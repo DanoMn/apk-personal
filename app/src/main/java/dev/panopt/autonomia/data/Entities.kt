@@ -23,13 +23,21 @@ data class ActivityEntity(
     val name: String,
     val description: String,
     val type: String,
-    val targetValue: Int,
-    val minimumValue: Int,
+    val role: String,
+    val displaySurface: String,
+    val contributionRole: String,
+    val importanceTier: String,
+    val cadence: String?,
+    val targetValue: Int?,
+    val minimumValue: Int?,
+    val targetCount: Int?,
+    val targetPeriod: String?,
     val unit: String,
-    val weeklyTarget: Int = 0,
-    val importance: Int = 1,
     val active: Boolean = true,
+    val archived: Boolean = false,
     val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
 @Entity(
@@ -41,7 +49,7 @@ data class ActivityLogEntity(
     val activityId: String,
     val date: String,
     val completed: Boolean,
-    val actualValue: Int,
+    val actualValue: Int?,
     val note: String = "",
     val updatedAt: Long,
 )
@@ -52,8 +60,12 @@ data class AbstinenceTrackEntity(
     val name: String,
     val substanceLabel: String,
     val severity: String,
+    val contributionRole: String,
+    val importanceTier: String,
     val active: Boolean = true,
     val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
 @Entity(
@@ -84,4 +96,82 @@ data class RiskEventEntity(
     val actionTaken: String,
     val actedOnImpulse: Boolean,
     val note: String,
+)
+
+@Entity(
+    tableName = "tasks",
+    indices = [Index("layerId")],
+)
+data class TaskEntity(
+    @PrimaryKey val id: String,
+    val title: String,
+    val description: String,
+    val layerId: String?,
+    val projectId: String?,
+    val status: String,
+    val contributionRole: String,
+    val importanceTier: String,
+    val dueDate: String?,
+    val completedAt: Long?,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(tableName = "anchor_phrases")
+data class AnchorPhraseEntity(
+    @PrimaryKey val id: String,
+    val text: String,
+    val authorReference: String?,
+    val family: String,
+    val language: String,
+    val attributionStatus: String,
+    val active: Boolean = true,
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(
+    tableName = "anchor_phrase_state_rules",
+    primaryKeys = ["phraseId", "scoreState"]
+)
+data class AnchorPhraseStateRuleEntity(
+    val phraseId: String,
+    val scoreState: String,
+    val weight: Int,
+)
+
+@Entity(
+    tableName = "anchor_phrase_phase_rules",
+    primaryKeys = ["phraseId", "dayPhase"]
+)
+data class AnchorPhrasePhaseRuleEntity(
+    val phraseId: String,
+    val dayPhase: String,
+    val weight: Int,
+)
+
+@Entity(
+    tableName = "anchor_phrase_impressions",
+    indices = [Index("date", "dayPhase"), Index("phraseId", "shownAt")]
+)
+data class AnchorPhraseImpressionEntity(
+    @PrimaryKey val id: String,
+    val phraseId: String,
+    val date: String,
+    val dayPhase: String,
+    val scoreState: String,
+    val shownAt: Long,
+)
+
+@Entity(
+    tableName = "anchor_phrase_daily_slots",
+    primaryKeys = ["date", "dayPhase"]
+)
+data class AnchorPhraseDailySlotEntity(
+    val date: String,
+    val dayPhase: String,
+    val scoreState: String,
+    val phraseId: String,
+    val resolvedAt: Long,
 )

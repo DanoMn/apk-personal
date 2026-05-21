@@ -186,21 +186,20 @@ Proyecto        estable
 Sueno           alerta
 ```
 
-## Estados globales
+## Estados globales (ScoreState canónico)
 
 Los estados no son diagnosticos.
 
-Son lecturas operativas.
+Son lecturas operativas del dominio, representadas por el enum canónico `ScoreState`:
 
-Estados candidatos:
+- `NoData`: todavia no hay suficiente registro. (UI: Sin datos)
+- `Restoration`: despues de crisis o abandono; el objetivo es no empeorar. (UI: Recuperación)
+- `Attention`: faltan acciones basicas, pero aun hay margen. (UI: Bajo movimiento)
+- `Motion`: ya hay acciones protectoras hoy. (UI: En marcha)
+- `Plenitude`: la base esta sostenida. (UI: Estable)
+- `Unbreakable`: consistencia a largo plazo y máxima protección.
 
-- Sin datos: todavia no hay suficiente registro.
-- En marcha: ya hay acciones protectoras hoy.
-- Estable: la base esta sostenida.
-- Bajo movimiento: faltan acciones basicas, pero aun hay margen.
-- Riesgo: se acumulan senales de abandono o escape.
-- Crisis: hay recaida, abandono fuerte o evento grave.
-- Recuperacion: despues de crisis; el objetivo es no empeorar.
+Nota: "Riesgo", "Crisis" o "Recaída" no compiten como enums paralelos. Son señales críticas, eventos u overrides del dominio que pueden forzar un estado (ej. hacia Restoration o Attention).
 
 ## Senales de alerta
 

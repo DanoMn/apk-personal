@@ -67,6 +67,12 @@ ActivityLog
 Task
 = pendiente puntual. Puede contribuir o no a estabilidad, pero no es hábito.
 
+AbstinenceTrack
+= racha o hábito a dejar (ej. alcohol). No es una Activity común, es una feature propia protectora.
+
+AnchorPhrase
+= cita o frase mostrada en la UI que funciona como soporte o ancla psicológica, elegida según el ScoreState.
+
 DashboardSignal
 = lectura rápida mostrada en dashboard. Puede venir de actividades, features o tareas.
 
@@ -78,8 +84,9 @@ Separación clave:
 
 ```text
 Activity no es ActivityLog.
-Activity no es Task.
-FeatureLog no es ActivityLog.
+Activity no es Task (pendientes).
+Activity no es AbstinenceTrack (rachas a dejar).
+FeatureLog (ej. AbstinenceLog) no es ActivityLog.
 DashboardSignal no es Capa.
 ```
 

@@ -13,26 +13,33 @@ import androidx.room.RoomDatabase
         AbstinenceTrackEntity::class,
         AbstinenceLogEntity::class,
         RiskEventEntity::class,
+        TaskEntity::class,
+        AnchorPhraseEntity::class,
+        AnchorPhraseStateRuleEntity::class,
+        AnchorPhrasePhaseRuleEntity::class,
+        AnchorPhraseImpressionEntity::class,
+        AnchorPhraseDailySlotEntity::class
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
     abstract fun autonomiaDao(): AutonomiaDao
 
     companion object {
         @Volatile
-        private var instance: AutonomiaDatabase? = null
+        private var INSTANCE: AutonomiaDatabase? = null
 
-        fun getInstance(context: Context): AutonomiaDatabase =
-            instance ?: synchronized(this) {
-                instance ?: Room.databaseBuilder(
+        fun getInstance(context: Context): AutonomiaDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AutonomiaDatabase::class.java,
-                    "autonomia.db",
-                )
-                    .build()
-                    .also { instance = it }
+                    "autonomia_db"
+                ).build()
+                INSTANCE = instance
+                instance
             }
+        }
     }
 }

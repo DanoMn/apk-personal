@@ -7,6 +7,7 @@ data class Layer(
     val name: String,
     val description: String,
     val sortOrder: Int,
+    val active: Boolean = true,
 )
 
 data class TrackedActivity(
@@ -15,21 +16,30 @@ data class TrackedActivity(
     val name: String,
     val description: String,
     val type: ActivityType,
-    val targetValue: Int,
-    val minimumValue: Int,
+    val role: ActivityRole,
+    val displaySurface: DisplaySurface,
+    val contributionRole: ContributionRole,
+    val importanceTier: ImportanceTier,
+    val cadence: ActivityCadence? = null,
+    val targetValue: Int? = null,
+    val minimumValue: Int? = null,
+    val targetCount: Int? = null,
+    val targetPeriod: TargetPeriod? = null,
     val unit: ActivityUnit,
-    val weeklyTarget: Int,
-    val importance: Int,
-    val active: Boolean,
+    val active: Boolean = true,
+    val archived: Boolean = false,
     val sortOrder: Int,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L,
 )
 
 data class ActivityLog(
     val activityId: String,
     val date: String,
     val completed: Boolean,
-    val actualValue: Int,
+    val actualValue: Int? = null,
     val note: String = "",
+    val updatedAt: Long = 0L,
 )
 
 data class AbstinenceTrack(
@@ -37,8 +47,12 @@ data class AbstinenceTrack(
     val name: String,
     val substanceLabel: String,
     val severity: AbstinenceSeverity,
-    val active: Boolean,
+    val contributionRole: ContributionRole,
+    val importanceTier: ImportanceTier,
+    val active: Boolean = true,
     val sortOrder: Int,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L,
 )
 
 data class AbstinenceLog(
@@ -48,6 +62,7 @@ data class AbstinenceLog(
     val urge: Boolean = false,
     val urgeIntensity: Int = 0,
     val note: String = "",
+    val updatedAt: Long = 0L,
 )
 
 data class RiskEvent(
@@ -61,75 +76,57 @@ data class RiskEvent(
     val note: String,
 )
 
-data class DashboardState(
-    val today: String,
-    val globalState: GlobalState,
-    val globalMessage: String,
-    val dimensions: List<DashboardDimension>,
-    val layers: List<Layer>,
-    val activities: List<TrackedActivity>,
-    val activityLogsToday: Map<String, ActivityLog>,
-    val abstinenceTracks: List<AbstinenceTrack>,
-    val abstinenceLogsToday: Map<String, AbstinenceLog>,
-    val weeklyGymDone: Int,
-    val riskEventsToday: Int,
+data class Task(
+    val id: String,
+    val title: String,
+    val description: String,
+    val layerId: String?,
+    val projectId: String?,
+    val status: TaskStatus,
+    val contributionRole: ContributionRole,
+    val importanceTier: ImportanceTier,
+    val dueDate: String?,
+    val completedAt: Long?,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
-data class DashboardDimension(
-    val name: String,
-    val status: DimensionStatus,
-    val message: String,
+data class AnchorPhrase(
+    val id: String,
+    val text: String,
+    val authorReference: String?,
+    val family: PhraseFamily,
+    val language: String,
+    val attributionStatus: AttributionStatus,
+    val active: Boolean,
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
-enum class ActivityType {
-    Time,
-    Check,
-    SelfCare,
-    AbstinenceSupport,
-    Weekly,
-    TimeOfDay,
-    Note,
+// -- Enums --
+
+enum class ScoreState(val uiAlias: String) {
+    NoData("Sin datos"),
+    Restoration("Recuperación"),
+    Attention("Bajo movimiento"),
+    Motion("En marcha"),
+    Plenitude("Estable"),
+    Unbreakable("Inquebrantable")
 }
 
-enum class ActivityUnit {
-    Minutes,
-    Count,
-    Boolean,
-    Time,
-    Text,
-}
-
-enum class AbstinenceSeverity {
-    Critical,
-    Moderate,
-}
-
-enum class AbstinenceStatus {
-    Unknown,
-    Clean,
-    Relapse,
-}
-
-enum class GlobalState(
-    val label: String,
-) {
-    NoData("sin datos"),
-    InMotion("en marcha"),
-    Stable("base estable"),
-    LowMotion("base baja"),
-    Risk("riesgo"),
-    Crisis("crisis"),
-    Recovery("recuperacion"),
-}
-
-enum class DimensionStatus(
-    val label: String,
-) {
-    Stable("estable"),
-    InMotion("en marcha"),
-    Low("bajo"),
-    Alert("alerta"),
-    Unknown("sin datos"),
-}
+enum class ActivityType { Check, Time, Count, Note, TimeOfDay, SelfCare, AbstinenceSupport, Weekly }
+enum class ActivityRole { Practice, SelfCare, Boundary, DigitalHygiene, DomesticOrder, RelationalHabit, ProjectWork, Learning, Custom }
+enum class DisplaySurface { PrimaryChecklist, SecondaryChecklist, Compact, Contextual, Silent }
+enum class ContributionRole { Core, Support, Protective, Recovery, Neutral }
+enum class ImportanceTier { Low, Medium, High, Critical }
+enum class ActivityCadence { Daily, Weekly, Monthly, Custom, EventBased }
+enum class TargetPeriod { Day, Week, Month }
+enum class ActivityUnit { Minutes, Count, Boolean, Time, Text }
+enum class AbstinenceSeverity { Critical, Moderate }
+enum class AbstinenceStatus { Unknown, Clean, Relapse }
+enum class TaskStatus { Pending, Done, Archived }
+enum class PhraseFamily { Containment, MinimalAction, RegulationClarity, Persistence, IdentityValues, Recognition, Contemplation }
+enum class AttributionStatus { Clear, Traditional, Disputed, NeedsReview }
 
 fun todayKey(): String = LocalDate.now().toString()
