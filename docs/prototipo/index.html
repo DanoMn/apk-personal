@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocal - Diseño Orgánico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Normalización global de iconos para garantizar que todos tengan exactamente el mismo peso visual y tamaño */
+    .lucide {
+      width: 24px;
+      height: 24px;
+      stroke-width: 1.5; /* Trazo fino y elegante */
+      stroke: currentColor;
+    }
+    .layer-logo .lucide {
+      width: 32px;
+      height: 32px;
+      stroke-width: 1.25; /* Trazo un poco más fino al crecer para no verse tosco */
+    }
+    .custom-ui-icon {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .custom-ui-icon .solid {
+      fill: currentColor;
+      stroke: none;
+    }
+    .icon-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .icon-spec-card {
+      background-color: var(--bg-surface);
+      border-radius: var(--radius-md);
+      padding: 1rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 0.5rem;
+    }
+    .icon-spec-card .layer-logo {
+      margin: 0;
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+    }
+    .icon-note {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      margin-top: 0.75rem;
+    }
+    /* Clase para rellenar los iconos geométricos y darles peso visual sólido */
+    .solid-icon {
+      fill: currentColor;
+    }
+    .state-scale-grid {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .state-demo-card {
+      background-color: var(--bg-surface);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+    .state-score-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 1rem;
+    }
+    .state-pill {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      border-radius: var(--radius-pill);
+      padding: 0.32rem 0.68rem;
+      background: color-mix(in srgb, var(--state-color) 20%, transparent);
+      color: var(--state-color);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+    .state-pill .lucide {
+      width: 16px;
+      height: 16px;
+    }
+    .state-title {
+      display: block;
+      margin-top: 0.72rem;
+      color: var(--color-cardboard);
+      font-family: var(--font-serif);
+      font-size: 1.24rem;
+      line-height: 1.16;
+    }
+    .state-copy {
+      margin-top: 0.38rem;
+      font-size: 0.9rem;
+    }
+    .state-orbit {
+      --score: 74;
+      width: 104px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        conic-gradient(var(--state-color) calc(var(--score) * 1%), rgba(255,255,255,0.08) 0),
+        var(--bg-surface-hover);
+    }
+    .state-orbit-inner {
+      width: 78px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .state-score {
+      color: var(--text-main);
+      font-size: 1.22rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .state-score-label {
+      color: var(--text-muted);
+      font-size: 0.66rem;
+      margin-top: 0.18rem;
+    }
+    .daily-progress {
+      margin-top: 0.9rem;
+      display: grid;
+      gap: 0.4rem;
+    }
+    .daily-progress-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .daily-progress-track {
+      height: 7px;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+    .daily-progress-track span {
+      display: block;
+      width: var(--progress);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--color-coral);
+    }
+    .state-row {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 0.85rem;
+      background-color: var(--bg-surface);
+      border-radius: var(--radius-md);
+      padding: 0.82rem;
+    }
+    .state-icon-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      background: color-mix(in srgb, var(--state-color) 16%, transparent);
+      color: var(--state-color);
+    }
+    .state-icon-mark .lucide {
+      width: 24px;
+      height: 24px;
+    }
+    .state-row strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.96rem;
+      line-height: 1.1;
+    }
+    .state-row span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.25;
+      margin-top: 0.22rem;
+    }
+    .state-unknown { --state-color: #8f8981; }
+    .state-care { --state-color: #b03831; } /* Rojo orgánico (Restauración) */
+    .state-attention { --state-color: #c79a54; }
+    .state-motion { --state-color: #5a8296; } /* Azul orgánico */
+    .state-sustained { --state-color: #8c9c76; } /* Verde orgánico (Pleno) */
+    .state-solid { --state-color: #d1a843; } /* Oro masivo (Inquebrantable) */
+    .state-sustained-alt2 { --state-color: #9eb870; } /* Verde más profundo y asertivo */
+    .state-solid-alt2 { --state-color: #dcb345; } /* Oro más vibrante y pesado */
+    .state-solid-alt3 { --state-color: #c78b54; } /* Bronce/Cobre para logro monumental */
+    .state-alt-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.9rem;
+    }
+    .state-alt-card {
+      min-height: 112px;
+      background-color: var(--bg-surface);
+      border-radius: var(--radius-md);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 0.85rem 0.5rem;
+      color: var(--state-color);
+    }
+    .state-alt-card .lucide {
+      width: 28px;
+      height: 28px;
+    }
+    .state-alt-card span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1.15;
+      margin-top: 0.5rem;
+    }
+    .layer-logo.state-unknown,
+    .layer-logo.state-care,
+    .layer-logo.state-attention,
+    .layer-logo.state-sustained,
+    .layer-logo.state-motion,
+    .layer-logo.state-solid,
+    .layer-logo.state-sustained-alt2,
+    .layer-logo.state-solid-alt2,
+    .layer-logo.state-solid-alt3 {
+      color: var(--state-color);
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute; overflow:hidden;" aria-hidden="true" focusable="false">
+    <symbol id="icon-vocal-checklist" viewBox="0 0 24 24">
+      <rect class="solid" x="4" y="5" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 6.65h9.5" />
+      <rect class="solid" x="4" y="10.35" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 12h8" />
+      <rect class="solid" x="4" y="15.7" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 17.35h6.5" />
+    </symbol>
+    <symbol id="icon-vocal-intimate-boundary" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <path d="M12 8.1l3.7 3.7-3.7 3.7-3.7-3.7L12 8.1z" />
+      <path d="M12 10.55l1.25 1.25L12 13.05l-1.25-1.25L12 10.55z" class="solid" />
+    </symbol>
+    <symbol id="icon-vocal-logbook" viewBox="0 0 24 24">
+      <path d="M7 4.5h8.6c1 0 1.9.85 1.9 1.9v13.1H8.2A2.7 2.7 0 0 1 5.5 16.8V6A1.5 1.5 0 0 1 7 4.5z" />
+      <path d="M8.2 19.5a2.2 2.2 0 0 1 0-4.4h9.3" />
+      <path d="M9.2 8.2h5.1M9.2 11h3.8" />
+    </symbol>
+    <symbol id="icon-vocal-layer-stack" viewBox="0 0 24 24">
+      <path d="M12 4l8 4.2-8 4.2-8-4.2L12 4z" />
+      <path d="M4 12l8 4.2 8-4.2" />
+      <path d="M4 15.8l8 4.2 8-4.2" />
+    </symbol>
+    <symbol id="icon-vocal-sleep" viewBox="0 0 24 24">
+      <path class="solid" d="M18.25 15.35c-1.08.66-2.36 1.04-3.72 1.04-4.05 0-7.34-3.28-7.34-7.34 0-1.74.6-3.34 1.61-4.59-3.28.92-5.68 3.92-5.68 7.48 0 4.3 3.48 7.78 7.78 7.78 3.32 0 6.15-2.08 7.25-5.01.04-.12.08-.24.1-.36z" />
+      <path d="M18.15 4.25l1.02 1.78 1.78 1.02-1.78 1.02-1.02 1.78-1.02-1.78-1.78-1.02 1.78-1.02 1.02-1.78z" />
+    </symbol>
+    <symbol id="icon-vocal-no-phone-bed" viewBox="0 0 24 24">
+      <path d="M4.4 15.2V8.9" />
+      <path d="M4.4 13.2h8.1c1.25 0 2.25.98 2.25 2.2v1.55" />
+      <path d="M4.4 16.95h15.2" />
+      <path d="M4.4 16.95v2.4M19.6 16.95v2.4" />
+      <path d="M15.85 5.05h2.9c.72 0 1.3.58 1.3 1.3v6.2c0 .72-.58 1.3-1.3 1.3h-3.2c-.72 0-1.3-.58-1.3-1.3v-3" />
+      <path d="M15.15 4.15l5.7 10.55" />
+    </symbol>
+    <symbol id="icon-vocal-state-unknown" viewBox="0 0 24 24">
+      <path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6z" />
+      <circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention" viewBox="0 0 24 24">
+      <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+      <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained" viewBox="0 0 24 24">
+      <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+      <polygon points="12 6.5, 17 9.5, 17 14.5, 12 17.5, 7 14.5, 7 9.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <path d="M12 7.4l3.85 1.42v3.05c0 2.32-1.42 3.98-3.85 5.05-2.43-1.07-3.85-2.73-3.85-5.05V8.82L12 7.4z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt" viewBox="0 0 24 24">
+      <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+      <polygon points="12 5.8, 17.7 9.05, 17.7 14.95, 12 18.2, 6.3 14.95, 6.3 9.05" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.45" fill="var(--bg-surface)" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <path d="M12 6.9l4.45 1.65v3.55c0 2.68-1.65 4.6-4.45 5.85-2.8-1.25-4.45-3.17-4.45-5.85V8.55L12 6.9z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt2" viewBox="0 0 24 24">
+      <polygon points="12 2, 22 20, 2 20" />
+      <polygon points="12 6.5, 18.5 18, 5.5 18" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt2" viewBox="0 0 24 24">
+      <polygon points="8 2, 16 2, 22 8, 22 16, 16 22, 8 22, 2 16, 2 8" />
+      <polygon points="9.5 5.5, 14.5 5.5, 18.5 9.5, 18.5 14.5, 14.5 18.5, 9.5 18.5, 5.5 14.5, 5.5 9.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt3" viewBox="0 0 24 24">
+      <polygon points="12 2, 22 12, 12 22, 2 12" />
+      <polygon points="12 5.5, 18.5 12, 12 18.5, 5.5 12" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="2.5" fill="var(--bg-surface)" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt4" viewBox="0 0 24 24">
+      <rect x="4" y="18" width="16" height="2" />
+      <path d="M6 18 V12 A6 6 0 0 1 18 12 V18" />
+      <path d="M8 18 V12 A4 4 0 0 1 16 12 V18 Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt5" viewBox="0 0 24 24">
+      <path d="M 4 20 L 20 20 L 20 14 L 16 14 L 16 8 L 8 8 L 8 14 L 4 14 Z" />
+      <path d="M 5.5 18.5 L 18.5 18.5 L 18.5 15.5 L 14.5 15.5 L 14.5 9.5 L 9.5 9.5 L 9.5 15.5 L 5.5 15.5 Z" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt6" viewBox="0 0 24 24">
+      <polygon points="4 4, 20 4, 16 12, 20 20, 4 20, 8 12" />
+      <polygon points="6.5 5.5, 17.5 5.5, 14 12, 17.5 18.5, 6.5 18.5, 10 12" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-sustained-alt7" viewBox="0 0 24 24">
+      <path d="M 12 22 C 12 22, 4 18, 4 8 L 4 4 L 12 2 L 20 4 L 20 8 C 20 18, 12 22, 12 22 Z" />
+      <path d="M 12 19.5 C 12 19.5, 6 16, 6 9 L 6 6 L 12 4.5 L 18 6 L 18 9 C 18 16, 12 19.5, 12 19.5 Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt4" viewBox="0 0 24 24">
+      <path d="M 12 2 L 15 9 L 22 12 L 15 15 L 12 22 L 9 15 L 2 12 L 9 9 Z" />
+      <path d="M 12 5.5 L 14 10 L 18.5 12 L 14 14 L 12 18.5 L 10 14 L 5.5 12 L 10 10 Z" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="2.5" fill="var(--bg-surface)" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt5" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <rect x="5.5" y="5.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="12.5" y="5.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="5.5" y="12.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="12.5" y="12.5" width="6" height="6" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt6" viewBox="0 0 24 24">
+      <polygon points="12 2, 21 7, 21 17, 12 22, 3 17, 3 7" />
+      <polygon points="12 5, 18.5 8.5, 18.5 15.5, 12 19, 5.5 15.5, 5.5 8.5" fill="currentColor" stroke="none" />
+      <polygon points="12 9.5, 14.5 12, 12 14.5, 9.5 12" fill="var(--bg-surface)" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt7" viewBox="0 0 24 24">
+      <polygon points="3 20, 21 20, 21 16, 18 6, 12 12, 6 6, 3 16" />
+      <polygon points="5 18.5, 19 18.5, 19 16.5, 16.5 8, 12 14, 7.5 8, 5 16.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt1" viewBox="0 0 24 24">
+      <path d="M 9 6 C 7 12 11 12 9 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <path d="M 15 6 C 13 12 17 12 15 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 4" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt3" viewBox="0 0 24 24">
+      <path d="M 12 16 A 4 4 0 0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <path d="M 12 20 A 8 8 0 0 0 12 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="8" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt4" viewBox="0 0 24 24">
+      <path d="M 6 14 C 6 8 18 8 18 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="14" r="2.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt5" viewBox="0 0 24 24">
+      <path d="M 12 22 L 12 16 C 12 10 18 10 18 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="18" cy="4" r="2" fill="currentColor" stroke="none" />
+      <path d="M 12 12 L 12 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2 4" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt1" viewBox="0 0 24 24">
+      <path d="M 12 22 V 12 C 12 6 6 6 6 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt2" viewBox="0 0 24 24">
+      <path d="M 5 12 C 5 18 19 18 19 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="10" r="2.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt3" viewBox="0 0 24 24">
+      <path d="M 4 14 C 4 6 20 6 20 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="14" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt4" viewBox="0 0 24 24">
+      <path d="M 7 16 C 10 20 14 20 17 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <path d="M 4 12 C 8 18 16 18 20 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="8" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt5" viewBox="0 0 24 24">
+      <path d="M 12 4 C 18 10 18 20 12 20 C 6 20 6 10 12 4 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt6" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <path d="M 12 7 A 5 5 0 0 0 12 17 A 3 3 0 0 1 12 7 Z" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt7" viewBox="0 0 24 24">
+      <path d="M 4 16 L 20 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="6" cy="15" r="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention-alt8" viewBox="0 0 24 24">
+      <path d="M 12 3 L 20 12 L 12 21 L 4 12 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M 12 8 L 12 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt6" viewBox="0 0 24 24">
+      <path d="M 4 16 L 14 16 C 16 16 16 20 16 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="17.5" cy="11" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt7" viewBox="0 0 24 24">
+      <path d="M 8 18 C 8 12 12 8 12 8 C 12 8 16 12 16 18 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+      <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt8" viewBox="0 0 24 24">
+      <path d="M 12 6 L 12 18 M 6 12 L 18 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt9" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <rect x="10" y="7" width="4" height="10" rx="1.5" fill="currentColor" stroke="none" />
+      <rect x="7" y="10" width="10" height="4" rx="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+  </svg>
+
+  <!-- DESIGN SYSTEM DOCUMENTATION -->
+  <div style="max-width: 900px; margin: 0 auto 3rem auto; padding: 2rem; background: var(--bg-card); border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+    <h1 style="margin-top: 0;">Vocal: Design System (Especificaciones)</h1>
+    <p>Este documento es la fuente de verdad (Source of Truth) visual para replicar la interfaz en Jetpack Compose con máxima fidelidad.</p>
+    <ul style="opacity: 0.9; line-height: 1.6;">
+      <li><strong>Estética "Paper/Orgánica":</strong> Evitar el estilo tecnológico frío. Sin bordes rígidos (0px border). Todo se separa usando sombras difusas multicapa (Drop Shadows suaves) para un efecto flotante y premium.</li>
+      <li><strong>Paleta de Personalidad (3 colores base):</strong>
+        <ul>
+          <li><em>Base Oscura:</em> <code>#1F1E1D</code> (Un carbón cálido y orgánico. No usar grises azulados ni negros puros).</li>
+          <li><em>Acento Cartón/Beige:</em> <code>#D3C7B6</code> (Para elementos secundarios o tarjetas inmersivas. Da la sensación de papel).</li>
+          <li><em>Acento Coral:</em> <code>#E66A53</code> (Para acciones primarias, subrayados y checkboxes. Sutil pero vibrante).</li>
+        </ul>
+      </li>
+      <li><strong>Tipografía:</strong> Títulos en Serif (Lora) para el toque de libro/humano. Texto y datos técnicos en Sans-Serif Geométrica (Outfit). Siempre usar <code>text-wrap: balance</code> en títulos.</li>
+    </ul>
+  </div>
+
+  <div class="app-container">
+    
+    <header>
+      <h2>Dashboard de Inicio (Tarjetas Flotantes)</h2>
+      <p>Especificaciones: Las tarjetas no tienen <code>border</code>. La separación visual se logra con una sombra sutil <code>box-shadow: 0 8px 32px rgba(0,0,0,0.2)</code>. Los checkboxes usan el color Coral (<code>#E66A53</code>) al activarse. Las transiciones de hover duran <code>0.3s ease</code> para levantarse ligeramente, invitando a la interacción táctil.</p>
+    </header>
+    
+    <header style="margin-bottom: 1rem;">
+      <h1>Registro</h1>
+      <p>La base ya empezó a moverse. Una acción mínima abre el día. No necesitas perfección, solo constancia.</p>
+      
+      <div class="button-row">
+        <button class="btn btn-primary">Apoyar el proyecto</button>
+        <button class="btn btn-secondary">Ver historial...</button>
+      </div>
+    </header>
+
+    <!-- Card 1: Dimensión -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Cuidado Básico</span>
+        <span class="badge">PLENITUD</span>
+      </div>
+      <p>Hoy la base está en plenitud. Volviste al cuerpo de manera orgánica.</p>
+    </div>
+
+    <!-- Card 2: Checklist Interactivo -->
+    <div class="card" style="padding: 1rem;">
+      <div class="card-header" style="padding: 0.5rem 0.5rem 0 0.5rem;">
+        <span class="card-title">Prácticas de Hoy</span>
+      </div>
+      <div class="checklist">
+        
+        <label class="checklist-item">
+          <input type="checkbox">
+          <div class="checklist-text">
+            <span>Meditar 5 minutos</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-interior);">
+              <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter" style="width:14px; height:14px;">
+                <polygon points="12 2, 22 12, 12 22, 2 12" />
+                <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none" />
+              </svg>
+            </span> Capa Interior</small>
+          </div>
+        </label>
+
+        <label class="checklist-item">
+          <input type="checkbox" checked>
+          <div class="checklist-text">
+            <span>Ducha fría</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-body);"><i data-lucide="waves" style="width:14px; height:14px;"></i></span> Capa Cuerpo</small>
+          </div>
+        </label>
+
+        <label class="checklist-item">
+          <input type="checkbox">
+          <div class="checklist-text">
+            <span>Mantener límites de uso</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-conduct);"><i data-lucide="infinity" style="width:14px; height:14px;"></i></span> Capa Conducta</small>
+          </div>
+        </label>
+
+        <label class="checklist-item">
+          <input type="checkbox">
+          <div class="checklist-text">
+            <span>Comida en casa</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-home);"><i data-lucide="tent" style="width:14px; height:14px;"></i></span> Capa Casa/Comida</small>
+          </div>
+        </label>
+
+        <label class="checklist-item">
+          <input type="checkbox">
+          <div class="checklist-text">
+            <span>Llamar a un amigo</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-social);">
+              <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter" style="width:14px; height:14px;">
+                <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+                <polygon points="12 6.5, 17 9.5, 17 14.5, 12 17.5, 7 14.5, 7 9.5" fill="currentColor" stroke="none" />
+              </svg>
+            </span> Capa Social</small>
+          </div>
+        </label>
+
+        <label class="checklist-item">
+          <input type="checkbox">
+          <div class="checklist-text">
+            <span>Leer</span>
+            <small><span class="layer-icon" style="color: var(--color-layer-project);">
+              <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width:14px; height:14px;"><polygon points="12 2 23 21 1 21" /></svg>
+            </span> Capa Proyecto - 20 min</small>
+          </div>
+        </label>
+
+        <div class="completed-divider" id="completedDivider">Completados</div>
+
+      </div>
+    </div>
+
+    <!-- Panel Informativo tipo Changelog -->
+    <div style="margin-top: 1rem; padding-left: 0.5rem; border-left: 2px solid var(--color-coral);">
+      <h3 style="color: var(--color-coral); font-family: inherit; font-size: 1rem; margin-bottom: 0.25rem;">Nota del sistema</h3>
+      <p style="font-size: 0.9rem;">Observa cómo los botones primarios usan el color cartón, y los acentos visuales usan el tono coral. Las fuentes de los títulos ahora son Serif para dar ese toque de "libro" o aspecto de dibujo humano.</p>
+    </div>
+
+    <!-- Especificación de Iconos de Capa -->
+    <header style="margin-top: 4rem;">
+      <h2>Configuración de Capas (Iconos Definitivos)</h2>
+      <p>Especificaciones Críticas para Replicación: Las Capas son el corazón de Vocal, por lo que sus íconos deben sentirse como <strong>"sellos" primarios y masivos</strong>, radicalmente distintos a los íconos de la UI.</p>
+      <ul style="opacity: 0.9; font-size: 0.95rem; margin-bottom: 2rem;">
+        <li>Se respeta el trazo normalizado de <code>1.5px</code> en todo el ecosistema.</li>
+        <li><strong>Truco de Peso Visual (Interior, Social, Proyecto):</strong> Para dar la sensación de masa pesada sin engrosar la línea, se eliminaron los bordes redondeados (ángulos afilados) y se inyectaron <em>núcleos sólidos gigantes</em> que casi tocan el borde (ej. el rombo interior, el hexágono interior sólido).</li>
+        <li><strong>Fluidez Primal (Cuerpo, Conducta, Casa):</strong> Se utilizan ondas, tiendas de campaña y bucles infinitos para dar sensación de flujo natural y refugio.</li>
+      </ul>
+    </header>
+
+    <div class="layer-grid">
+      
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-interior);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polygon points="12 2, 22 12, 12 22, 2 12" />
+            <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <div class="layer-name">Interior</div>
+        <div class="layer-desc">Mente y Calma</div>
+      </div>
+
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-body);">
+          <i data-lucide="waves"></i>
+        </div>
+        <div class="layer-name">Cuerpo</div>
+        <div class="layer-desc">Biología y Salud</div>
+      </div>
+
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);">
+          <i data-lucide="infinity"></i>
+        </div>
+        <div class="layer-name">Conducta</div>
+        <div class="layer-desc">Límites y Reglas</div>
+      </div>
+
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-home);">
+          <i data-lucide="tent"></i>
+        </div>
+        <div class="layer-name">Casa/Comida</div>
+        <div class="layer-desc">Refugio y Base</div>
+      </div>
+
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-social);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+            <polygon points="12 6.5, 17 9.5, 17 14.5, 12 17.5, 7 14.5, 7 9.5" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <div class="layer-name">Social</div>
+        <div class="layer-desc">Vínculos</div>
+      </div>
+
+      <div class="layer-card">
+        <div class="layer-logo" style="color: var(--color-layer-project);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <polygon points="12 2 23 21 1 21" />
+          </svg>
+        </div>
+        <div class="layer-name">Proyecto</div>
+        <div class="layer-desc">Construcción</div>
+      </div>
+
+    </div>
+
+    <!-- Especificación de Iconografía UI -->
+    <header style="margin-top: 4rem;">
+      <h2 style="font-size: 1.75rem;">Iconografía UI Esencial</h2>
+      <p>Especificaciones Críticas para Replicación: los íconos utilitarios no deben competir con las Capas. Lucide se usa cuando el símbolo ya respira con trazo fino; cuando el concepto es central y Lucide se siente genérico, se usa un símbolo propio con la misma retícula de 24x24.</p>
+      <ul style="opacity: 0.9; font-size: 0.95rem; margin-bottom: 2rem;">
+        <li><strong>Grosor estricto:</strong> <code>1.5px</code>. Son ligeros y dejan respirar la interfaz.</li>
+        <li><strong>Bordes y remates:</strong> Redondeados en iconos de UI. Los ángulos afilados quedan reservados para los sellos de las Capas.</li>
+        <li><strong>Escala:</strong> Siempre 24x24 de viewBox. En botones se muestran a 22-24dp; en esta guía se amplían a 32px para revisión visual.</li>
+        <li><strong>Regla de coherencia:</strong> si una señal pertenece claramente a una capa, reutiliza el sello de esa capa en versión pequeña. Si es navegación, ajuste o acción, usa icono UI ligero.</li>
+      </ul>
+    </header>
+
+    <div class="icon-spec-grid">
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="menu"></i></div>
+        <div class="layer-desc">Menú</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="layout-grid"></i></div>
+        <div class="layer-desc">Dashboard</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-checklist"></use></svg>
+        </div>
+        <div class="layer-desc">Checklist</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="bar-chart-3"></i></div>
+        <div class="layer-desc">Progreso</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-logbook"></use></svg>
+        </div>
+        <div class="layer-desc">Registros</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-layer-stack"></use></svg>
+        </div>
+        <div class="layer-desc">Capas</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="sliders-horizontal"></i></div>
+        <div class="layer-desc">Ajustes</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="plus"></i></div>
+        <div class="layer-desc">Añadir</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="pen-line"></i></div>
+        <div class="layer-desc">Editar</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="archive"></i></div>
+        <div class="layer-desc">Archivar</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="x"></i></div>
+        <div class="layer-desc">Eliminar</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="chevron-left"></i></div>
+        <div class="layer-desc">Atrás</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="check"></i></div>
+        <div class="layer-desc">Confirmar</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="search"></i></div>
+        <div class="layer-desc">Buscar</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="flag"></i></div>
+        <div class="layer-desc">Alerta</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="home"></i></div>
+        <div class="layer-desc">Inicio</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="user"></i></div>
+        <div class="layer-desc">Perfil</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="calendar-days"></i></div>
+        <div class="layer-desc">Calendario</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="clock-3"></i></div>
+        <div class="layer-desc">Hora</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="timer"></i></div>
+        <div class="layer-desc">Tiempo real</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);"><i data-lucide="grip-vertical"></i></div>
+        <div class="layer-desc">Ordenar</div>
+      </div>
+    </div>
+
+    <p class="icon-note">El icono de Checklist queda definido como símbolo propio: marcadores sólidos pequeños + líneas ligeras. Evita la sensación de lista genérica con checks pesados y mantiene el tono editorial del sistema.</p>
+
+    <header style="margin-top: 4rem;">
+      <h2 style="font-size: 1.75rem;">Iconografía de Señales y Estado</h2>
+      <p>Estas señales aparecen en dashboard, tarjetas de resumen y estados calculados. Las señales por capa usan el sello de capa correspondiente; las señales transversales usan UI ligera, pero pueden tomar el truco de peso visual de las capas cuando necesitan sentirse más primarias.</p>
+      <p class="icon-note">Regla de peso visual para señales: no agregar bases, subrayados o adornos externos para "explicar" el símbolo. Si una señal queda débil, se le da masa desde adentro: relleno sólido, núcleo geométrico o contraste entre una figura sólida y un trazo fino. Sueño queda como referencia: luna sólida + estrella geométrica, sin línea de suelo.</p>
+    </header>
+
+    <div class="state-demo-card state-score-card state-motion">
+      <div>
+        <span class="state-pill">
+          <i data-lucide="activity"></i>
+          En marcha
+        </span>
+        <strong class="state-title">La base se mantiene dentro de rango.</strong>
+        <p class="state-copy">Los registros muestran suficiente estructura para sostener el día.</p>
+      </div>
+      <div class="state-orbit" style="--score: 74;">
+        <div class="state-orbit-inner">
+          <span class="state-score">742</span>
+          <span class="state-score-label">base</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-demo-card daily-progress">
+      <div class="daily-progress-head">
+        <span>Progreso diario</span>
+        <strong>64%</strong>
+      </div>
+      <div class="daily-progress-track" style="--progress: 64%;"><span></span></div>
+    </div>
+
+    <p class="icon-note">Escala provisional: el círculo representa un score general de base/salud construido con historial, no el porcentaje del día. El progreso diario vive como barra lineal secundaria. Sostenido y Sólido deben sentirse difíciles de obtener.</p>
+
+    <div class="state-scale-grid">
+      <div class="state-row state-unknown">
+        <div class="state-icon-mark">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-unknown"></use></svg>
+        </div>
+        <div>
+          <strong>Sin datos</strong>
+          <span>Inicialización o día sin registros suficientes.</span>
+        </div>
+      </div>
+      <div class="state-row state-care">
+        <div class="state-icon-mark">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt9"></use></svg>
+        </div>
+        <div>
+          <strong>Restauración</strong>
+          <span>La base necesita una acción de recuperación urgente.</span>
+        </div>
+      </div>
+      <div class="state-row state-attention">
+        <div class="state-icon-mark">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention"></use></svg>
+        </div>
+        <div>
+          <strong>Atención</strong>
+          <span>Hay señales acumulándose, pero todavía hay margen.</span>
+        </div>
+      </div>
+      <div class="state-row state-motion">
+        <div class="state-icon-mark">
+          <i data-lucide="activity"></i>
+        </div>
+        <div>
+          <strong>En marcha</strong>
+          <span>La base se mantiene dentro de un rango saludable.</span>
+        </div>
+      </div>
+      <div class="state-row state-sustained">
+        <div class="state-icon-mark">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt5"></use></svg>
+        </div>
+        <div>
+          <strong>Plenitud</strong>
+          <span>Todas las bases están activas formando una unidad.</span>
+        </div>
+      </div>
+      <div class="state-row state-solid">
+        <div class="state-icon-mark">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt4"></use></svg>
+        </div>
+        <div>
+          <strong>Inquebrantable</strong>
+          <span>Núcleo masivo y protegido. Historial de consistencia absoluta.</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="icon-note">Alternativas para estados altos: exploran si el logro debe sentirse más como núcleo consolidado o como premio protegido. No reemplazan la escala principal hasta revisión visual.</p>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 0.5rem; font-family: var(--font-serif); color: var(--text-main);">Nivel 4 (Sostenido) - Propuestas</h3>
+    <p class="icon-note" style="margin-top: 0; margin-bottom: 1rem;">Nombres alternativos: Arraigado, Férreo, Firme, Templado, Establecido.</p>
+    <div class="state-alt-grid">
+      <div class="state-alt-card state-sustained">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt"></use></svg>
+          <span>Sostenido<br>(Original)</span>
+        </div>
+      </div>
+      <div class="state-alt-card state-sustained-alt2">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt2"></use></svg>
+          <span>Firme<br>(Pirámide)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #8c9c76; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt4"></use></svg>
+          <span>Arraigado<br>(Base circular)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #7b8e6a; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt5"></use></svg>
+          <span>Establecido<br>(Ziggurat)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #a7b789; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt6"></use></svg>
+          <span>Férreo<br>(Yunque)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #6a8e7a; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained-alt7"></use></svg>
+          <span>Templado<br>(Escudo)</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 0.5rem; font-family: var(--font-serif); color: var(--text-main);">Nivel 5 (Sólido) - Propuestas</h3>
+    <p class="icon-note" style="margin-top: 0; margin-bottom: 1rem;">Nombres alternativos: Inquebrantable, Consolidado, Íntegro, Inmutable, Plenitud, Absoluto.</p>
+    <div class="state-alt-grid">
+      <div class="state-alt-card state-solid">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt"></use></svg>
+          <span>Sólido<br>(Original)</span>
+        </div>
+      </div>
+      <div class="state-alt-card state-solid-alt2">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt2"></use></svg>
+          <span>Consolidado<br>(Octágono)</span>
+        </div>
+      </div>
+      <div class="state-alt-card state-solid-alt3">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt3"></use></svg>
+          <span>Íntegro<br>(Monolito)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #e3c15b; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt4"></use></svg>
+          <span>Inquebrantable<br>(Estrella núcleo)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #d1a843; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt5"></use></svg>
+          <span>Plenitud<br>(Bloques unidos)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c98447; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt6"></use></svg>
+          <span>Absoluto<br>(Hexágono denso)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b57a53; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid-alt7"></use></svg>
+          <span>Soberano<br>(Corona fortaleza)</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 0.5rem; font-family: var(--font-serif); color: var(--text-main);">Nivel 3 (Atención) - Propuestas Compasivas</h3>
+    <p class="icon-note" style="margin-top: 0; margin-bottom: 1rem;">Filosofía: Un llamado gentil. Nombres alternativos: Pausa, Observación, Señal, Reflejo, Desvío.</p>
+    <div class="state-alt-grid">
+      <div class="state-alt-card state-attention">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention"></use></svg>
+          <span>Atención<br>(Original)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c9a66b; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt1"></use></svg>
+          <span>Pausa<br>(Balance suave)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b89047; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt2"></use></svg>
+          <span>Observación<br>(Onda de agua)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c29b57; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt3"></use></svg>
+          <span>Señal<br>(Eco receptivo)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b58d4b; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt4"></use></svg>
+          <span>Reflejo<br>(Arco y centro)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #d1ab64; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt5"></use></svg>
+          <span>Desvío<br>(Ruta alterna)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #d99238; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt6"></use></svg>
+          <span>Sombra<br>(Eclipse parcial)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #d48a42; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt7"></use></svg>
+          <span>Desbalance<br>(Inclinación)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #cc7635; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention-alt8"></use></svg>
+          <span>Advertencia<br>(Rombo suave)</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 0.5rem; font-family: var(--font-serif); color: var(--text-main);">Nivel 2 (Cuidado) - Propuestas de Refugio</h3>
+    <p class="icon-note" style="margin-top: 0; margin-bottom: 1rem;">Filosofía: Contención, no alarma. Nombres alternativos: Regreso, Anclaje, Refugio, Soporte, Origen.</p>
+    <div class="state-alt-grid">
+      <div class="state-alt-card state-care">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care"></use></svg>
+          <span>Cuidado<br>(Original)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c47a76; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt1"></use></svg>
+          <span>Regreso<br>(Brote orgánico)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b8685c; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt2"></use></svg>
+          <span>Anclaje<br>(Cuenco protector)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c7836b; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt3"></use></svg>
+          <span>Refugio<br>(Techo suave)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b3635d; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt4"></use></svg>
+          <span>Soporte<br>(Manos/cuna)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #c97969; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt5"></use></svg>
+          <span>Origen<br>(Semilla)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #cc584b; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt6"></use></svg>
+          <span>Límite<br>(Borde precario)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #bf4e43; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt7"></use></svg>
+          <span>Emergencia<br>(Brasa baja)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #bd423a; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt8"></use></svg>
+          <span>Intervención<br>(Cruz punteada)</span>
+        </div>
+      </div>
+      <div class="state-alt-card" style="--state-color: #b03831; color: var(--state-color);">
+        <div>
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care-alt9"></use></svg>
+          <span>Intervención 2<br>(Cruz limpia)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="icon-spec-grid">
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--text-main);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-sleep"></use></svg>
+        </div>
+        <div class="layer-desc">Sueño</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-body);"><i data-lucide="waves"></i></div>
+        <div class="layer-desc">Cuerpo / movimiento</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-project);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 23 21 1 21" /></svg>
+        </div>
+        <div class="layer-desc">Proyecto</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-home);"><i data-lucide="tent"></i></div>
+        <div class="layer-desc">Comida / casa</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-social);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+            <polygon points="12 6.5, 17 9.5, 17 14.5, 12 17.5, 7 14.5, 7 9.5" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <div class="layer-desc">Vínculos</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-interior);">
+          <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+            <polygon points="12 2, 22 12, 12 22, 2 12" />
+            <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+        <div class="layer-desc">Interior</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-unknown">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-unknown"></use></svg>
+        </div>
+        <div class="layer-desc">Sin datos</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-care">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-care"></use></svg>
+        </div>
+        <div class="layer-desc">Cuidado</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-attention">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-attention"></use></svg>
+        </div>
+        <div class="layer-desc">Atención</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-motion">
+          <i data-lucide="activity"></i>
+        </div>
+        <div class="layer-desc">En marcha</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-sustained">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-sustained"></use></svg>
+        </div>
+        <div class="layer-desc">Sostenido</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo state-solid">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-state-solid"></use></svg>
+        </div>
+        <div class="layer-desc">Sólido</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-coral);"><i data-lucide="shield-alert"></i></div>
+        <div class="layer-desc">Riesgo</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-cardboard);"><i data-lucide="rotate-ccw"></i></div>
+        <div class="layer-desc">Recuperación</div>
+      </div>
+    </div>
+
+    <header style="margin-top: 4rem;">
+      <h2 style="font-size: 1.75rem;">Iconografía de Abstinencias</h2>
+      <p>El módulo puede llamarse Sobriedad o Abstinencias según el contexto, pero sus símbolos deben ser discretos: protección, límite y registro diario, sin volverse explícitos ni moralizantes.</p>
+    </header>
+
+    <div class="icon-spec-grid">
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);"><i data-lucide="shield"></i></div>
+        <div class="layer-desc">Abstinencia</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);"><i data-lucide="glass-water"></i></div>
+        <div class="layer-desc">Alcohol</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-intimate-boundary"></use></svg>
+        </div>
+        <div class="layer-desc">Conducta sexual</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);"><i data-lucide="circle-slash"></i></div>
+        <div class="layer-desc">Sustancias</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);">
+          <svg class="lucide custom-ui-icon"><use href="#icon-vocal-no-phone-bed"></use></svg>
+        </div>
+        <div class="layer-desc">Celular en cama</div>
+      </div>
+      <div class="icon-spec-card">
+        <div class="layer-logo" style="color: var(--color-layer-conduct);"><i data-lucide="zap-off"></i></div>
+        <div class="layer-desc">Impulso</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const checklist = document.querySelector('.checklist');
+      const divider = document.getElementById('completedDivider');
+      const checkboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+
+      // Asignar un ID único de View Transition a cada item para animarlos fluidamente
+      document.querySelectorAll('.checklist-item').forEach((item, index) => {
+        item.style.viewTransitionName = `item-${index}`;
+        // Inicializar estado visual basado en si está checkeado
+        if(item.querySelector('input').checked) {
+          item.classList.add('completed');
+          checklist.appendChild(item); // Mover al fondo inicialmente
+        }
+      });
+
+      const updateList = () => {
+        let hasCompleted = false;
+        
+        checkboxes.forEach(cb => {
+          const item = cb.closest('.checklist-item');
+          if (cb.checked) {
+            item.classList.add('completed');
+            checklist.appendChild(item); // Mueve el elemento al final de la lista
+            hasCompleted = true;
+          } else {
+            item.classList.remove('completed');
+            checklist.insertBefore(item, divider); // Mueve el elemento antes del divisor
+          }
+        });
+
+        // Mostrar u ocultar el divisor de "Completados"
+        divider.style.display = hasCompleted ? 'block' : 'none';
+        checklist.appendChild(divider); // Asegurar que el divisor queda por encima de los completados
+        
+        // Mover los completados reales debajo del divisor
+        checkboxes.forEach(cb => {
+          if (cb.checked) {
+            checklist.appendChild(cb.closest('.checklist-item'));
+          }
+        });
+      };
+
+      // Inicializar
+      updateList();
+
+      // Escuchar cambios
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+          // Si el navegador soporta View Transitions (Chrome 111+, Edge), animamos
+          if (document.startViewTransition) {
+            document.startViewTransition(() => updateList());
+          } else {
+            updateList(); // Fallback para navegadores antiguos
+          }
+        });
+      });
+      // Inicializar iconos de Lucide al final
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

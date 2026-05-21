@@ -1,0 +1,321 @@
+/* 
+  Vocal - Prototipo Orgánico (Estilo Zen/Claude)
+*/
+
+:root {
+  /* 
+    3 Colores Base Principales (Personalidad):
+    1. Base Oscura Orgánica: Un carbón cálido, casi sepia oscuro, muy humano. No es gris frío.
+    2. Cartón/Beige (Cardboard): Color papel reciclado para botones primarios y títulos.
+    3. Coral/Terracota: El acento vivo para llamadas a la acción, íconos y estados activos.
+  */
+  
+  --bg-base: #1F1E1D;
+  --bg-surface: #2A2927;      /* Superficies ligeramente más claras */
+  --bg-surface-hover: #333230;
+
+  --color-cardboard: #E0D8C3; /* Beige cartón */
+  --color-cardboard-hover: #D1C9B3;
+  
+  --color-coral: #E57B65;     /* Naranja/Coral vivo pero mate */
+  --color-coral-muted: color-mix(in srgb, var(--color-coral) 20%, transparent);
+
+  --text-main: #EAE5D9;       /* Hueso/Beige claro para texto legible */
+  --text-muted: #A3A09A;      /* Gris cálido para texto secundario */
+  
+  /* Colores Simbólicos para las Capas */
+  --color-layer-interior: #8893A5; /* Azul Pizarra apagado (Mente/Calma) */
+  --color-layer-body: #7F9E83;     /* Verde Salvia (Biología/Naturaleza) */
+  --color-layer-conduct: #C49B55;  /* Ocre/Mostaza (Límites/Estructura) */
+  --color-layer-home: #C9786A;     /* Terracota (Arcilla/Hogar/Calidez) */
+  --color-layer-social: #A38491;   /* Malva Apagado (Vínculos/Empatía) */
+  --color-layer-project: #708A9E;  /* Cerceta apagado (Construcción/Enfoque) */
+
+  --font-serif: 'Lora', "Georgia", ui-serif, serif;
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Radios y Espaciado */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-pill: 99px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  /* Fuente del cuerpo: Limpia, redonda y humana (Outfit) */
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+/* Contenedor principal */
+.app-container {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Tipografía Orgánica para Encabezados (Estilo Libro/Editorial con Lora) */
+h1, h2, h3, .serif-text {
+  font-family: var(--font-serif);
+  text-wrap: balance;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 2.5rem;
+  color: var(--color-cardboard); /* El título destaca con el color cartón */
+  margin-bottom: 0.25rem;
+}
+
+p {
+  text-wrap: pretty;
+  color: var(--text-muted);
+}
+
+/* Superficies (Tarjetas) sin bordes ni sombras pesadas, pura geometría limpia */
+.card {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  /* Cero sombras exageradas. Todo es plano, limpio y de aspecto dibujado. */
+  transition: background-color 0.2s ease;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--color-cardboard);
+}
+
+/* Etiquetas (Tags/Badges) */
+.badge {
+  background: var(--color-coral-muted);
+  color: var(--color-coral);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Botones (Inspirado en Zen Browser) */
+.button-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  font-family: inherit;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background-color: var(--color-cardboard);
+  color: var(--bg-base); /* Texto oscuro sobre fondo cartón */
+}
+
+.btn-primary:hover {
+  background-color: var(--color-cardboard-hover);
+}
+
+.btn-secondary {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* Checklist Orgánico */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  user-select: none;
+}
+
+.checklist-item:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* El Checkbox es de color Coral cuando está activo */
+.checklist-item input[type="checkbox"] {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--text-muted);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+.checklist-item input[type="checkbox"]:checked {
+  background-color: var(--color-coral);
+  border-color: var(--color-coral);
+}
+
+/* Iconografía simple y de trazo (Checkmark) */
+.checklist-item input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--bg-base);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+}
+
+.checklist-item input[type="checkbox"]:checked::after {
+  transform: rotate(45deg) scale(1);
+  opacity: 1;
+}
+
+.checklist-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.checklist-text span {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--text-main);
+  transition: color 0.2s ease;
+}
+
+.checklist-text small {
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  font-weight: 300;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+/* Estilos de los iconos de capa */
+.layer-icon {
+  font-size: 0.75rem;
+}
+
+/* Estado completado */
+.checklist-item.completed {
+  opacity: 0.5;
+}
+
+.checklist-item.completed .checklist-text span {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Separador de completados */
+.completed-divider {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-muted) 30%, transparent);
+  display: none; /* Oculto por defecto */
+}
+
+/* Mockup de Logos / Configuración de Capas */
+.layer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.layer-card {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.layer-card:hover {
+  background-color: var(--bg-surface-hover);
+  transform: translateY(-2px);
+}
+
+.layer-logo {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.layer-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.layer-desc {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

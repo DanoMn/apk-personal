@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocal - Dashboard Mobile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg-base: #1f1e1d;
+      --bg-surface: #2a2927;
+      --bg-surface-2: #33312e;
+      --bg-elevated: #3a3733;
+      --color-cardboard: #e0d8c3;
+      --color-cardboard-soft: #cfc4aa;
+      --color-coral: #e57b65;
+      --color-coral-soft: color-mix(in srgb, var(--color-coral) 18%, transparent);
+      --text-main: #eae5d9;
+      --text-muted: #a6a097;
+      --text-faint: #777169;
+      --layer-interior: #8893a5;
+      --layer-body: #7f9e83;
+      --layer-conduct: #c49b55;
+      --layer-vinculos: #a38491;
+      --layer-project: #708a9e;
+      --risk: #d45b51;
+      --ok: #8dae80;
+      --state-motion: #5a8296;
+      --font-serif: 'Lora', Georgia, ui-serif, serif;
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-pill: 99px;
+      --screen-max: 430px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(229, 123, 101, 0.08), transparent 32rem),
+        var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      text-align: inherit;
+    }
+
+    .lucide {
+      width: 22px;
+      height: 22px;
+      stroke-width: 1.5;
+      stroke: currentColor;
+    }
+
+    .custom-ui-icon {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .custom-ui-icon .solid {
+      fill: currentColor;
+      stroke: none;
+    }
+
+    .layer-stamp .lucide,
+    .layer-mark .lucide {
+      stroke-width: 1.35;
+    }
+
+    .prototype-shell {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .mobile-app {
+      width: 100%;
+      max-width: var(--screen-max);
+      min-height: 100vh;
+      background: var(--bg-base);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .app-scroll {
+      min-height: 100vh;
+      padding: 1rem 1rem 2rem;
+    }
+
+    .topbar {
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .icon-button {
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      transition: background-color 0.2s ease, transform 0.12s ease;
+    }
+
+    .icon-button:active {
+      transform: scale(0.96);
+    }
+
+    .identity {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .identity-date-only h1 {
+      font-size: 1.42rem;
+      line-height: 1.05;
+      margin-top: 0;
+    }
+
+    .eyebrow {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    .serif {
+      font-family: var(--font-serif);
+      font-weight: 500;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    h1 {
+      color: var(--color-cardboard);
+      font-size: 1.82rem;
+      line-height: 1.08;
+      margin-top: 0.08rem;
+    }
+
+    h2 {
+      color: var(--color-cardboard);
+      font-size: 1.24rem;
+      line-height: 1.15;
+    }
+
+    p {
+      color: var(--text-muted);
+      text-wrap: pretty;
+    }
+
+    .status-card {
+      --state-color: var(--state-motion);
+      --score-progress: 84;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      width: fit-content;
+      padding: 0.3rem 0.62rem;
+      border-radius: var(--radius-pill);
+      background: color-mix(in srgb, var(--state-color) 20%, transparent);
+      color: var(--state-color);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status-title {
+      margin-top: 0.75rem;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      line-height: 1.1;
+    }
+
+    .status-copy {
+      margin-top: 0.45rem;
+      font-size: 0.94rem;
+    }
+
+    .score-orbit {
+      width: 104px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        conic-gradient(var(--state-color) calc(var(--score-progress) * 1%), rgba(255,255,255,0.08) 0),
+        var(--bg-elevated);
+    }
+
+    .score-inner {
+      width: 78px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .score-value {
+      color: var(--text-main);
+      font-size: 1.28rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .score-label {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      margin-top: 0.22rem;
+    }
+
+    .daily-progress-card {
+      --daily-progress: 64%;
+      margin-top: 0.72rem;
+      padding: 0.95rem;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      display: grid;
+      gap: 0.72rem;
+    }
+
+    .daily-progress-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.85rem;
+    }
+
+    .daily-progress-head strong {
+      color: var(--text-main);
+      font-size: 0.96rem;
+      font-weight: 700;
+    }
+
+    .daily-progress-value {
+      color: var(--color-cardboard);
+      font-size: 1.28rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .daily-progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.08);
+    }
+
+    .daily-progress-track span {
+      display: block;
+      width: var(--daily-progress);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--color-coral);
+    }
+
+    .daily-progress-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.15;
+    }
+
+    .anchor-card {
+      margin-top: 0.72rem;
+      padding: 1.1rem;
+      border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--color-cardboard) 12%, var(--bg-surface));
+    }
+
+    .anchor-card p {
+      color: var(--text-main);
+      font-family: var(--font-serif);
+      font-size: 1.02rem;
+      line-height: 1.45;
+    }
+
+    .anchor-card cite {
+      display: block;
+      margin-top: 0.65rem;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-style: normal;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.72rem;
+      margin-top: 0.85rem;
+    }
+
+    .primary-action,
+    .risk-action {
+      min-height: 54px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      font-weight: 700;
+      transition: transform 0.12s ease, background-color 0.2s ease;
+    }
+
+    .primary-action {
+      background: var(--color-cardboard);
+      color: var(--bg-base);
+      padding: 0 1rem;
+    }
+
+    .risk-action {
+      width: 58px;
+      background: color-mix(in srgb, var(--risk) 22%, var(--bg-surface));
+      color: #f0b0a7;
+    }
+
+    .primary-action:active,
+    .risk-action:active {
+      transform: scale(0.97);
+    }
+
+    .section {
+      margin-top: 1.35rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.72rem;
+    }
+
+    .section-note {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .layer-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.45rem;
+    }
+
+    .layer-pill {
+      min-width: 0;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      padding: 0.62rem 0.32rem;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      gap: 0.42rem;
+    }
+
+    .layer-stamp {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+    }
+
+    .mini-meter {
+      width: 100%;
+      max-width: 28px;
+      height: 4px;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .mini-meter span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: currentColor;
+    }
+
+    .layer-pill small {
+      max-width: 100%;
+      color: var(--text-muted);
+      font-size: 0.62rem;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.65rem;
+    }
+
+    .signal {
+      min-height: 92px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      color: inherit;
+      padding: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background-color 0.2s ease, transform 0.12s ease;
+    }
+
+    .signal-action:active {
+      transform: scale(0.97);
+    }
+
+    .signal-action:hover {
+      background: var(--bg-surface-2);
+    }
+
+    .signal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+
+    .signal strong {
+      color: var(--text-main);
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .signal span:last-child {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      line-height: 1.1;
+    }
+
+    .sobriety-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+
+    .streak {
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      padding: 0.9rem;
+    }
+
+    .streak-head {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .streak-number {
+      display: flex;
+      align-items: baseline;
+      gap: 0.25rem;
+      margin-top: 0.65rem;
+      color: var(--color-cardboard);
+      font-weight: 700;
+    }
+
+    .streak-number strong {
+      font-size: 2.05rem;
+      line-height: 1;
+    }
+
+    .streak small {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .check-card {
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      padding: 0.35rem;
+    }
+
+    .check-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: center;
+      min-height: 62px;
+      padding: 0.72rem;
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .check-item:hover {
+      background: var(--bg-surface-2);
+    }
+
+    .check-item input {
+      appearance: none;
+      width: 23px;
+      height: 23px;
+      border-radius: 7px;
+      border: 2px solid var(--text-muted);
+      background: transparent;
+      position: relative;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .check-item input::after {
+      content: "";
+      position: absolute;
+      width: 5px;
+      height: 10px;
+      top: 3px;
+      left: 7px;
+      border: solid var(--bg-base);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg) scale(0);
+      opacity: 0;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .check-item input:checked {
+      border-color: var(--color-coral);
+      background: var(--color-coral);
+    }
+
+    .check-item input:checked::after {
+      opacity: 1;
+      transform: rotate(45deg) scale(1);
+    }
+
+    .check-text {
+      min-width: 0;
+    }
+
+    .check-text strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.96rem;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+
+    .check-text span {
+      display: flex;
+      align-items: center;
+      gap: 0.32rem;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      margin-top: 0.22rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .check-item:has(input:checked) {
+      opacity: 0.58;
+    }
+
+    .check-item:has(input:checked) strong {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    .check-completed-divider {
+      display: none;
+      color: var(--text-faint);
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin: 0.45rem 0 0.18rem;
+      padding: 0.45rem 0.75rem 0;
+    }
+
+    .check-completed-divider.visible {
+      display: block;
+    }
+
+    .check-value {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .support-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+
+    .support-card {
+      min-width: 0;
+      min-height: 124px;
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background-color 0.2s ease, transform 0.12s ease;
+    }
+
+    .support-card:active {
+      transform: scale(0.97);
+    }
+
+    .support-card:hover {
+      background: var(--bg-surface-2);
+    }
+
+    .support-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      color: var(--text-muted);
+    }
+
+    .support-card strong {
+      display: block;
+      color: var(--color-cardboard);
+      font-size: 1.28rem;
+      line-height: 1;
+      margin-top: 0.85rem;
+    }
+
+    .support-copy {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      line-height: 1.2;
+      margin-top: 0.38rem;
+    }
+
+    .support-list {
+      display: grid;
+      gap: 0.28rem;
+      margin-top: 0.76rem;
+    }
+
+    .support-list small {
+      display: flex;
+      align-items: center;
+      gap: 0.36rem;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1.1;
+      min-width: 0;
+    }
+
+    .support-list small i {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+    }
+
+    .sleep-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.48);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+      z-index: 30;
+    }
+
+    .sleep-panel {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      width: min(100%, var(--screen-max));
+      max-height: 92vh;
+      overflow-y: auto;
+      transform: translate(-50%, 105%);
+      border-radius: 26px 26px 0 0;
+      background: #282622;
+      padding: 0.85rem 1rem 1rem;
+      z-index: 31;
+      transition: transform 0.26s ease;
+      box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.42);
+      pointer-events: none;
+    }
+
+    .mobile-app.sleep-open .sleep-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-app.sleep-open .sleep-panel {
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+    }
+
+    .sheet-handle {
+      width: 48px;
+      height: 4px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.16);
+      margin: 0 auto 0.85rem;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .sheet-title {
+      display: flex;
+      align-items: center;
+      gap: 0.58rem;
+      min-width: 0;
+    }
+
+    .sheet-title h2 {
+      font-size: 1.3rem;
+    }
+
+    .sleep-form {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .sleep-group {
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      padding: 0.9rem;
+    }
+
+    .sleep-group h3 {
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+
+    .time-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.62rem;
+    }
+
+    .time-field {
+      display: grid;
+      gap: 0.34rem;
+    }
+
+    .time-field span {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .time-field input,
+    .sleep-note {
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      color: var(--text-main);
+      padding: 0.68rem;
+      outline: none;
+    }
+
+    .sleep-note {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    .quality-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.52rem;
+    }
+
+    .quality-chip {
+      min-height: 42px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-2);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .quality-chip.active {
+      background: color-mix(in srgb, var(--color-coral) 20%, var(--bg-surface-2));
+      color: #efaa9c;
+    }
+
+    .sheet-action {
+      min-height: 52px;
+      border-radius: var(--radius-sm);
+      background: var(--color-cardboard);
+      color: var(--bg-base);
+      font-weight: 700;
+      margin-top: 0.15rem;
+      text-align: center;
+    }
+
+    .week-card {
+      border-radius: var(--radius-lg);
+      background: var(--bg-surface);
+      padding: 1rem;
+    }
+
+    .week-row {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr) 36px;
+      align-items: center;
+      gap: 0.75rem;
+      min-height: 32px;
+    }
+
+    .week-row + .week-row {
+      margin-top: 0.48rem;
+    }
+
+    .week-name {
+      color: var(--text-main);
+      font-size: 0.82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .week-bar {
+      height: 9px;
+      border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .week-bar span {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      border-radius: inherit;
+      background: currentColor;
+    }
+
+    .week-score {
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      text-align: right;
+    }
+
+    .drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease;
+      z-index: 10;
+    }
+
+    .drawer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: min(82vw, 340px);
+      max-width: calc(var(--screen-max) - 44px);
+      height: 100%;
+      min-height: 100vh;
+      transform: translateX(-105%);
+      background: #272522;
+      z-index: 11;
+      padding: 1.1rem;
+      transition: transform 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mobile-app.drawer-open .drawer-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-app.drawer-open .drawer {
+      transform: translateX(0);
+    }
+
+    .drawer-brand {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .drawer-brand-main {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.72rem;
+    }
+
+    .app-logo {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: var(--color-cardboard);
+    }
+
+    .app-logo svg {
+      width: 34px;
+      height: 34px;
+    }
+
+    .drawer-title {
+      color: var(--color-cardboard);
+      font-family: var(--font-serif);
+      font-size: 1.08rem;
+      line-height: 1.08;
+    }
+
+    .drawer-subtitle {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      margin-top: 0.24rem;
+    }
+
+    .drawer-nav {
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .drawer-link {
+      min-height: 48px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 0.78rem;
+      padding: 0 0.72rem;
+      color: var(--text-main);
+      background: transparent;
+      text-align: left;
+    }
+
+    .drawer-link.active {
+      background: var(--color-coral-soft);
+      color: #efaa9c;
+    }
+
+    .drawer-footer {
+      margin-top: auto;
+      padding: 0.9rem;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+    }
+
+    .drawer-footer strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .drawer-footer span {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    @media (min-width: 820px) {
+      .prototype-shell {
+        align-items: center;
+        padding: 2rem;
+      }
+
+      .mobile-app {
+        min-height: min(900px, calc(100vh - 4rem));
+        max-height: min(900px, calc(100vh - 4rem));
+        border-radius: 34px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.34);
+        overflow-y: auto;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute; overflow:hidden;" aria-hidden="true" focusable="false">
+    <symbol id="icon-vocal-checklist" viewBox="0 0 24 24">
+      <rect class="solid" x="4" y="5" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 6.65h9.5" />
+      <rect class="solid" x="4" y="10.35" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 12h8" />
+      <rect class="solid" x="4" y="15.7" width="3.3" height="3.3" rx="0.9" />
+      <path d="M10 17.35h6.5" />
+    </symbol>
+    <symbol id="icon-vocal-intimate-boundary" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <path d="M12 8.1l3.7 3.7-3.7 3.7-3.7-3.7L12 8.1z" />
+      <path d="M12 10.55l1.25 1.25L12 13.05l-1.25-1.25L12 10.55z" class="solid" />
+    </symbol>
+    <symbol id="icon-vocal-logbook" viewBox="0 0 24 24">
+      <path d="M7 4.5h8.6c1 0 1.9.85 1.9 1.9v13.1H8.2A2.7 2.7 0 0 1 5.5 16.8V6A1.5 1.5 0 0 1 7 4.5z" />
+      <path d="M8.2 19.5a2.2 2.2 0 0 1 0-4.4h9.3" />
+      <path d="M9.2 8.2h5.1M9.2 11h3.8" />
+    </symbol>
+    <symbol id="icon-vocal-layer-stack" viewBox="0 0 24 24">
+      <path d="M12 4l8 4.2-8 4.2-8-4.2L12 4z" />
+      <path d="M4 12l8 4.2 8-4.2" />
+      <path d="M4 15.8l8 4.2 8-4.2" />
+    </symbol>
+    <symbol id="icon-vocal-sleep" viewBox="0 0 24 24">
+      <path class="solid" d="M18.25 15.35c-1.08.66-2.36 1.04-3.72 1.04-4.05 0-7.34-3.28-7.34-7.34 0-1.74.6-3.34 1.61-4.59-3.28.92-5.68 3.92-5.68 7.48 0 4.3 3.48 7.78 7.78 7.78 3.32 0 6.15-2.08 7.25-5.01.04-.12.08-.24.1-.36z" />
+      <path d="M18.15 4.25l1.02 1.78 1.78 1.02-1.78 1.02-1.02 1.78-1.02-1.78-1.78-1.02 1.78-1.02 1.02-1.78z" />
+    </symbol>
+    <symbol id="icon-vocal-no-phone-bed" viewBox="0 0 24 24">
+      <path d="M4.4 15.2V8.9" />
+      <path d="M4.4 13.2h8.1c1.25 0 2.25.98 2.25 2.2v1.55" />
+      <path d="M4.4 16.95h15.2" />
+      <path d="M4.4 16.95v2.4M19.6 16.95v2.4" />
+      <path d="M15.85 5.05h2.9c.72 0 1.3.58 1.3 1.3v6.2c0 .72-.58 1.3-1.3 1.3h-3.2c-.72 0-1.3-.58-1.3-1.3v-3" />
+      <path d="M15.15 4.15l5.7 10.55" />
+    </symbol>
+  </svg>
+
+  <div class="prototype-shell">
+    <main class="mobile-app" id="app">
+      <aside class="drawer" aria-label="Navegacion principal">
+        <div class="drawer-brand">
+          <div class="drawer-brand-main">
+            <span class="app-logo" aria-hidden="true">
+              <svg viewBox="0 0 64 64" fill="none">
+                <path d="M56 32C56 18.7 45.3 8 32 8C18.7 8 8 18.7 8 32C8 45.3 18.7 56 32 56C43.6 56 52 47.6 52 36.6C52 25.7 43.9 16 33 16C23.1 16 16 23.1 16 32C16 41.1 22.9 48 32 48C39.3 48 44 43.3 44 36.2C44 29.1 39.1 24 32 24C27.1 24 24 27.1 24 32C24 36.7 27.3 40 32 40C35.1 40 37.4 37.7 37.4 34.9C37.4 31.9 35.4 30 32 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <div>
+              <div class="drawer-title">Autonomia sin limites</div>
+              <div class="drawer-subtitle">Base diaria</div>
+            </div>
+          </div>
+          <button class="icon-button" id="closeDrawer" aria-label="Cerrar menu">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <nav class="drawer-nav">
+          <button class="drawer-link active"><i data-lucide="layout-grid"></i><span>Dashboard</span></button>
+          <button class="drawer-link"><svg class="lucide custom-ui-icon"><use href="#icon-vocal-checklist"></use></svg><span>Checklist</span></button>
+          <button class="drawer-link"><i data-lucide="list-todo"></i><span>Pendientes</span></button>
+          <button class="drawer-link"><i data-lucide="shield-alert"></i><span>Riesgo</span></button>
+          <button class="drawer-link"><i data-lucide="bar-chart-3"></i><span>Progreso</span></button>
+          <button class="drawer-link"><svg class="lucide custom-ui-icon"><use href="#icon-vocal-logbook"></use></svg><span>Registros</span></button>
+          <button class="drawer-link"><svg class="lucide custom-ui-icon"><use href="#icon-vocal-layer-stack"></use></svg><span>Capas y actividades</span></button>
+          <button class="drawer-link"><i data-lucide="sliders-horizontal"></i><span>Configuracion</span></button>
+        </nav>
+
+        <div class="drawer-footer">
+          <strong>Estado calculado</strong>
+          <span>Room guarda hechos; el dominio interpreta senales.</span>
+        </div>
+      </aside>
+      <button class="drawer-backdrop" id="drawerBackdrop" aria-label="Cerrar menu"></button>
+
+      <div class="app-scroll">
+        <header class="topbar">
+          <button class="icon-button" id="openDrawer" aria-label="Abrir menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="identity identity-date-only">
+            <h1>Miercoles 20 de mayo</h1>
+          </div>
+          <button class="icon-button" aria-label="Buscar">
+            <i data-lucide="search"></i>
+          </button>
+        </header>
+
+        <section class="status-card" aria-label="Estado de base">
+          <div>
+            <span class="status-label"><i data-lucide="activity"></i> En marcha</span>
+            <h2 class="status-title">La base esta activa y sosteniendose.</h2>
+            <p class="status-copy">Hay practica real en tu dia. Mantener el ritmo tambien significa cerrar con calma antes de dormir.</p>
+          </div>
+          <div class="score-orbit" style="--score-progress: 84;">
+            <div class="score-inner">
+              <span class="score-value">842</span>
+              <span class="score-label">base</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="daily-progress-card" style="--daily-progress: 64%;" aria-label="Progreso diario">
+          <div class="daily-progress-head">
+            <strong>Progreso de hoy</strong>
+            <span class="daily-progress-value">64%</span>
+          </div>
+          <div class="daily-progress-track"><span></span></div>
+          <div class="daily-progress-meta">
+            <span>3 pendientes</span>
+            <span>4 de 5 capas activas</span>
+          </div>
+        </section>
+
+        <section class="anchor-card" aria-label="Frase ancla">
+          <p>"Life can only be understood backwards; but it must be lived forwards."</p>
+          <cite>Soren Kierkegaard</cite>
+        </section>
+
+        <div class="action-grid">
+          <button class="primary-action">
+            <svg class="lucide custom-ui-icon"><use href="#icon-vocal-checklist"></use></svg>
+            Registrar checklist
+          </button>
+          <button class="risk-action" aria-label="Abrir protocolo de riesgo">
+            <i data-lucide="flag"></i>
+          </button>
+        </div>
+
+        <section class="section" aria-label="Capas del dia">
+          <div class="section-header">
+            <h2>Capas de hoy</h2>
+            <span class="section-note">4 de 5 activas</span>
+          </div>
+
+          <div class="layer-strip">
+            <div class="layer-pill" style="color: var(--layer-interior);">
+              <div class="layer-stamp">
+                <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="square" stroke-linejoin="miter">
+                  <polygon points="12 2, 22 12, 12 22, 2 12"></polygon>
+                  <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none"></polygon>
+                </svg>
+              </div>
+              <div class="mini-meter"><span style="width: 35%;"></span></div>
+              <small>Interior</small>
+            </div>
+
+            <div class="layer-pill" style="color: var(--layer-body);">
+              <div class="layer-stamp"><i data-lucide="waves"></i></div>
+              <div class="mini-meter"><span style="width: 78%;"></span></div>
+              <small>Cuerpo</small>
+            </div>
+
+            <div class="layer-pill" style="color: var(--layer-conduct);">
+              <div class="layer-stamp"><i data-lucide="infinity"></i></div>
+              <div class="mini-meter"><span style="width: 92%;"></span></div>
+              <small>Conducta</small>
+            </div>
+
+            <div class="layer-pill" style="color: var(--layer-vinculos);">
+              <div class="layer-stamp">
+                <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="square" stroke-linejoin="miter">
+                  <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5"></polygon>
+                  <polygon points="12 6.5, 17 9.5, 17 14.5, 12 17.5, 7 14.5, 7 9.5" fill="currentColor" stroke="none"></polygon>
+                </svg>
+              </div>
+              <div class="mini-meter"><span style="width: 20%;"></span></div>
+              <small>Vínculos</small>
+            </div>
+
+            <div class="layer-pill" style="color: var(--layer-project);">
+              <div class="layer-stamp">
+                <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <polygon points="12 2 23 21 1 21"></polygon>
+                </svg>
+              </div>
+              <div class="mini-meter"><span style="width: 70%;"></span></div>
+              <small>Proyecto</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Señales importantes">
+          <div class="section-header">
+            <h2>Señales</h2>
+            <span class="section-note">lectura rapida</span>
+          </div>
+
+          <div class="signal-grid">
+            <button class="signal signal-action" id="openSleepPanel" type="button" aria-label="Abrir registro de sueño">
+              <div class="signal-top"><svg class="lucide custom-ui-icon"><use href="#icon-vocal-sleep"></use></svg><span>Sueño</span></div>
+              <strong>6h 40m</strong>
+              <span id="sleepSignalStatus">aceptable</span>
+            </button>
+            <div class="signal">
+              <div class="signal-top" style="color: var(--layer-project);">
+                <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 23 21 1 21"></polygon></svg>
+                <span>Proyecto</span>
+              </div>
+              <strong>20m</strong>
+              <span>musica</span>
+            </div>
+            <button class="signal signal-action" type="button" aria-label="Cambiar senal destacada">
+              <div class="signal-top" style="color: var(--layer-interior);">
+                <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="square" stroke-linejoin="miter">
+                  <polygon points="12 2, 22 12, 12 22, 2 12"></polygon>
+                  <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none"></polygon>
+                </svg>
+                <span>Interior</span>
+              </div>
+              <strong>12m</strong>
+              <span>elegida</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Sobriedad y abstinencias">
+          <div class="section-header">
+            <h2>Sobriedad</h2>
+            <span class="section-note">rachas activas</span>
+          </div>
+
+          <div class="sobriety-row">
+            <div class="streak">
+              <div class="streak-head"><i data-lucide="glass-water"></i><span>Alcohol</span></div>
+              <div class="streak-number"><strong>18</strong><span>dias</span></div>
+              <small>hoy limpio</small>
+            </div>
+            <div class="streak">
+              <div class="streak-head"><svg class="lucide custom-ui-icon"><use href="#icon-vocal-intimate-boundary"></use></svg><span>Conducta sexual</span></div>
+              <div class="streak-number"><strong>4</strong><span>dias</span></div>
+              <small>activa</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Checklist compacta">
+          <div class="section-header">
+            <h2>Faltan ahora</h2>
+            <span class="section-note">3 pendientes</span>
+          </div>
+
+          <div class="check-card">
+            <label class="check-item">
+              <input type="checkbox">
+              <span class="check-text">
+                <strong>Meditar antes de dormir</strong>
+                <span style="color: var(--layer-interior);">
+                  <svg class="lucide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="square" stroke-linejoin="miter" style="width: 14px; height: 14px;">
+                    <polygon points="12 2, 22 12, 12 22, 2 12"></polygon>
+                    <polygon points="12 6.5, 17.5 12, 12 17.5, 6.5 12" fill="currentColor" stroke="none"></polygon>
+                  </svg>
+                  Interior
+                </span>
+              </span>
+              <span class="check-value">5 min</span>
+            </label>
+
+            <div class="check-completed-divider" id="checkCompletedDivider">Completados</div>
+
+            <label class="check-item">
+              <input type="checkbox" checked>
+              <span class="check-text">
+                <strong>Gimnasio o caminata fuerte</strong>
+                <span style="color: var(--layer-body);"><i data-lucide="waves" style="width: 14px; height: 14px;"></i> Cuerpo</span>
+              </span>
+              <span class="check-value">45 min</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox" checked>
+              <span class="check-text">
+                <strong>Avanzar Digitaliza</strong>
+                <span style="color: var(--layer-project);">
+                  <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 14px; height: 14px;"><polygon points="12 2 23 21 1 21"></polygon></svg>
+                  Proyecto
+                </span>
+              </span>
+              <span class="check-value">30 min</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox">
+              <span class="check-text">
+                <strong>Componer EP</strong>
+                <span style="color: var(--layer-project);">
+                  <svg class="lucide" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width: 14px; height: 14px;"><polygon points="12 2 23 21 1 21"></polygon></svg>
+                  Proyecto
+                </span>
+              </span>
+              <span class="check-value">20 min</span>
+            </label>
+
+            <label class="check-item">
+              <input type="checkbox">
+              <span class="check-text">
+                <strong>No celular en cama</strong>
+                <span style="color: var(--layer-conduct);"><svg class="lucide custom-ui-icon" style="width: 14px; height: 14px;"><use href="#icon-vocal-no-phone-bed"></use></svg> Conducta</span>
+              </span>
+              <span class="check-value">noche</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Soportes del dia">
+          <div class="section-header">
+            <h2>Soportes</h2>
+            <span class="section-note">ligero</span>
+          </div>
+
+          <div class="support-grid">
+            <button class="support-card" type="button" aria-label="Abrir checklist secundaria">
+              <span class="support-top">
+                <span>Checklist secundaria</span>
+                <svg class="lucide custom-ui-icon"><use href="#icon-vocal-checklist"></use></svg>
+              </span>
+              <span>
+                <strong>2/4</strong>
+                <span class="support-copy">cuidado básico</span>
+              </span>
+              <span class="support-list">
+                <small><i data-lucide="check"></i>Ducha marcada</small>
+                <small><i data-lucide="circle"></i>Dientes pendiente</small>
+              </span>
+            </button>
+
+            <button class="support-card" type="button" aria-label="Abrir pendientes">
+              <span class="support-top">
+                <span>Pendientes</span>
+                <i data-lucide="list-todo"></i>
+              </span>
+              <span>
+                <strong>3</strong>
+                <span class="support-copy">tareas abiertas</span>
+              </span>
+              <span class="support-list">
+                <small><i data-lucide="circle"></i>Pagar recibo</small>
+                <small><i data-lucide="circle"></i>Comprar cuerdas</small>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section" aria-label="Resumen semanal">
+          <div class="section-header">
+            <h2>Semana</h2>
+            <span class="section-note">consistencia</span>
+          </div>
+
+          <div class="week-card">
+            <div class="week-row" style="color: var(--layer-interior);">
+              <span class="week-name">Interior</span>
+              <div class="week-bar"><span style="--w: 42%;"></span></div>
+              <span class="week-score">3/7</span>
+            </div>
+            <div class="week-row" style="color: var(--layer-body);">
+              <span class="week-name">Cuerpo</span>
+              <div class="week-bar"><span style="--w: 58%;"></span></div>
+              <span class="week-score">4/7</span>
+            </div>
+            <div class="week-row" style="color: var(--layer-conduct);">
+              <span class="week-name">Conducta</span>
+              <div class="week-bar"><span style="--w: 86%;"></span></div>
+              <span class="week-score">6/7</span>
+            </div>
+            <div class="week-row" style="color: var(--layer-project);">
+              <span class="week-name">Proyecto</span>
+              <div class="week-bar"><span style="--w: 72%;"></span></div>
+              <span class="week-score">5/7</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <button class="sleep-backdrop" id="sleepBackdrop" aria-label="Cerrar registro de sueño"></button>
+      <section class="sleep-panel" id="sleepPanel" role="dialog" aria-label="Registro de sueño" aria-modal="true" aria-hidden="true">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div class="sheet-title">
+            <svg class="lucide custom-ui-icon"><use href="#icon-vocal-sleep"></use></svg>
+            <div>
+              <span class="eyebrow">Señal de descanso</span>
+              <h2>Sueño</h2>
+            </div>
+          </div>
+          <button class="icon-button" id="closeSleepPanel" aria-label="Cerrar sueño">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="sleep-form">
+          <section class="sleep-group" aria-label="Plan de sueño">
+            <h3>Plan</h3>
+            <div class="time-grid">
+              <label class="time-field">
+                <span>Dormir</span>
+                <input type="time" value="23:30">
+              </label>
+              <label class="time-field">
+                <span>Despertar</span>
+                <input type="time" value="07:30">
+              </label>
+            </div>
+          </section>
+
+          <section class="sleep-group" aria-label="Registro real de sueño">
+            <h3>Registro</h3>
+            <div class="time-grid">
+              <label class="time-field">
+                <span>Dormí</span>
+                <input type="time" value="00:20">
+              </label>
+              <label class="time-field">
+                <span>Desperté</span>
+                <input type="time" value="07:00">
+              </label>
+            </div>
+          </section>
+
+          <section class="sleep-group" aria-label="Calidad de sueño">
+            <h3>Calidad</h3>
+            <div class="quality-row">
+              <button class="quality-chip" type="button">Baja</button>
+              <button class="quality-chip active" type="button">Aceptable</button>
+              <button class="quality-chip" type="button">Buena</button>
+            </div>
+          </section>
+
+          <label class="time-field">
+            <span>Nota</span>
+            <textarea class="sleep-note" placeholder="Algo que haya afectado el descanso"></textarea>
+          </label>
+
+          <button class="sheet-action" id="saveSleepPanel" type="button">Guardar sueño</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const app = document.getElementById('app');
+      const openDrawer = document.getElementById('openDrawer');
+      const closeDrawer = document.getElementById('closeDrawer');
+      const drawerBackdrop = document.getElementById('drawerBackdrop');
+
+      const setDrawer = (isOpen) => {
+        app.classList.toggle('drawer-open', isOpen);
+      };
+
+      openDrawer.addEventListener('click', () => setDrawer(true));
+      closeDrawer.addEventListener('click', () => setDrawer(false));
+      drawerBackdrop.addEventListener('click', () => setDrawer(false));
+
+      const openSleepPanel = document.getElementById('openSleepPanel');
+      const closeSleepPanel = document.getElementById('closeSleepPanel');
+      const sleepBackdrop = document.getElementById('sleepBackdrop');
+      const sleepPanel = document.getElementById('sleepPanel');
+      const saveSleepPanel = document.getElementById('saveSleepPanel');
+      const sleepSignalStatus = document.getElementById('sleepSignalStatus');
+      const qualityChips = document.querySelectorAll('.quality-chip');
+
+      const setSleepPanel = (isOpen) => {
+        app.classList.toggle('sleep-open', isOpen);
+        sleepPanel.setAttribute('aria-hidden', String(!isOpen));
+      };
+
+      openSleepPanel.addEventListener('click', () => setSleepPanel(true));
+      closeSleepPanel.addEventListener('click', () => setSleepPanel(false));
+      sleepBackdrop.addEventListener('click', () => setSleepPanel(false));
+
+      qualityChips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          qualityChips.forEach((item) => item.classList.remove('active'));
+          chip.classList.add('active');
+        });
+      });
+
+      saveSleepPanel.addEventListener('click', () => {
+        const activeQuality = document.querySelector('.quality-chip.active');
+        sleepSignalStatus.textContent = activeQuality
+          ? activeQuality.textContent.toLowerCase()
+          : 'registrado';
+        setSleepPanel(false);
+      });
+
+      const checkCard = document.querySelector('.check-card');
+      const checkDivider = document.getElementById('checkCompletedDivider');
+      const checkInputs = document.querySelectorAll('.check-item input');
+      const checkNote = document.querySelector('.section[aria-label="Checklist compacta"] .section-note');
+
+      const updateChecklistOrder = () => {
+        const items = Array.from(document.querySelectorAll('.check-item'));
+        const pendingItems = items.filter((item) => !item.querySelector('input').checked);
+        const completedItems = items.filter((item) => item.querySelector('input').checked);
+
+        pendingItems.forEach((item) => checkCard.insertBefore(item, checkDivider));
+        checkCard.appendChild(checkDivider);
+        completedItems.forEach((item) => checkCard.appendChild(item));
+
+        checkDivider.classList.toggle('visible', completedItems.length > 0);
+        checkNote.textContent = pendingItems.length === 1
+          ? '1 pendiente'
+          : `${pendingItems.length} pendientes`;
+      };
+
+      checkInputs.forEach((input) => {
+        input.addEventListener('change', () => {
+          if (document.startViewTransition) {
+            document.startViewTransition(() => updateChecklistOrder());
+          } else {
+            updateChecklistOrder();
+          }
+        });
+      });
+
+      updateChecklistOrder();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

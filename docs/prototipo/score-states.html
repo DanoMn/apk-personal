@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocal - Score y Estados</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg-base: #1f1e1d;
+      --bg-surface: #2a2927;
+      --bg-surface-2: #33312e;
+      --color-cardboard: #e0d8c3;
+      --color-coral: #e57b65;
+      --text-main: #eae5d9;
+      --text-muted: #a6a097;
+      --state-empty: #8f8981;
+      --state-restoration: #b03831;
+      --state-attention: #c79a54;
+      --state-motion: #5a8296;
+      --state-plenitude: #8c9c76;
+      --state-unbreakable: #d1a843;
+      --font-serif: "Lora", Georgia, ui-serif, serif;
+      --font-sans: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-pill: 99px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(229, 123, 101, 0.08), transparent 30rem),
+        var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+    }
+
+    .intro {
+      margin-bottom: 1.4rem;
+    }
+
+    .eyebrow {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.35rem;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: var(--font-serif);
+      color: var(--color-cardboard);
+      font-weight: 500;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      line-height: 1.02;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      color: var(--text-muted);
+      text-wrap: pretty;
+    }
+
+    .note {
+      max-width: 690px;
+      margin-top: 0.75rem;
+      font-size: 0.96rem;
+    }
+
+    .section {
+      margin-top: 1.7rem;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+    }
+
+    .score-card {
+      --state-color: var(--state-motion);
+      --score-progress: 84;
+      min-height: 250px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1.2rem;
+      align-items: center;
+    }
+
+    .state-pill {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      border-radius: var(--radius-pill);
+      padding: 0.32rem 0.68rem;
+      background: color-mix(in srgb, var(--state-color) 20%, transparent);
+      color: var(--state-color);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.045em;
+      text-transform: uppercase;
+    }
+
+    .state-pill svg,
+    .state-pill .lucide {
+      width: 16px;
+      height: 16px;
+    }
+
+    .score-title {
+      display: block;
+      margin-top: 0.8rem;
+      color: var(--color-cardboard);
+      font-family: var(--font-serif);
+      font-size: 1.48rem;
+      line-height: 1.12;
+    }
+
+    .score-copy {
+      margin-top: 0.45rem;
+      font-size: 0.95rem;
+    }
+
+    .score-orbit {
+      width: 132px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        conic-gradient(var(--state-color) calc(var(--score-progress) * 1%), rgba(255,255,255,0.08) 0),
+        var(--bg-surface-2);
+    }
+
+    .score-orbit.empty {
+      background:
+        repeating-conic-gradient(color-mix(in srgb, var(--state-color) 54%, transparent) 0 10deg, rgba(255,255,255,0.06) 10deg 18deg),
+        var(--bg-surface-2);
+    }
+
+    .score-inner {
+      width: 98px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-value {
+      color: var(--text-main);
+      font-size: 1.65rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .score-label {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      margin-top: 0.18rem;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .rule-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.7rem;
+      align-items: start;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      padding: 0.82rem;
+    }
+
+    .rule-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: color-mix(in srgb, var(--color-cardboard) 14%, transparent);
+      color: var(--color-cardboard);
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .rule-item strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      margin-bottom: 0.12rem;
+    }
+
+    .rule-item span {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .dashboard-mock-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .dashboard-state-card {
+      --state-color: var(--state-motion);
+      --score-progress: 84;
+      min-height: 248px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1.05rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .dashboard-copy {
+      display: grid;
+      gap: 0.72rem;
+      align-content: start;
+    }
+
+    .dashboard-state-title {
+      color: var(--color-cardboard);
+      font-family: var(--font-serif);
+      font-size: 1.52rem;
+      line-height: 1.08;
+    }
+
+    .dashboard-support {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.35;
+    }
+
+    .dashboard-score {
+      display: grid;
+      place-items: center;
+    }
+
+    .dashboard-score .score-orbit {
+      width: 106px;
+    }
+
+    .dashboard-score .score-inner {
+      width: 78px;
+    }
+
+    .dashboard-score .score-value {
+      font-size: 1.25rem;
+    }
+
+    .state-card {
+      --state-color: var(--state-empty);
+      --score-progress: 0;
+      min-height: 248px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 0.9rem;
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+    }
+
+    .state-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: start;
+    }
+
+    .state-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--state-color) 16%, transparent);
+      color: var(--state-color);
+      flex: 0 0 auto;
+    }
+
+    .state-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .range {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      text-align: right;
+    }
+
+    .state-card-body {
+      display: grid;
+      align-content: space-between;
+      gap: 0.85rem;
+    }
+
+    .mini-score {
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+    }
+
+    .mini-score .score-orbit {
+      width: 104px;
+    }
+
+    .mini-score .score-inner {
+      width: 78px;
+    }
+
+    .mini-score .score-value {
+      font-size: 1.22rem;
+    }
+
+    .state-name {
+      color: var(--color-cardboard);
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      line-height: 1.1;
+      margin-bottom: 0.22rem;
+    }
+
+    .state-reading {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .state-phrase {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+
+    .behavior-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .example-card {
+      --state-color: var(--state-restoration);
+      background: var(--bg-surface);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .example-card strong {
+      color: var(--text-main);
+      font-size: 0.96rem;
+    }
+
+    .example-card span {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    .table {
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.2fr;
+      gap: 0.8rem;
+      padding: 0.78rem 0.9rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    .table-row:last-child {
+      border-bottom: 0;
+    }
+
+    .table-head {
+      color: var(--color-cardboard);
+      font-weight: 700;
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .color-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.42rem;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--state-color);
+    }
+
+    .state-empty { --state-color: var(--state-empty); }
+    .state-restoration { --state-color: var(--state-restoration); }
+    .state-attention { --state-color: var(--state-attention); }
+    .state-motion { --state-color: var(--state-motion); }
+    .state-plenitude { --state-color: var(--state-plenitude); }
+    .state-unbreakable { --state-color: var(--state-unbreakable); }
+
+    .lucide,
+    .custom-ui-icon {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 1rem 1rem 2rem;
+      }
+
+      .hero-grid,
+      .score-grid,
+      .behavior-grid,
+      .dashboard-mock-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .score-card,
+      .dashboard-state-card {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .score-orbit {
+        justify-self: center;
+      }
+
+      .table-row {
+        grid-template-columns: 1fr;
+        gap: 0.28rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute; overflow:hidden;" aria-hidden="true" focusable="false">
+    <symbol id="icon-vocal-state-unknown" viewBox="0 0 24 24">
+      <path d="M12 4.2a7.8 7.8 0 1 0 0 15.6 7.8 7.8 0 0 0 0-15.6z" />
+      <circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care" viewBox="0 0 24 24">
+      <path d="M12 3.5l6.5 2.4v5.7c0 4.2-2.45 7.15-6.5 8.9-4.05-1.75-6.5-4.7-6.5-8.9V5.9L12 3.5z" />
+      <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-care-alt9" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.5" />
+      <rect x="10" y="7" width="4" height="10" rx="1.5" fill="currentColor" stroke="none" />
+      <rect x="7" y="10" width="10" height="4" rx="1.5" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-attention" viewBox="0 0 24 24">
+      <polygon points="12 2, 21 7.5, 21 16.5, 12 22, 3 16.5, 3 7.5" />
+      <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt5" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <rect x="5.5" y="5.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="12.5" y="5.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="5.5" y="12.5" width="6" height="6" fill="currentColor" stroke="none" />
+      <rect x="12.5" y="12.5" width="6" height="6" fill="currentColor" stroke="none" />
+    </symbol>
+    <symbol id="icon-vocal-state-solid-alt4" viewBox="0 0 24 24">
+      <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7z" />
+      <path d="M12 5.5l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2 2-4.5z" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="2.35" fill="var(--bg-surface)" stroke="none" />
+    </symbol>
+  </svg>
+
+  <main class="page">
+    <header class="intro">
+      <span class="eyebrow">Laboratorio de score</span>
+      <h1>Estados y score general</h1>
+      <p class="note">Mockups para representar el score de base/salud en dashboard. El score visible va de 700 a 1000 y el círculo usa el valor completo sobre 1000.</p>
+    </header>
+
+    <section class="hero-grid">
+      <article class="card score-card state-motion" style="--score-progress: 84;">
+        <div>
+          <span class="state-pill">
+            <i data-lucide="activity"></i>
+            En marcha
+          </span>
+          <strong class="score-title">La base ya empezó a moverse.</strong>
+          <p class="score-copy">El score representa una lectura acumulada de base, no solo el porcentaje de tareas del día.</p>
+        </div>
+        <div class="score-orbit">
+          <div class="score-inner">
+            <span class="score-value">842</span>
+            <span class="score-label">base</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="rule-list">
+        <div class="rule-item">
+          <span class="rule-number">1</span>
+          <div>
+            <strong>El círculo usa score / 1000</strong>
+            <span>800 se ve como 80%, no como un valor bajo dentro del tramo 700-1000.</span>
+          </div>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">2</span>
+          <div>
+            <strong>No mostrar números menores a 700</strong>
+            <span>Si el score interno baja de 700, el visible se fija en 700 y el estado es Restauración.</span>
+          </div>
+        </div>
+        <div class="rule-item">
+          <span class="rule-number">3</span>
+          <div>
+            <strong>Sin datos no tiene score</strong>
+            <span>Hasta tener registros suficientes, se muestra lectura vacía y sin número.</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <h2>Estados mockeados</h2>
+      <div class="score-grid">
+        <article class="state-card state-empty">
+          <div class="state-card-head">
+            <span class="state-icon"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-unknown"></use></svg></span>
+            <span class="range">Sin datos</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit empty">
+                <div class="score-inner">
+                  <span class="score-value">--</span>
+                  <span class="score-label">sin score</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="state-name">Sin datos</div>
+              <span class="state-reading">No mostrar score todavía</span>
+              <p class="state-phrase">Aún falta registro para leer la base.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="state-card state-restoration" style="--score-progress: 70;">
+          <div class="state-card-head">
+            <span class="state-icon"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-care-alt9"></use></svg></span>
+            <span class="range">700-749</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit"><div class="score-inner"><span class="score-value">700</span><span class="score-label">base</span></div></div>
+            </div>
+            <div>
+              <div class="state-name">Restauración</div>
+              <span class="state-reading">Base baja</span>
+              <p class="state-phrase">Una acción mínima puede mover la base.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="state-card state-attention" style="--score-progress: 75;">
+          <div class="state-card-head">
+            <span class="state-icon"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-attention"></use></svg></span>
+            <span class="range">750-799</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit"><div class="score-inner"><span class="score-value">750</span><span class="score-label">base</span></div></div>
+            </div>
+            <div>
+              <div class="state-name">Atención</div>
+              <span class="state-reading">Hay margen</span>
+              <p class="state-phrase">Todavía hay margen para volver al centro.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="state-card state-motion" style="--score-progress: 80;">
+          <div class="state-card-head">
+            <span class="state-icon"><i data-lucide="activity"></i></span>
+            <span class="range">800-899</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit"><div class="score-inner"><span class="score-value">800</span><span class="score-label">base</span></div></div>
+            </div>
+            <div>
+              <div class="state-name">En marcha</div>
+              <span class="state-reading">Base activa</span>
+              <p class="state-phrase">La base ya empezó a moverse.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="state-card state-plenitude" style="--score-progress: 90;">
+          <div class="state-card-head">
+            <span class="state-icon"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-solid-alt5"></use></svg></span>
+            <span class="range">900-949</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit"><div class="score-inner"><span class="score-value">900</span><span class="score-label">base</span></div></div>
+            </div>
+            <div>
+              <div class="state-name">Plenitud</div>
+              <span class="state-reading">Base sostenida</span>
+              <p class="state-phrase">Las bases están activas formando unidad.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="state-card state-unbreakable" style="--score-progress: 95;">
+          <div class="state-card-head">
+            <span class="state-icon"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-solid-alt4"></use></svg></span>
+            <span class="range">950-1000</span>
+          </div>
+          <div class="state-card-body">
+            <div class="mini-score">
+              <div class="score-orbit"><div class="score-inner"><span class="score-value">950</span><span class="score-label">base</span></div></div>
+            </div>
+            <div>
+              <div class="state-name">Inquebrantable</div>
+              <span class="state-reading">Núcleo sólido</span>
+              <p class="state-phrase">Núcleo protegido por consistencia.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Comportamientos clave</h2>
+      <div class="behavior-grid">
+        <article class="example-card state-restoration">
+          <span class="state-pill">
+            <svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-care-alt9"></use></svg>
+            Bajo 700
+          </span>
+          <strong>Score interno: 423 → visible: 700</strong>
+          <span>No se muestra un número humillante. La lectura visible queda en Restauración.</span>
+        </article>
+        <article class="example-card state-unbreakable" style="--score-progress: 100;">
+          <span class="state-pill">
+            <svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-solid-alt4"></use></svg>
+            Tope
+          </span>
+          <strong>Score visible: 1000 → círculo 100%</strong>
+          <span>El máximo debe sentirse como logro real, no como un estado común.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Tabla de rangos</h2>
+      <div class="table">
+        <div class="table-row table-head">
+          <span>Rango</span>
+          <span>Estado</span>
+          <span>Color</span>
+          <span>Lectura</span>
+        </div>
+        <div class="table-row">
+          <span>Sin datos</span>
+          <span>Sin datos</span>
+          <span class="color-chip state-empty"><i class="dot"></i>#8f8981</span>
+          <span>No mostrar score todavía</span>
+        </div>
+        <div class="table-row">
+          <span>700-749</span>
+          <span>Restauración</span>
+          <span class="color-chip state-restoration"><i class="dot"></i>#b03831</span>
+          <span>Base baja</span>
+        </div>
+        <div class="table-row">
+          <span>750-799</span>
+          <span>Atención</span>
+          <span class="color-chip state-attention"><i class="dot"></i>#c79a54</span>
+          <span>Hay margen</span>
+        </div>
+        <div class="table-row">
+          <span>800-899</span>
+          <span>En marcha</span>
+          <span class="color-chip state-motion"><i class="dot"></i>#5a8296</span>
+          <span>Base activa</span>
+        </div>
+        <div class="table-row">
+          <span>900-949</span>
+          <span>Plenitud</span>
+          <span class="color-chip state-plenitude"><i class="dot"></i>#8c9c76</span>
+          <span>Base sostenida</span>
+        </div>
+        <div class="table-row">
+          <span>950-1000</span>
+          <span>Inquebrantable</span>
+          <span class="color-chip state-unbreakable"><i class="dot"></i>#d1a843</span>
+          <span>Núcleo sólido</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Tarjeta del dashboard</h2>
+      <p class="note">Estas tarjetas son el resumen inicial del estado. La prioridad visual es píldora, motivo, círculo de referencia e información útil del dashboard; el soporte no describe el score, describe qué está ocurriendo y hacia dónde volver.</p>
+
+      <div class="dashboard-mock-grid">
+        <article class="dashboard-state-card state-empty">
+          <div class="dashboard-copy">
+            <span class="state-pill"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-unknown"></use></svg>Sin datos</span>
+            <strong class="dashboard-state-title">Aún no hay registros suficientes.</strong>
+            <p class="dashboard-support">Registra algunas acciones de hoy para empezar. No hay prisa, el objetivo es mirarte con honestidad y empezar a construir tu base.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit empty">
+              <div class="score-inner">
+                <span class="score-value">--</span>
+                <span class="score-label">sin score</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-state-card state-restoration" style="--score-progress: 70;">
+          <div class="dashboard-copy">
+            <span class="state-pill"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-care-alt9"></use></svg>Restauración</span>
+            <strong class="dashboard-state-title">La base necesita cuidado mínimo.</strong>
+            <p class="dashboard-support">Hoy no es día de exigencias. Pausa el ruido y vuelve a lo indispensable para sostenerte: agua, alimento, higiene o descanso. No te dejes caer del todo.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit">
+              <div class="score-inner">
+                <span class="score-value">700</span>
+                <span class="score-label">base</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-state-card state-attention" style="--score-progress: 75;">
+          <div class="dashboard-copy">
+            <span class="state-pill"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-attention"></use></svg>Atención</span>
+            <strong class="dashboard-state-title">Hay margen, pero estamos cediendo.</strong>
+            <p class="dashboard-support">No te dejes resbalar, estás a tiempo de volver al centro. Cierra una acción protectora de tu checklist ahora mismo para recuperar la tracción y subir.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit">
+              <div class="score-inner">
+                <span class="score-value">750</span>
+                <span class="score-label">base</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-state-card state-motion" style="--score-progress: 80;">
+          <div class="dashboard-copy">
+            <span class="state-pill"><i data-lucide="activity"></i>En marcha</span>
+            <strong class="dashboard-state-title">La base está activa y sosteniéndose.</strong>
+            <p class="dashboard-support">Lo estás haciendo bien; hay práctica real en tu día. Mantén este ritmo y no olvides cerrar tu mundo interior antes de dormir para proteger lo ganado.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit">
+              <div class="score-inner">
+                <span class="score-value">800</span>
+                <span class="score-label">base</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-state-card state-plenitude" style="--score-progress: 90;">
+          <div class="dashboard-copy">
+            <span class="state-pill"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-solid-alt5"></use></svg>Plenitud</span>
+            <strong class="dashboard-state-title">Las bases forman una unidad estable.</strong>
+            <p class="dashboard-support">Siente esta estabilidad, te la has ganado tratándote con respeto. Has mantenido la consistencia; fluye con este ritmo natural sin sobreexigirte de más.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit">
+              <div class="score-inner">
+                <span class="score-value">900</span>
+                <span class="score-label">base</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="dashboard-state-card state-unbreakable" style="--score-progress: 95;">
+          <div class="dashboard-copy">
+            <span class="state-pill"><svg class="custom-ui-icon" viewBox="0 0 24 24"><use href="#icon-vocal-state-solid-alt4"></use></svg>Inquebrantable</span>
+            <strong class="dashboard-state-title">Núcleo protegido por consistencia.</strong>
+            <p class="dashboard-support">Llegar aquí requiere un compromiso profundo contigo mismo. Tu cuerpo, conducta y proyectos están alineados. Respira y valora el refugio que has construido.</p>
+          </div>
+          <div class="dashboard-score">
+            <div class="score-orbit">
+              <div class="score-inner">
+                <span class="score-value">950</span>
+                <span class="score-label">base</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
