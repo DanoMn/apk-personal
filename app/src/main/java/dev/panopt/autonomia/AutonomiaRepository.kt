@@ -2,48 +2,193 @@ package dev.panopt.autonomia
 
 import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
-import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
-import dev.panopt.autonomia.data.LayerEntity
+import dev.panopt.autonomia.data.RiskEventEntity
+import dev.panopt.autonomia.data.SleepLogEntity
+import dev.panopt.autonomia.data.TaskEntity
+import dev.panopt.autonomia.data.local.mapper.toDomain
+import dev.panopt.autonomia.data.local.seed.DefaultSeeds
+import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.defaultActualValue
+import dev.panopt.autonomia.domain.sleep.SleepPolicy
+import dev.panopt.autonomia.domain.sleep.SleepWindowValidation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 class AutonomiaRepository(context: Context) {
-    private val prefs = context.getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
-    private val dao = AutonomiaDatabase.getInstance(context).autonomiaDao()
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
+    private val dao = AutonomiaDatabase.getInstance(appContext).autonomiaDao()
 
-    private val _isDarkMode = MutableStateFlow(prefs.getBoolean("dark_mode", false))
+    private val _isDarkMode = MutableStateFlow(prefs.getBoolean("dark_mode", true))
+    private val _focusSignalActivityId = MutableStateFlow(prefs.getString("focus_signal_activity_id", null))
+    private val _isInitialConfigurationComplete = MutableStateFlow(
+        prefs.getBoolean("initial_configuration_complete", false),
+    )
 
     fun isDarkModeFlow(): StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    fun focusSignalActivityIdFlow(): StateFlow<String?> = _focusSignalActivityId.asStateFlow()
+
+    fun isInitialConfigurationCompleteFlow(): StateFlow<Boolean> =
+        _isInitialConfigurationComplete.asStateFlow()
 
     suspend fun setDarkMode(enabled: Boolean) {
         prefs.edit().putBoolean("dark_mode", enabled).apply()
         _isDarkMode.value = enabled
     }
 
+    suspend fun setFocusSignalActivity(activityId: String?) {
+        prefs.edit().putString("focus_signal_activity_id", activityId).apply()
+        _focusSignalActivityId.value = activityId
+    }
+
+    suspend fun setInitialConfigurationComplete(completed: Boolean) {
+        prefs.edit().putBoolean("initial_configuration_complete", completed).apply()
+        _isInitialConfigurationComplete.value = completed
+    }
+
     fun allActivityLogsFlow(): Flow<List<ActivityLog>> =
         dao.observeAllActivityLogs().map { logs -> logs.map { it.toDomain() } }
+
+    fun layersFlow(): Flow<List<Layer>> =
+        dao.observeLayers().map { layers -> layers.map { it.toDomain() } }
+
+    fun activityDefinitionsFlow(): Flow<List<ActivityDefinition>> =
+        dao.observeActivities().map { activities -> activities.map { it.toDomain() } }
+
+    fun activityLogsForDateFlow(date: String): Flow<List<ActivityLog>> =
+        dao.observeActivityLogsForDate(date).map { logs -> logs.map { it.toDomain() } }
+
+    fun activityLogsBetweenFlow(startDate: String, endDate: String): Flow<List<ActivityLog>> =
+        dao.observeActivityLogsBetween(startDate, endDate).map { logs -> logs.map { it.toDomain() } }
+
+    fun abstinenceTracksFlow(): Flow<List<AbstinenceTrack>> =
+        dao.observeAbstinenceTracks().map { tracks -> tracks.map { it.toDomain() } }
+
+    fun abstinenceLogsForDateFlow(date: String): Flow<List<AbstinenceLog>> =
+        dao.observeAbstinenceLogsForDate(date).map { logs -> logs.map { it.toDomain() } }
 
     fun allAbstinenceLogsFlow(): Flow<List<AbstinenceLog>> =
         dao.observeAllAbstinenceLogs().map { logs -> logs.map { it.toDomain() } }
 
+    fun riskEventsForDateFlow(date: String): Flow<List<RiskEvent>> =
+        dao.observeRiskEventsForDate(date).map { events -> events.map { it.toDomain() } }
+
+    fun tasksFlow(): Flow<List<Task>> =
+        dao.observeTasks().map { tasks -> tasks.map { it.toDomain() } }
+
+    fun anchorPhrasesFlow(): Flow<List<AnchorPhrase>> =
+        dao.observeAnchorPhrases().map { phrases -> phrases.map { it.toDomain() } }
+
+    fun sleepLogForDateFlow(date: String): Flow<SleepLog?> =
+        dao.observeSleepLogForDate(date).map { it?.toDomain() }
+
     suspend fun ensureSeeded() {
         if (dao.layerCount() > 0) return
 
-        dao.upsertLayers(DefaultLayers)
-        dao.upsertActivities(DefaultActivities)
-        dao.upsertAbstinenceTracks(DefaultAbstinenceTracks)
+        dao.upsertLayers(DefaultSeeds.layers)
+        dao.upsertActivities(DefaultSeeds.activities)
+        dao.upsertAbstinenceTracks(DefaultSeeds.abstinenceTracks)
+    }
+
+    suspend fun setActivityCompleted(
+        activity: ActivityDefinition,
+        completed: Boolean,
+        date: String = todayKey(),
+    ) {
+        if (!completed) {
+            dao.deleteActivityLog(activity.id, date)
+            return
+        }
+
+        dao.upsertActivityLog(
+            ActivityLogEntity(
+                activityId = activity.id,
+                date = date,
+                completed = true,
+                actualValue = activity.defaultActualValue(),
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    suspend fun setActivityValue(
+        activity: ActivityDefinition,
+        actualValue: Int,
+        date: String = todayKey(),
+    ) {
+        dao.upsertActivityLog(
+            ActivityLogEntity(
+                activityId = activity.id,
+                date = date,
+                completed = true,
+                actualValue = actualValue.coerceAtLeast(0),
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    suspend fun createActivity(
+        name: String,
+        layerId: String,
+        targetMinutes: Int,
+        displaySurface: DisplaySurface,
+        isGoal: Boolean = false,
+        isMonthlyGoal: Boolean = false,
+    ) {
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) return
+
+        val now = System.currentTimeMillis()
+        val isProject = layerId == "layer_proyecto"
+        val targetPeriod = when {
+            !isGoal -> TargetPeriod.Day
+            isMonthlyGoal -> TargetPeriod.Month
+            else -> TargetPeriod.Week
+        }
+        dao.upsertActivity(
+            ActivityEntity(
+                id = "act_custom_${UUID.randomUUID()}",
+                layerId = layerId,
+                name = trimmedName,
+                description = "",
+                type = ActivityType.Time.name,
+                role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
+                displaySurface = if (isGoal) DisplaySurface.Contextual.name else displaySurface.name,
+                contributionRole = ContributionRole.Core.name,
+                importanceTier = ImportanceTier.Medium.name,
+                cadence = when (targetPeriod) {
+                    TargetPeriod.Day -> ActivityCadence.Daily
+                    TargetPeriod.Week -> ActivityCadence.Weekly
+                    TargetPeriod.Month -> ActivityCadence.Monthly
+                }.name,
+                targetValue = targetMinutes.coerceAtLeast(1),
+                minimumValue = 1,
+                targetCount = if (isGoal) 1 else null,
+                targetPeriod = targetPeriod.name,
+                unit = ActivityUnit.Minutes.name,
+                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
     }
 
     suspend fun markAbstinenceClean(track: AbstinenceTrack, date: String = todayKey()) {
+        markAbstinenceClean(track.id, date)
+    }
+
+    suspend fun markAbstinenceClean(trackId: String, date: String = todayKey()) {
         dao.upsertAbstinenceLog(
             AbstinenceLogEntity(
-                trackId = track.id,
+                trackId = trackId,
                 date = date,
                 status = AbstinenceStatus.Clean.name,
                 updatedAt = System.currentTimeMillis(),
@@ -52,100 +197,111 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun markAbstinenceRelapse(track: AbstinenceTrack, date: String = todayKey()) {
+        markAbstinenceRelapse(track.id, date)
+    }
+
+    suspend fun markAbstinenceRelapse(trackId: String, date: String = todayKey()) {
         dao.upsertAbstinenceLog(
             AbstinenceLogEntity(
-                trackId = track.id,
+                trackId = trackId,
                 date = date,
                 status = AbstinenceStatus.Relapse.name,
                 updatedAt = System.currentTimeMillis(),
             ),
         )
     }
+
+    suspend fun clearAbstinenceLog(trackId: String, date: String = todayKey()) {
+        dao.deleteAbstinenceLog(trackId, date)
+    }
+
+    suspend fun recordDashboardRiskEvent(date: String = todayKey()) {
+        val now = System.currentTimeMillis()
+        dao.upsertRiskEvent(
+            RiskEventEntity(
+                id = UUID.randomUUID().toString(),
+                date = date,
+                createdAt = now,
+                intensity = 6,
+                trigger = "dashboard",
+                actionTaken = "Registrar evento desde dashboard",
+                actedOnImpulse = false,
+                note = "",
+            ),
+        )
+    }
+
+    suspend fun saveSleepLog(
+        plannedSleepAt: String,
+        plannedWakeAt: String,
+        sleptAt: String,
+        wokeAt: String,
+        quality: SleepQuality,
+        note: String,
+        date: String = todayKey(),
+    ): Boolean {
+        val resolvedPlannedSleepAt = plannedSleepAt.ifBlank { "23:30" }
+        val resolvedPlannedWakeAt = plannedWakeAt.ifBlank { "07:30" }
+        val validation = SleepPolicy.validatePlannedWindow(
+            plannedSleepAt = resolvedPlannedSleepAt,
+            plannedWakeAt = resolvedPlannedWakeAt,
+        )
+        if (validation is SleepWindowValidation.Invalid) return false
+
+        dao.upsertSleepLog(
+            SleepLogEntity(
+                date = date,
+                plannedSleepAt = resolvedPlannedSleepAt,
+                plannedWakeAt = resolvedPlannedWakeAt,
+                sleptAt = sleptAt.ifBlank { "00:00" },
+                wokeAt = wokeAt.ifBlank { "07:00" },
+                quality = quality.name,
+                note = note,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+        return true
+    }
+
+    suspend fun createTask(
+        title: String,
+        layerId: String?,
+        contributesToCore: Boolean,
+    ) {
+        val trimmedTitle = title.trim()
+        if (trimmedTitle.isBlank()) return
+
+        val now = System.currentTimeMillis()
+        val scoringLayerId = layerId?.takeIf { contributesToCore && it.isNotBlank() }
+        dao.upsertTask(
+            TaskEntity(
+                id = "task_${UUID.randomUUID()}",
+                title = trimmedTitle,
+                description = "",
+                layerId = scoringLayerId,
+                projectId = null,
+                status = TaskStatus.Pending.name,
+                contributionRole = if (scoringLayerId == null) {
+                    ContributionRole.Neutral
+                } else {
+                    ContributionRole.Support
+                }.name,
+                importanceTier = ImportanceTier.Medium.name,
+                dueDate = null,
+                completedAt = null,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
+
+    suspend fun completeTask(taskId: String) {
+        val now = System.currentTimeMillis()
+        dao.updateTaskStatus(
+            taskId = taskId,
+            status = TaskStatus.Done.name,
+            completedAt = now,
+            updatedAt = now,
+        )
+    }
 }
-
-private fun LayerEntity.toDomain(): Layer =
-    Layer(id = id, name = name, description = description, sortOrder = sortOrder, active = active)
-
-private fun ActivityEntity.toDomain(): TrackedActivity =
-    TrackedActivity(
-        id = id,
-        layerId = layerId,
-        name = name,
-        description = description,
-        type = runCatching { ActivityType.valueOf(type) }.getOrDefault(ActivityType.Check),
-        role = runCatching { ActivityRole.valueOf(role) }.getOrDefault(ActivityRole.Practice),
-        displaySurface = runCatching { DisplaySurface.valueOf(displaySurface) }.getOrDefault(DisplaySurface.PrimaryChecklist),
-        contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Core),
-        importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
-        cadence = cadence?.let { runCatching { ActivityCadence.valueOf(it) }.getOrNull() },
-        targetValue = targetValue,
-        minimumValue = minimumValue,
-        targetCount = targetCount,
-        targetPeriod = targetPeriod?.let { runCatching { TargetPeriod.valueOf(it) }.getOrNull() },
-        unit = runCatching { ActivityUnit.valueOf(unit) }.getOrDefault(ActivityUnit.Boolean),
-        active = active,
-        archived = archived,
-        sortOrder = sortOrder,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-
-private fun ActivityLogEntity.toDomain(): ActivityLog =
-    ActivityLog(
-        activityId = activityId,
-        date = date,
-        completed = completed,
-        actualValue = actualValue,
-        note = note,
-        updatedAt = updatedAt,
-    )
-
-private fun AbstinenceTrackEntity.toDomain(): AbstinenceTrack =
-    AbstinenceTrack(
-        id = id,
-        name = name,
-        substanceLabel = substanceLabel,
-        severity = runCatching { AbstinenceSeverity.valueOf(severity) }.getOrDefault(AbstinenceSeverity.Moderate),
-        contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Protective),
-        importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
-        active = active,
-        sortOrder = sortOrder,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-
-private fun AbstinenceLogEntity.toDomain(): AbstinenceLog =
-    AbstinenceLog(
-        trackId = trackId,
-        date = date,
-        status = runCatching { AbstinenceStatus.valueOf(status) }.getOrDefault(AbstinenceStatus.Unknown),
-        urge = urge,
-        urgeIntensity = urgeIntensity,
-        note = note,
-        updatedAt = updatedAt,
-    )
-
-private val DefaultLayers = listOf(
-    LayerEntity("layer_interior", "Interior", "Mundo interno: conciencia, aprendizaje, reflexion.", 10),
-    LayerEntity("layer_cuerpo", "Cuerpo", "Base fisica: movimiento, descanso, alimentacion e higiene.", 20),
-    LayerEntity("layer_conducta", "Conducta", "Autocontrol, limites y estructura diaria.", 30),
-    LayerEntity("layer_vinculos", "Vinculos", "Contacto humano y relaciones importantes.", 40),
-    LayerEntity("layer_proyecto", "Proyecto", "Futuro, identidad, trabajo y creacion.", 50),
-)
-
-private val DefaultActivities = listOf(
-    ActivityEntity("act_meditar", "layer_interior", "Meditar", "", ActivityType.Time.name, ActivityRole.Practice.name, DisplaySurface.PrimaryChecklist.name, ContributionRole.Core.name, ImportanceTier.High.name, null, 5, null, null, null, ActivityUnit.Minutes.name, sortOrder = 10, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_ejercicio", "layer_cuerpo", "Ejercicio", "", ActivityType.Time.name, ActivityRole.Practice.name, DisplaySurface.PrimaryChecklist.name, ContributionRole.Core.name, ImportanceTier.High.name, null, 40, null, null, null, ActivityUnit.Minutes.name, sortOrder = 20, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_digitaliza", "layer_proyecto", "Proyecto Digitaliza", "", ActivityType.Time.name, ActivityRole.ProjectWork.name, DisplaySurface.PrimaryChecklist.name, ContributionRole.Core.name, ImportanceTier.Critical.name, null, 360, null, null, null, ActivityUnit.Minutes.name, sortOrder = 30, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_musica", "layer_proyecto", "Proyecto musical / Anatomia de la ausencia", "", ActivityType.Time.name, ActivityRole.ProjectWork.name, DisplaySurface.PrimaryChecklist.name, ContributionRole.Core.name, ImportanceTier.High.name, null, 180, null, null, null, ActivityUnit.Minutes.name, sortOrder = 40, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_dientes", "layer_cuerpo", "Cepillarse los dientes", "", ActivityType.Count.name, ActivityRole.SelfCare.name, DisplaySurface.SecondaryChecklist.name, ContributionRole.Support.name, ImportanceTier.Medium.name, null, 2, null, null, null, ActivityUnit.Count.name, sortOrder = 50, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_banarse", "layer_cuerpo", "Banarse", "", ActivityType.Check.name, ActivityRole.SelfCare.name, DisplaySurface.SecondaryChecklist.name, ContributionRole.Support.name, ImportanceTier.Medium.name, null, null, null, null, null, ActivityUnit.Boolean.name, sortOrder = 60, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_cocinar", "layer_cuerpo", "Cocinar en casa", "", ActivityType.Check.name, ActivityRole.DomesticOrder.name, DisplaySurface.SecondaryChecklist.name, ContributionRole.Support.name, ImportanceTier.Medium.name, null, null, null, null, null, ActivityUnit.Boolean.name, sortOrder = 70, createdAt = 0L, updatedAt = 0L),
-    ActivityEntity("act_trastes", "layer_conducta", "Limpiar los trastes", "", ActivityType.Check.name, ActivityRole.DomesticOrder.name, DisplaySurface.SecondaryChecklist.name, ContributionRole.Support.name, ImportanceTier.Low.name, null, null, null, null, null, ActivityUnit.Boolean.name, sortOrder = 80, createdAt = 0L, updatedAt = 0L)
-)
-
-private val DefaultAbstinenceTracks = listOf(
-    AbstinenceTrackEntity("trk_alcohol", "Alcohol", "alcohol", AbstinenceSeverity.Critical.name, ContributionRole.Protective.name, ImportanceTier.Critical.name, active = true, sortOrder = 10, createdAt = 0L, updatedAt = 0L),
-    AbstinenceTrackEntity("trk_sexual", "Conducta sexual / masturbacion", "conducta sexual", AbstinenceSeverity.Critical.name, ContributionRole.Protective.name, ImportanceTier.High.name, active = true, sortOrder = 20, createdAt = 0L, updatedAt = 0L),
-    AbstinenceTrackEntity("trk_marihuana", "Marihuana", "marihuana", AbstinenceSeverity.Moderate.name, ContributionRole.Protective.name, ImportanceTier.Medium.name, active = false, sortOrder = 30, createdAt = 0L, updatedAt = 0L),
-)

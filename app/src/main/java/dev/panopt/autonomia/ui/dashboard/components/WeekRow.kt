@@ -23,10 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
-
+import dev.panopt.autonomia.domain.dashboard.DashboardWeekRowState
 
 @Composable
-internal fun WeekSection(palette: DashboardPalette) {
+internal fun WeekSection(
+    palette: DashboardPalette,
+    rows: List<DashboardWeekRowState>,
+) {
     SectionHeader(
         palette = palette,
         title = "Semana",
@@ -41,10 +44,15 @@ internal fun WeekSection(palette: DashboardPalette) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(7.68.dp),
     ) {
-        WeekRow(palette, "Interior", "3/7", palette.layerInterior, 0.42f)
-        WeekRow(palette, "Cuerpo", "4/7", palette.layerBody, 0.58f)
-        WeekRow(palette, "Conducta", "6/7", palette.layerConduct, 0.86f)
-        WeekRow(palette, "Proyecto", "5/7", palette.layerProject, 0.72f)
+        rows.forEach { row ->
+            WeekRow(
+                palette = palette,
+                name = row.name,
+                score = row.score,
+                color = row.layerColor(palette),
+                progress = row.progress,
+            )
+        }
     }
 }
 
@@ -100,3 +108,13 @@ internal fun WeekRow(
         )
     }
 }
+
+private fun DashboardWeekRowState.layerColor(palette: DashboardPalette): Color =
+    when (layerId) {
+        "layer_interior" -> palette.layerInterior
+        "layer_cuerpo" -> palette.layerBody
+        "layer_conducta" -> palette.layerConduct
+        "layer_vinculos" -> palette.layerVinculos
+        "layer_proyecto" -> palette.layerProject
+        else -> palette.textMuted
+    }

@@ -23,6 +23,9 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertActivities(activities: List<ActivityEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertActivity(activity: ActivityEntity)
+
     @Query("SELECT * FROM activity_logs WHERE date = :date")
     fun observeActivityLogsForDate(date: String): Flow<List<ActivityLogEntity>>
 
@@ -52,6 +55,9 @@ interface AutonomiaDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAbstinenceLog(log: AbstinenceLogEntity)
+
+    @Query("DELETE FROM abstinence_logs WHERE trackId = :trackId AND date = :date")
+    suspend fun deleteAbstinenceLog(trackId: String, date: String)
 
     @Query("SELECT * FROM risk_events WHERE date = :date")
     fun observeRiskEventsForDate(date: String): Flow<List<RiskEventEntity>>
@@ -95,4 +101,13 @@ interface AutonomiaDao {
     
     @Query("SELECT * FROM anchor_phrase_daily_slots WHERE date = :date AND dayPhase = :dayPhase LIMIT 1")
     suspend fun getAnchorPhraseDailySlot(date: String, dayPhase: String): AnchorPhraseDailySlotEntity?
+
+    @Query("SELECT * FROM sleep_logs WHERE date = :date LIMIT 1")
+    fun observeSleepLogForDate(date: String): Flow<SleepLogEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSleepLog(log: SleepLogEntity)
+
+    @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE id = :taskId")
+    suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long)
 }

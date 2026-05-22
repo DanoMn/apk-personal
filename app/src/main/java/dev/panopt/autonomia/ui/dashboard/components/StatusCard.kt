@@ -27,15 +27,20 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.ui.dashboard.ActivityIcon
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
+import dev.panopt.autonomia.domain.dashboard.DashboardStatusState
 import dev.panopt.autonomia.ui.dashboard.mix
 
 private val DashboardSans = FontFamily.SansSerif
 private val DashboardSerif = FontFamily.Serif
 
 @Composable
-internal fun StatusCard(palette: DashboardPalette) {
+internal fun StatusCard(
+    palette: DashboardPalette,
+    status: DashboardStatusState,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -46,10 +51,10 @@ internal fun StatusCard(palette: DashboardPalette) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            StatusLabel(palette = palette)
+            StatusLabel(palette = palette, status = status)
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "La base esta activa y sosteniendose.",
+                text = status.headline,
                 color = palette.textMain,
                 fontFamily = DashboardSerif,
                 fontWeight = FontWeight.Medium,
@@ -58,7 +63,7 @@ internal fun StatusCard(palette: DashboardPalette) {
             )
             Spacer(modifier = Modifier.height(7.dp))
             Text(
-                text = "Hay practica real en tu dia. Mantener el ritmo tambien significa cerrar con calma antes de dormir.",
+                text = status.body,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 15.04.sp,
@@ -68,30 +73,35 @@ internal fun StatusCard(palette: DashboardPalette) {
 
         ScoreOrbit(
             palette = palette,
-            score = "842",
-            label = "base",
-            progress = 0.84f,
+            score = status.scoreLabel,
+            label = if (status.scoreState == ScoreState.NoData) "sin score" else "base",
+            progress = status.progress,
+            color = status.scoreState.statusColor(palette),
         )
     }
 }
 
 @Composable
-internal fun StatusLabel(palette: DashboardPalette) {
+internal fun StatusLabel(
+    palette: DashboardPalette,
+    status: DashboardStatusState,
+) {
+    val color = status.scoreState.statusColor(palette)
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(99.dp))
-            .background(mix(palette.stateMotion, 0.2f, palette.bgSurface))
+            .background(mix(color, 0.2f, palette.bgSurface))
             .padding(horizontal = 9.92.dp, vertical = 4.8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.4.dp),
     ) {
         ActivityIcon(
-            color = palette.stateMotion,
+            color = color,
             modifier = Modifier.size(18.dp),
         )
         Text(
-            text = "En marcha",
-            color = palette.stateMotion,
+            text = status.title,
+            color = color,
             fontFamily = DashboardSans,
             fontWeight = FontWeight.Bold,
             fontSize = 12.48.sp,
@@ -107,6 +117,7 @@ internal fun ScoreOrbit(
     score: String,
     label: String,
     progress: Float,
+    color: Color,
 ) {
     Box(
         modifier = Modifier.size(104.dp),
@@ -128,7 +139,7 @@ internal fun ScoreOrbit(
                 style = Stroke(width = strokeWidth),
             )
             drawArc(
-                color = palette.stateMotion,
+                color = color,
                 startAngle = -90f,
                 sweepAngle = 360f * progress.coerceIn(0f, 1f),
                 useCenter = false,
@@ -164,3 +175,13 @@ internal fun ScoreOrbit(
         }
     }
 }
+
+private fun ScoreState.statusColor(palette: DashboardPalette): Color =
+    when (this) {
+        ScoreState.NoData -> palette.textMuted
+        ScoreState.Restoration -> palette.risk
+        ScoreState.Attention -> palette.colorCardboard
+        ScoreState.Motion -> palette.stateMotion
+        ScoreState.Plenitude -> palette.layerBody
+        ScoreState.Unbreakable -> palette.colorCoral
+    }

@@ -1,18 +1,16 @@
 package dev.panopt.autonomia
 
-import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
+import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
 
 class MainActivity : ComponentActivity() {
@@ -20,12 +18,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val prefs = remember {
-                getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
-            }
-            var isDarkMode by rememberSaveable {
-                mutableStateOf(prefs.getBoolean("dark_mode", true))
-            }
+            val dashboardViewModel: DashboardViewModel = viewModel(
+                factory = DashboardViewModel.Factory(applicationContext),
+            )
+            val dashboardState by dashboardViewModel.dashboardState.collectAsStateWithLifecycle()
+            val isDarkMode by dashboardViewModel.isDarkMode.collectAsStateWithLifecycle()
             val palette = dashboardPalette(isDarkMode)
 
             SideEffect {
@@ -33,11 +30,18 @@ class MainActivity : ComponentActivity() {
             }
 
             DashboardScreen(
+                state = dashboardState,
                 isDarkMode = isDarkMode,
-                onThemeChange = { enabled ->
-                    prefs.edit().putBoolean("dark_mode", enabled).apply()
-                    isDarkMode = enabled
-                },
+                onThemeChange = dashboardViewModel::setDarkMode,
+                onToggleActivity = dashboardViewModel::toggleActivity,
+                onToggleAbstinenceClean = dashboardViewModel::toggleAbstinenceClean,
+                onSaveActivityValue = dashboardViewModel::saveActivityValue,
+                onSaveSleep = dashboardViewModel::saveSleep,
+                onToggleAbstinenceRelapse = dashboardViewModel::toggleAbstinenceRelapse,
+                onCreateActivity = dashboardViewModel::createActivity,
+                onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
+                onCreateTask = dashboardViewModel::createTask,
+                onCompleteTask = dashboardViewModel::completeTask,
             )
         }
     }

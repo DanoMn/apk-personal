@@ -1,453 +1,749 @@
 # Nucleo de dominio - Autonomia sin limites
 
-Este documento define el centro de la app. No es una arquitectura enorme; es una brujula para que el codigo no se convierta en tallarin cuando entren nuevas features.
+Estado: puente de nucleo en desarrollo
+
+Este documento define el centro operativo de Vocal para seguir construyendo
+features de backend local, dominio, scoring y UI sin mezclar conceptos.
+
+No es un documento maestro de todo el producto. Es la brujula minima para que
+el codigo respete el dominio.
+
+Fuentes relacionadas:
+
+- `docs/vocal-01-filosofia-producto.md`
+- `docs/vocal_mapa_componentes_v_0_2_borrador.md`
+- `docs/decisiones-capas-actividades-v1.md`
+- `docs/definicion-tablas-room-v1.md`
+- `docs/prototipo/score-states.html`
+- `docs/tono-comunicacion.md`
 
 ## Idea central
 
-La app no mide felicidad abstracta.
+Vocal no mide felicidad abstracta, valor personal, productividad ni salud
+mental clinica.
 
-La app mide si el usuario esta sosteniendo la base diaria que le permite no autosabotearse.
-
-Estar bien significa:
-
-- sostener habitos base;
-- cuidar el cuerpo;
-- sostener sobriedad/abstinencias importantes;
-- avanzar proyectos sin sacrificar la estructura;
-- dormir y vivir con suficiente orden;
-- detectar el bucle antes de caer.
-
-Estar mal no significa "ser malo" o "fallar".
-
-Estar mal significa:
-
-- la base se esta desarmando;
-- los habitos protectores desaparecen;
-- aparecen conductas de escape;
-- el cuerpo y la casa empiezan a abandonarse;
-- aumenta la probabilidad de recaida o crisis.
-
-## Filosofia operativa
-
-En los mejores momentos, el usuario sostiene:
-
-- ejercicio;
-- meditacion;
-- lectura;
-- escritura;
-- proyectos;
-- cuidado basico;
-- sobriedad.
-
-Cuando esa base se pierde, suele ser reemplazada por:
-
-- dormir tarde;
-- uso excesivo del celular;
-- no banarse;
-- no cepillarse;
-- no ordenar;
-- conducta sexual compulsiva como escape;
-- alcohol;
-- aislamiento;
-- decisiones desde cansancio, rabia o madrugada.
-
-La app debe ayudar a detectar esa sustitucion antes de tocar fondo.
-
-## Frase de dominio
-
-> Si la base cae, el bucle vuelve. La app existe para ver la base, reconstruirla y cortar el circuito antes de caer.
-
-## Conceptos separados del dominio
-
-### 1. Sobriedad / abstinencias
-
-No es una actividad comun.
-
-Es una bandera critica de estabilidad.
-
-Ejemplos:
-
-- alcohol;
-- conducta sexual;
-- marihuana;
-- otras abstinencias configurables.
-
-Debe tener:
-
-- racha;
-- marca diaria;
-- estado desconocido si no se registro;
-- recaida;
-- impulso;
-- intensidad opcional;
-- nota opcional.
-
-### 2. Cuidado personal basico
-
-No es productividad.
-
-Es dignidad corporal y estructura minima.
-
-Ejemplos:
-
-- banarse;
-- cepillarse dientes;
-- cambiarse;
-- comer algo decente;
-- dormir con algo de orden;
-- volver al cuerpo.
-
-Debe ser tratado con lenguaje compasivo. No debe humillar.
-
-### 3. Actividades de practica
-
-Son acciones que construyen estabilidad y futuro.
-
-Ejemplos:
-
-- meditar;
-- leer;
-- escribir;
-- gimnasio;
-- caminar;
-- musica;
-- Digitaliza.
-
-Pueden tener:
-
-- objetivo;
-- minimo valido;
-- tiempo real;
-- frecuencia diaria o semanal;
-- capa;
-- nivel.
-
-### 4. Objetivos semanales
-
-No todo se mide dia a dia.
-
-Ejemplos:
-
-- gimnasio 3 veces por semana;
-- caminar 4 veces por semana;
-- cocinar 4 veces por semana;
-- leer 5 veces por semana.
-
-### 5. Eventos de riesgo
-
-No son estado manual.
-
-Son hechos registrados:
-
-- se abrio modo riesgo;
-- hubo impulso;
-- hubo detonante;
-- se uso una estrategia;
-- se evito o no se evito actuar.
-
-### 6. Senales externas o automaticas futuras
-
-Mas adelante:
-
-- uso del celular;
-- hora de dormir;
-- hora de despertar;
-- comida;
-- datos corporales.
-
-No deben ser usadas como vigilancia punitiva, sino como senales de cuidado.
-
-## Dimensiones del dashboard
-
-El dashboard debe tener una lectura global, pero no reducir todo a una sola palabra.
-
-Debe mostrar dimensiones separadas.
-
-Dimensiones iniciales:
-
-- Sobriedad / abstinencias.
-- Cuidado personal.
-- Cuerpo / movimiento.
-- Interior / mente.
-- Proyecto / identidad.
-- Sueno / ritmo.
-- Uso del celular, futuro.
-
-Ejemplo:
+Vocal mide una lectura practica:
 
 ```text
-Lectura general: bajo movimiento
-
-Sobriedad       estable
-Cuidado basico  alerta
-Cuerpo          en pausa
-Interior        en marcha
-Proyecto        estable
-Sueno           alerta
+Que tanto esta sosteniendo el usuario su base personal configurada.
 ```
 
-## Estados globales (ScoreState canónico)
+La app existe para detectar cuando la base se esta desarmando antes de que el
+usuario vuelva al bucle.
 
-Los estados no son diagnosticos.
+Frase de dominio:
 
-Son lecturas operativas del dominio, representadas por el enum canónico `ScoreState`:
+> Si la base cae, el bucle vuelve. La app existe para ver la base,
+> reconstruirla y cortar el circuito antes de caer.
 
-- `NoData`: todavia no hay suficiente registro. (UI: Sin datos)
-- `Restoration`: despues de crisis o abandono; el objetivo es no empeorar. (UI: Recuperación)
-- `Attention`: faltan acciones basicas, pero aun hay margen. (UI: Bajo movimiento)
-- `Motion`: ya hay acciones protectoras hoy. (UI: En marcha)
-- `Plenitude`: la base esta sostenida. (UI: Estable)
-- `Unbreakable`: consistencia a largo plazo y máxima protección.
+Estar bajo no significa fallar. Significa que hay una senal y toca volver a la
+base.
 
-Nota: "Riesgo", "Crisis" o "Recaída" no compiten como enums paralelos. Son señales críticas, eventos u overrides del dominio que pueden forzar un estado (ej. hacia Restoration o Attention).
+## Nucleo operativo
 
-## Senales de alerta
+El nucleo operativo de Vocal es:
 
-### Alerta roja
+```text
+Cinco capas
++ Mis anclas
++ sueno
++ score de base
++ estado de base
++ tono de comunicacion
++ configuracion local personal
+```
 
-Ejemplos:
+### Cinco capas
 
-- Beber alcohol.
-- Recaida en abstinencia critica activa.
-- No banarse o no cepillarse por mas de 3 dias.
-- Uso de celular extremadamente alto, por ejemplo 12 horas.
-- Varios dias consecutivos durmiendo tarde.
-- Evento de riesgo fuerte.
+Las capas son el modelo conceptual estable.
 
-### Alerta amarilla
+Responden:
 
-Ejemplos:
+```text
+Que parte de mi vida se esta sosteniendo o cayendo?
+```
 
-- Un dia sin actividades protectoras.
-- Falta de cuidado personal por 1 o 2 dias.
-- No meditar/leer/moverse varios dias.
-- Uso alto del celular, pero no extremo.
-- Dormir tarde uno o dos dias.
-- Mucho proyecto y cero cuerpo/cuidado.
+Capas canonicas:
 
-### Senal positiva
+1. Interior
+2. Cuerpo
+3. Conducta
+4. Vinculos
+5. Proyecto
 
-Ejemplos:
+Las capas no son features, pantallas ni formulas. Son dimensiones donde el
+dominio agrupa hechos para producir una lectura.
 
-- Cumplir version minima de una actividad.
-- Registrar impulso y no actuar.
-- Marcar dia sobrio.
-- Banarse o cepillarse despues de varios dias mal.
-- Volver a una actividad protectora.
+### Mis anclas
 
-## Reglas iniciales del estado calculado
+Nombre UI recomendado:
 
-Nota de prioridad:
+```text
+Mis anclas
+```
 
-- Los umbrales exactos no son necesarios para la primera implementacion del nuevo sistema.
-- Primero se necesita tener tablas/modelo y checklist funcionando.
-- Los umbrales se disenaran despues, porque son el medidor real del algoritmo.
+Definicion:
 
-Reglas simples para empezar:
+```text
+Practicas recurrentes que el usuario elige porque sostienen su base personal.
+```
 
-- Si hay recaida de alcohol, estado global minimo: crisis o riesgo alto.
-- Si hay recaida en abstinencia critica activa, estado global minimo: riesgo alto.
-- Si hay no cuidado personal por mas de 3 dias, estado global minimo: riesgo.
-- Si uso de celular futuro supera umbral extremo, estado global minimo: riesgo.
-- Si hay varios dias seguidos durmiendo tarde, sube alerta de sueno.
-- Si no hay acciones protectoras y ya es tarde, estado: bajo movimiento.
-- Si hay acciones protectoras en varias dimensiones, estado: estable.
-- Si se abrio modo riesgo, registrar evento y subir alerta temporalmente.
+Son pocas, visibles y centrales.
 
-Importante:
+Conceptualmente son `Activity` configuradas por el usuario como base principal.
+No son el registro diario. El registro diario vive en `ActivityLog`.
 
-- Estas reglas deben ser ajustables con el tiempo.
-- La app debe evitar lenguaje clinico o diagnostico.
-- La app no debe decir "estas mal"; debe traducir a accion concreta.
+Nota sobre el codigo actual:
 
-## Motor de recomendaciones
+```text
+El modelo actual se llama TrackedActivity, pero ese nombre es transitorio y
+puede confundir porque suena a actividad ya registrada.
+```
 
-La app debe recomendar desde cuidado, no desde control.
+En el dominio futuro, el nombre deberia migrar a algo mas claro como
+`ActivityDefinition`, `ConfiguredActivity` o simplemente `Activity`, segun la
+separacion final del codigo.
 
-Una "recomendacion valida por dimension" significa que la app no debe sugerir cualquier cosa al azar. Debe sugerir una accion que tenga sentido para la dimension que esta baja.
+Regla actual de superficie:
 
-Cuando detecta bajo movimiento:
+```text
+Mis anclas = Activity configuradas con displaySurface = PrimaryChecklist.
+```
 
-- accion minima de cuerpo;
-- agua;
-- ducha;
-- cepillarse;
-- 5 minutos de orden;
-- caminar;
-- meditar 1 minuto;
-- abrir checklist.
+Reglas:
 
-Cuando detecta riesgo:
+- deben ser elegidas o aceptadas por el usuario;
+- deben ser pocas;
+- alimentan las capas;
+- pesan mas que checklist secundaria y tasks;
+- no deben convertirse en una lista infinita.
 
-- abrir modo riesgo;
-- alejar detonante;
-- salir del cuarto;
-- registrar impulso;
-- usar protocolo de 20 minutos.
+Sin anclas no hay suficiente base diaria para leer estabilidad.
 
-Cuando detecta abandono de cuidado personal:
+### Sueno
 
-- una accion basica, no diez.
-- lenguaje: "Volvamos al cuerpo."
+Sueno es core.
 
-Cuando detecta exceso de proyecto sin base:
+No es solo una actividad dentro de Cuerpo. Es base fisiologica y conductual del
+sistema.
 
-- recordar que el futuro no se construye sacrificando cuerpo, mente ni sobriedad.
+En esta etapa se registra manualmente mientras se investiga una fuente mejor.
 
-Ejemplos por dimension:
+Modelo actual:
 
-- Sobriedad / abstinencias: abrir modo riesgo, alejar detonante, registrar impulso, ganar 20 minutos.
-- Cuidado personal: banarse, cepillarse, cambiarse, comer algo simple, volver al cuerpo.
-- Cuerpo / movimiento: caminar 10 minutos, estirar, gimnasio si hay energia, salir del cuarto.
-- Interior / mente: meditar 1 minuto, escribir una linea honesta, respirar, no decidir de madrugada.
-- Proyecto / identidad: avance minimo de 10 minutos, cerrar una tarea pequena, no sacrificar cuerpo por proyecto.
-- Sueno / ritmo: apagar celular, preparar cama, registrar hora, bajar estimulacion.
-- Uso del celular, futuro: dejar celular lejos de la cama, bloquear detonante, hacer pausa fisica.
+```text
+SleepLog
+- date
+- plannedSleepAt
+- plannedWakeAt
+- sleptAt
+- wokeAt
+- quality
+- note
+- updatedAt
+```
 
-## Politica de comunicacion
+Regla de dominio:
+
+```text
+Si el sueno falta o esta bajo, la base no esta completa para estados altos.
+```
+
+Regla de configuracion:
+
+```text
+La ventana objetivo de sueno no puede ser menor a 5 horas.
+```
+
+El usuario puede configurar su hora objetivo de dormir y despertar. La app debe
+aceptar objetivos desde 5 horas en adelante.
+
+El score de sueno no debe castigar a alguien por elegir 5, 6, 7 u 8 horas. Debe
+leer si la persona cumplio razonablemente la ventana que ella misma configuro,
+junto con calidad subjetiva y consistencia.
+
+Distincion:
+
+```text
+Minimo configurable: 5 horas.
+Objetivo personal: ventana elegida por el usuario desde 5h en adelante.
+Score de sueno: cumplimiento del objetivo personal + calidad + consistencia.
+```
+
+Esto no debe comunicarse como castigo. Debe comunicarse como cuidado:
+
+```text
+El descanso esta bajo. Volvamos al cuerpo.
+```
+
+Telemetria, wearables, uso/desuso del telefono o bloqueo nocturno quedan como
+investigacion futura. No entran como requisito de esta etapa.
+
+### Score y estado de base
+
+El score es una inferencia del dominio, no un hecho guardado.
+
+Nombre recomendado:
+
+```text
+Score de base
+```
+
+Estado visible recomendado:
+
+```text
+Estado de base
+```
+
+El score no mide:
+
+- felicidad;
+- valor personal;
+- moral;
+- productividad pura;
+- diagnostico clinico.
+
+Mide:
+
+```text
+Que tanto esta sosteniendo el usuario la base que configuro.
+```
+
+### Tono de comunicacion
 
 La comunicacion es parte del dominio.
 
-La app debe hablar como:
+Vocal habla como un adulto funcional y compasivo. Nombra hechos sin convertirlos
+en identidad.
 
-- un adulto funcional;
-- un apoyo emocional;
-- una voz compasiva;
-- una estructura que no humilla.
-
-Debe evitar:
+Evitar:
 
 - "fallaste";
-- "mal";
-- "eres irresponsable";
+- "estas mal";
 - "deberias";
 - tono policial;
-- tono de coach barato;
-- tono clinico.
+- tono clinico;
+- tono de coach barato.
 
-Debe preferir:
+Preferir:
 
 - "La base esta baja."
 - "Volvamos al cuerpo."
 - "Una accion minima ahora."
-- "No necesitas tocar fondo."
 - "Esto es una senal, no una condena."
 - "Hoy toca estructura, no castigo."
 
-### Protocolo de comunicacion para recaidas
+## Backend local dentro de la version actual
 
-Pendiente de definir antes de escribir textos finales en la app.
+Cuando este proyecto habla de backend en esta etapa, se refiere al backend
+local de la app:
 
-Principio:
+- Room;
+- DAOs;
+- repositorios;
+- seeds;
+- modelos de dominio;
+- motor de scoring;
+- inferencias;
+- flujos de datos observables;
+- ViewModels que exponen estado a Compose.
 
-- Comunicar una recaida sin verguenza.
-- Nombrar el hecho sin moralizar.
-- Llevar al usuario a una accion de recuperacion.
-- Evitar lenguaje de castigo.
+Esto si esta dentro del trabajo actual y es justamente lo que este documento
+ayuda a delimitar.
 
-Ejemplo de direccion:
+Fuera de la etapa inmediata:
+
+- servidor remoto como fuente de datos personales;
+- auth obligatoria;
+- cuentas obligatorias;
+- multiusuario;
+- nube para guardar logs sensibles;
+- API externa;
+- sincronizacion cloud de datos sensibles;
+- analytics remotos;
+- telemetria automatica sensible.
+
+La app sigue siendo local-first.
+
+## Perfil local y configuracion personal
+
+Para esta etapa no hay cuentas ni login.
+
+Existe un perfil local unico implicito:
 
 ```text
-Esto ya paso. Ahora el objetivo es no empeorar.
-Agua, comida, ducha, dormir, pedir ayuda si hace falta.
-Manana revisamos el patron sin insultarte.
+La configuracion activa del usuario en este dispositivo.
+```
+
+Ese perfil esta formado por:
+
+- anclas activas;
+- activities activas o archivadas;
+- objetivos semanales/mensuales;
+- abstinencias activas;
+- preferencias locales;
+- registros diarios;
+- configuracion de sueno.
+
+El score se calcula contra esa base configurada, no contra una plantilla
+universal.
+
+Regla clave:
+
+```text
+Lo que el usuario no activo no aparece, no pesa y no limita el estado.
+```
+
+## Identidad opcional futura
+
+La autenticacion futura esta permitida, pero no es obligatoria.
+
+Proveedores posibles:
+
+- Google;
+- Auth0;
+- Credential Manager;
+- otro proveedor equivalente.
+
+Regla central:
+
+```text
+Cuenta remota no significa datos en nube.
+```
+
+Una cuenta remota puede servir para:
+
+- identidad;
+- licencia;
+- recuperacion futura no sensible;
+- integraciones no sensibles.
+
+No debe servir para:
+
+- almacenar logs personales;
+- leer sueno, recaidas, uso digital o abstinencias;
+- calcular score en servidor;
+- reemplazar el perfil local;
+- obligar al usuario a iniciar sesion para usar Vocal.
+
+Tipos conceptuales:
+
+- `LocalProfile`: configuracion y datos del usuario en el dispositivo.
+- `RemoteIdentity`: identidad externa opcional, sin acceso a logs sensibles.
+- `DataOwnershipPolicy`: regla que impide que un backend remoto sea dueno de
+  los datos personales.
+
+El perfil local sigue siendo la fuente de verdad del dominio.
+
+## Portabilidad y export/import
+
+Como los datos sensibles viven en el dispositivo, export/import es la forma
+prevista de mover datos entre dispositivos.
+
+Reglas:
+
+- export cifrado por defecto;
+- import valida version, integridad y compatibilidad de esquema;
+- el usuario controla el archivo exportado;
+- export/import no afecta score ni dashboard si no se usa;
+- la app no puede prometer recuperacion desde servidor si el usuario pierde el
+  archivo exportado.
+
+Tipos conceptuales:
+
+- `ExportPackage`: paquete portable cifrado.
+- `ExportManifest`: version, fecha, esquema, checksum y metadatos no sensibles.
+- `ImportResult`: exito, incompatibilidad, error de contrasena, corrupcion o
+  version no soportada.
+
+## Configuracion inicial esperada
+
+El flujo de entrada debe permitir dos caminos:
+
+```text
+1. Configurar la base personal.
+2. Aceptar una configuracion predeterminada y empezar.
+```
+
+Flujo esperado:
+
+1. Explicar brevemente que Vocal organiza la base diaria en capas.
+2. Mostrar las 5 capas.
+3. Pedir al usuario elegir al menos 3 activities para `Mis anclas`.
+4. Permitir filtrar o elegir activities por capa.
+5. Ofrecer un boton para aceptar una configuracion predeterminada.
+6. Preguntar si quiere fijar metas semanales para las anclas elegidas.
+7. Preguntar si quiere activar abstinencias como alcohol, conducta sexual,
+   marihuana u otra personalizada.
+8. Entrar al dashboard funcional.
+
+La configuracion inicial debe ser breve. No debe sentirse como una entrevista
+clinica ni como una pantalla de productividad pesada.
+
+## Activities, logs y tasks
+
+### Activity
+
+`Activity` define una accion recurrente o configurable que el usuario puede
+elegir y registrar.
+
+En el codigo actual esta representada por `TrackedActivity`, pero el nombre no
+es ideal. `TrackedActivity` no significa "hecho ya trackeado"; significa
+"actividad configurada y registrable".
+
+Campos conceptuales importantes:
+
+- capa;
+- tipo de medicion;
+- superficie de aparicion;
+- rol;
+- aporte a estabilidad;
+- importancia;
+- objetivo opcional;
+- frecuencia opcional;
+- estado activo o archivado.
+
+`displaySurface` define donde aparece:
+
+- `PrimaryChecklist`: Mis anclas.
+- `SecondaryChecklist`: cuidado base o soporte.
+- `Contextual`: metas, senales o flujos especificos.
+- `Silent`: no aparece como accion directa.
+
+### ActivityLog
+
+`ActivityLog` guarda hechos de una actividad.
+
+Ejemplos:
+
+- medite 5 minutos;
+- hice ejercicio;
+- avance proyecto 40 minutos;
+- me cepille los dientes;
+- cocine en casa.
+
+La version actual acepta un registro por activity por dia.
+
+### Task
+
+`Task` no es habito.
+
+Es un pendiente puntual.
+
+Puede contribuir a estabilidad solo si:
+
+```text
+layerId != null
+contributionRole != Neutral
+```
+
+Una task neutral no debe sumar al score.
+
+Ejemplos neutrales:
+
+- comprar cuerdas;
+- buscar una referencia;
+- ordenar un archivo.
+
+Ejemplos que si pueden sostener estabilidad:
+
+- pagar alquiler;
+- pedir cita medica;
+- resolver un tramite urgente;
+- llamar a alguien para reparar una conversacion.
+
+## Sobriedad y abstinencias
+
+La sobriedad no es una activity comun.
+
+Es una feature propia porque necesita:
+
+- racha;
+- marca diaria;
+- historial;
+- impulso;
+- recaida;
+- lectura protectora propia.
+
+Modelos canonicos:
+
+```text
+AbstinenceTrack
+AbstinenceLog
+```
+
+Estados diarios:
+
+```text
+Unknown
+Clean
+Relapse
+```
+
+Reglas:
+
+- abstinencias son opt-in desde el producto;
+- si una abstinencia no esta activa, no aparece, no pesa y no limita estado;
+- si esta activa, alimenta principalmente Conducta;
+- una recaida no es una tarea fallida;
+- una recaida es una senal critica de proteccion y recuperacion;
+- registrar impulso sin actuar debe poder leerse como senal protectora.
+
+Nota tecnica:
+
+```text
+El seed actual activa Alcohol y Conducta sexual. Eso debe corregirse despues
+para alinear codigo y documentacion con el canon opt-in.
+```
+
+La UI debe evitar etiquetas crudas cuando generen verguenza. `Conducta sexual`
+es el nombre visible preferido; internamente puede representar
+pornografia/masturbacion si el usuario activa esa racha.
+
+## Score v1
+
+El score v1 se calcula desde las 5 capas.
+
+Las features no son capas paralelas. Las features alimentan capas o generan
+senales especiales.
+
+Mapa:
+
+```text
+ActivityLog
+SleepLog
+AbstinenceLog
+Task
+RiskEvent
+        ->
+Capas
+        ->
+Score de base
+        ->
+Estado de base
+```
+
+Reglas de score v1:
+
+- las capas producen una base visible de 700 a 900;
+- goals semanales/mensuales pueden aportar bonus de 0 a 100;
+- `Plenitude` e `Unbreakable` requieren base sostenida y goals consistentes;
+- checklist principal pesa mas que checklist secundaria;
+- tasks pesan menos y solo cuentan si aportan a una capa;
+- sueno bajo o ausente impide lecturas altas;
+- recaidas en abstinencias activas pueden limitar fuertemente el estado;
+- no registrar una abstinencia no es recaida automatica;
+- un dia perfecto no debe inflar todo;
+- un mal dia no debe destruir todo.
+
+El score visible nunca debe mostrar numeros humillantes por debajo de 700.
+
+`Sin datos` no tiene numero real, pero la tarjeta de estado/score sigue visible
+y muestra `--` / `sin score`.
+
+## Estados canonicos
+
+La fuente canonica visual es `docs/prototipo/score-states.html`.
+
+| Enum tecnico | UI canonica | Rango visible | Lectura |
+| --- | --- | ---: | --- |
+| `NoData` | Sin datos | - | No mostrar score todavia. |
+| `Restoration` | Restauración | 700-749 | Base baja. |
+| `Attention` | Atención | 750-799 | Hay margen. |
+| `Motion` | En marcha | 800-899 | Base activa. |
+| `Plenitude` | Plenitud | 900-949 | Base sostenida. |
+| `Unbreakable` | Inquebrantable | 950-1000 | Núcleo sólido. |
+
+Regla:
+
+```text
+En marcha es el hogar operativo de la app.
+```
+
+`Plenitude` e `Unbreakable` son picos organicos de consistencia. No deben
+sentirse como obligacion diaria.
+
+`Riesgo`, `Crisis` o `Recaida` no compiten como estados del enum. Son eventos,
+senales u overrides que pueden empujar el estado hacia `Restoration` o
+`Attention`.
+
+## Hechos vs inferencias
+
+Room guarda hechos.
+
+Ejemplos:
+
+- se registro una activity;
+- se registraron minutos reales;
+- se marco una abstinencia como limpia;
+- se registro una recaida;
+- se guardo sueno;
+- se completo una task;
+- se abrio modo riesgo;
+- se mostro una frase ancla.
+
+El dominio calcula inferencias.
+
+Ejemplos:
+
+- capa Cuerpo baja;
+- Conducta protegida;
+- sueno incompleto;
+- estado de base `Attention`;
+- recomendacion: volver al cuerpo;
+- score visible;
+- senales del dashboard.
+
+Regla arquitectonica:
+
+```text
+Room guarda hechos.
+El dominio interpreta hechos.
+Compose presenta estado y envia acciones.
 ```
 
 ## Arquitectura recomendada
 
-Usar clean architecture ligera.
+La arquitectura recomendada se define con mas detalle en:
 
-No hacer ceremonia innecesaria, pero separar:
+```text
+docs/arquitectura-recomendada-autonomia.md
+```
+
+Decision corta:
+
+```text
+Arquitectura local-first con dominio modular.
+```
+
+Esto significa usar MVVM para presentacion, dominio modular para reglas,
+repositorios locales para datos, Room como fuente de hechos y flujo
+unidireccional de estado.
+
+Estructura conceptual minima:
 
 ```text
 domain/
   modelos puros
+  motor de scoring
   reglas de estado
-  motor de recomendaciones
+  recomendaciones
   politicas de comunicacion
 
 data/
   Room
   DAOs
   repositorios concretos
+  seeds
 
-app/
+ui/
   ViewModels
+  StateFlow de pantalla
   Compose UI
 ```
 
+Limites:
+
+- Room no calcula score.
+- El repositorio centraliza acceso a datos y expone flujos.
+- El dominio interpreta los hechos.
+- ViewModel compone estado de pantalla.
+- Compose no inventa reglas de negocio.
+
+Esta direccion toma los principios utiles de Clean Architecture y arquitectura
+hexagonal, pero sin copiar su ceremonia completa. El objetivo no es llenar el
+proyecto de interfaces, sino impedir que scoring, dashboard, Room y Compose se
+mezclen.
+
+## Dashboard
+
+El dashboard no debe contener todo el sistema ni redefinir el dominio.
+
+Su rol es presentar el estado calculado y las superficies principales. El
+contrato concreto vive en el dashboard actual de Compose y en
+`docs/prototipo/dashboard.html`.
+
+El dashboard actual debe mantenerse como referencia:
+
+- tarjeta de estado/score siempre visible;
+- en `NoData`, la tarjeta muestra `--` / `sin score`, no se oculta;
+- progreso diario;
+- frase ancla;
+- botones de accion, incluyendo acceso a Mis anclas/checklist;
+- capas de hoy;
+- senales importantes;
+- abstinencias activas si el usuario las activo;
+- preview de Mis anclas;
+- soportes como cuidado base y tasks;
+- resumen semanal.
+
+Senales importantes:
+
+```text
+1. Sueno
+2. Proyecto
+3. Foco configurable del usuario
+```
+
+Sueno no es una tarjeta separada del contrato principal del dashboard. Vive
+dentro de senales importantes y desde ahi puede abrir su panel de registro.
+
+Sobriedad/abstinencias es configurable. Si no hay abstinencias activas, esa
+superficie no debe pesar ni forzar lectura visual.
+
+El dashboard consume estado ya calculado. No calcula scoring directamente.
+
+## Recomendaciones
+
+El motor de recomendaciones debe sugerir acciones coherentes con la senal baja.
+
+Ejemplos:
+
+- Cuerpo bajo: agua, ducha, comida simple, caminar.
+- Interior bajo: meditar 1 minuto, escribir una linea honesta.
+- Conducta en riesgo: alejar detonante, registrar impulso, abrir modo riesgo.
+- Proyecto sin base: avanzar poco sin sacrificar cuerpo ni sueno.
+- Sueno bajo: preparar cama, bajar estimulacion, registrar descanso.
+
 Regla:
 
-- El dashboard no debe calcular reglas directamente.
-- Compose solo presenta.
-- Room solo guarda hechos.
-- El dominio interpreta hechos y produce senales, estado y recomendaciones.
+```text
+Una recomendacion valida no es motivacion generica.
+Es una accion concreta para volver a la base.
+```
 
-## Entidades de dominio candidatas
+## Pruebas de lectura
 
-- AbstinenceTrack
-- AbstinenceLog
-- SelfCareTask
-- PracticeActivity
-- WeeklyGoal
-- ActivityLog
-- DailyLog
-- RiskEvent
-- ExternalSignal
-- DashboardDimension
-- MentalStateAssessment
-- Recommendation
-- CommunicationMessage
+El documento debe sostener estos escenarios:
 
-## Hechos vs inferencias
+- usuario nuevo elige 3 anclas y entra al dashboard;
+- usuario omite configuracion y acepta presets;
+- usuario no activa abstinencias: no aparecen, no pesan y no limitan estado;
+- usuario activa alcohol y registra recaida: afecta Conducta y estado sin
+  lenguaje de verguenza;
+- sueno no registrado o muy bajo: la base se considera incompleta para estados
+  altos;
+- sin registros suficientes: `Sin datos`, tarjeta de score visible con `--`;
+- goals semanales/mensuales ayudan a `Plenitude`/`Unbreakable`, pero no
+  reemplazan la base diaria;
+- tasks neutrales no suman al score.
+- usuario usa Vocal sin iniciar sesion;
+- usuario inicia sesion con Google/Auth0 y sus logs siguen solo en el
+  dispositivo;
+- usuario migra a otro telefono con export/import cifrado;
+- usuario pierde el archivo exportado y la app no puede recuperar datos
+  sensibles desde servidor;
+- scoring funciona igual con o sin autenticacion;
+- identidad remota no reemplaza perfil local.
 
-La base de datos guarda hechos:
+## Deudas conocidas
 
-- hice 20 minutos;
-- marque dia sobrio;
-- no me bane;
-- dormi a las 3am;
-- use celular 12h;
-- abri modo riesgo.
-
-El dominio calcula inferencias:
-
-- cuidado personal en alerta;
-- cuerpo en pausa;
-- riesgo alto;
-- recomendacion: ducha + agua + salir del cuarto.
-
-Esta separacion es clave para escalar.
-
-## Patrones historicos
-
-La deteccion de patrones es una feature futura.
-
-Idea:
-
-- La app podria aprender que ciertas secuencias aumentan riesgo.
-- Ejemplo: varios dias sin cuidado personal + dormir tarde + mucho celular preceden alcohol.
-- Esos patrones deben guardarse y mostrarse como observaciones, no como diagnosticos.
-
-No entra en la primera implementacion del nuevo sistema.
-
-Antes de eso se necesita:
-
-- tablas estables;
-- logs diarios confiables;
-- suficientes datos historicos.
-
-## Preguntas abiertas
-
-- Cuales son los umbrales exactos para cada alerta.
-- Como se pondera cada dimension.
-- Como se comunica una recaida sin verguenza, mediante protocolo de tono.
-- Si el dashboard debe mostrar historico de "patrones detectados" desde el inicio o mas adelante.
-- Que recomendaciones son validas para cada dimension.
-
-## Decisiones recientes
-
-- Conducta sexual se considera abstinencia moderada por defecto. En documentacion interna puede referirse a pornografia/masturbacion si el usuario activa esa racha, pero la UI debe evitar etiquetas crudas.
-- Umbrales exactos se definen despues.
-- Patrones historicos y aprendizaje inteligente se dejan para feature futura.
-- La siguiente implementacion debe priorizar schema/tablas y checklist base funcionando.
+- Alinear seed de abstinencias con el canon opt-in.
+- Crear o pulir onboarding/configuracion inicial.
+- Alinear labels del codigo con tildes visibles del HTML canonico cuando toque
+  pulir UI.
+- Seguir refinando pesos y umbrales con datos reales.
+- Investigar sueno automatico, uso del telefono y telemetria solo cuando el
+  nucleo local sea estable.
+- Export/import queda postergado hasta estabilizar el esquema local, pero es
+  feature futura necesaria por la decision de datos sensibles locales.

@@ -24,7 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.panopt.autonomia.domain.dashboard.DashboardDimensionStatus
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
+import dev.panopt.autonomia.domain.dashboard.DashboardSignalKind
+import dev.panopt.autonomia.domain.dashboard.DashboardSignalState
 import dev.panopt.autonomia.ui.dashboard.InteriorLayerIcon
 import dev.panopt.autonomia.ui.dashboard.ProjectTriangleIcon
 import dev.panopt.autonomia.ui.dashboard.SleepIcon
@@ -32,46 +35,39 @@ import dev.panopt.autonomia.ui.dashboard.SleepIcon
 private val DashboardSans = FontFamily.SansSerif
 
 @Composable
-internal fun SignalsSection(palette: DashboardPalette) {
+internal fun SignalsSection(
+    palette: DashboardPalette,
+    signals: List<DashboardSignalState>,
+    onSleepClick: () -> Unit,
+    onSignalSettingsClick: () -> Unit,
+) {
     SectionHeader(
         palette = palette,
-        title = "Señales",
-        note = "lectura rápida",
+        title = "Senales",
+        note = "lectura rapida",
     )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.4.dp),
     ) {
-        SignalCard(
-            palette = palette,
-            label = "Sueño",
-            value = "6h 40m",
-            meta = "aceptable",
-            color = palette.textMuted,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            SleepIcon(color = iconColor, modifier = Modifier.size(28.dp))
-        }
-        SignalCard(
-            palette = palette,
-            label = "Proyecto",
-            value = "20m",
-            meta = "música",
-            color = palette.layerProject,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            ProjectTriangleIcon(color = iconColor, modifier = Modifier.size(28.dp))
-        }
-        SignalCard(
-            palette = palette,
-            label = "Interior",
-            value = "12m",
-            meta = "elegida",
-            color = palette.layerInterior,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            InteriorLayerIcon(color = iconColor, modifier = Modifier.size(28.dp))
+        signals.take(3).forEach { signal ->
+            SignalCard(
+                palette = palette,
+                label = signal.label,
+                value = signal.value,
+                meta = signal.meta,
+                color = signal.color(palette),
+                modifier = Modifier.weight(1f),
+                onClick = when (signal.kind) {
+                    DashboardSignalKind.Sleep -> onSleepClick
+                    DashboardSignalKind.Project,
+                    DashboardSignalKind.Focus,
+                    -> onSignalSettingsClick
+                },
+            ) { iconColor ->
+                SignalIcon(kind = signal.kind, color = iconColor)
+            }
         }
     }
 }
@@ -84,6 +80,7 @@ internal fun SignalCard(
     meta: String,
     color: Color,
     modifier: Modifier,
+    onClick: () -> Unit,
     icon: @Composable (Color) -> Unit,
 ) {
     Column(
@@ -91,7 +88,7 @@ internal fun SignalCard(
             .height(116.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(palette.bgSurface)
-            .clickable(role = Role.Button, onClick = {})
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -139,3 +136,24 @@ internal fun SignalCard(
         }
     }
 }
+
+@Composable
+private fun SignalIcon(
+    kind: DashboardSignalKind,
+    color: Color,
+) {
+    when (kind) {
+        DashboardSignalKind.Sleep -> SleepIcon(color = color, modifier = Modifier.size(28.dp))
+        DashboardSignalKind.Project -> ProjectTriangleIcon(color = color, modifier = Modifier.size(28.dp))
+        DashboardSignalKind.Focus -> InteriorLayerIcon(color = color, modifier = Modifier.size(28.dp))
+    }
+}
+
+private fun DashboardSignalState.color(palette: DashboardPalette): Color =
+    when (status) {
+        DashboardDimensionStatus.Stable -> palette.layerBody
+        DashboardDimensionStatus.Motion -> palette.stateMotion
+        DashboardDimensionStatus.Attention -> palette.colorCardboard
+        DashboardDimensionStatus.Restoration -> palette.risk
+        DashboardDimensionStatus.Unknown -> palette.textMuted
+    }

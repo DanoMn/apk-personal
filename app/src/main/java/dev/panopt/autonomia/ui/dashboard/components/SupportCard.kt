@@ -28,45 +28,41 @@ import dev.panopt.autonomia.ui.dashboard.CheckIcon
 import dev.panopt.autonomia.ui.dashboard.ChecklistIcon
 import dev.panopt.autonomia.ui.dashboard.CircleIcon
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
+import dev.panopt.autonomia.domain.dashboard.DashboardSupportKind
+import dev.panopt.autonomia.domain.dashboard.DashboardSupportState
 import dev.panopt.autonomia.ui.dashboard.ListTodoIcon
 
 private val DashboardSans = FontFamily.SansSerif
 
 @Composable
-internal fun SupportsSection(palette: DashboardPalette) {
+internal fun SupportsSection(
+    palette: DashboardPalette,
+    supports: List<DashboardSupportState>,
+    onOpenSecondaryChecklist: () -> Unit,
+    onOpenTasks: () -> Unit,
+) {
     SectionHeader(
         palette = palette,
         title = "Soportes",
         note = "ligero",
     )
 
+    if (supports.isEmpty()) return
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(11.2.dp),
     ) {
-        SupportCard(
-            palette = palette,
-            title = "Checklist secundaria",
-            value = "2/4",
-            copy = "cuidado basico",
-            first = "Ducha marcada",
-            firstChecked = true,
-            second = "Dientes pendiente",
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            ChecklistIcon(color = iconColor, modifier = Modifier.size(24.dp))
-        }
-        SupportCard(
-            palette = palette,
-            title = "Pendientes",
-            value = "3",
-            copy = "tareas abiertas",
-            first = "Pagar recibo",
-            firstChecked = false,
-            second = "Comprar cuerdas",
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            ListTodoIcon(color = iconColor, modifier = Modifier.size(24.dp))
+        supports.forEach { support ->
+            SupportCard(
+                palette = palette,
+                support = support,
+                modifier = Modifier.weight(1f),
+                onClick = when (support.kind) {
+                    DashboardSupportKind.SecondaryChecklist -> onOpenSecondaryChecklist
+                    DashboardSupportKind.Tasks -> onOpenTasks
+                },
+            )
         }
     }
 }
@@ -74,21 +70,16 @@ internal fun SupportsSection(palette: DashboardPalette) {
 @Composable
 internal fun SupportCard(
     palette: DashboardPalette,
-    title: String,
-    value: String,
-    copy: String,
-    first: String,
-    firstChecked: Boolean,
-    second: String,
+    support: DashboardSupportState,
     modifier: Modifier,
-    icon: @Composable (Color) -> Unit,
+    onClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
             .height(148.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(palette.bgSurface)
-            .clickable(role = Role.Button, onClick = {})
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -98,7 +89,7 @@ internal fun SupportCard(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = title,
+                text = support.title,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Medium,
@@ -111,12 +102,12 @@ internal fun SupportCard(
                 modifier = Modifier.size(26.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                icon(palette.textMuted)
+                SupportIcon(kind = support.kind, color = palette.textMuted)
             }
         }
         Column {
             Text(
-                text = value,
+                text = support.value,
                 color = palette.colorCardboard,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Bold,
@@ -125,7 +116,7 @@ internal fun SupportCard(
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
-                text = copy,
+                text = support.copy,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 14.sp,
@@ -137,13 +128,13 @@ internal fun SupportCard(
         ) {
             SupportListLine(
                 palette = palette,
-                text = first,
-                checked = firstChecked,
+                text = support.first,
+                checked = support.firstChecked,
             )
             SupportListLine(
                 palette = palette,
-                text = second,
-                checked = false,
+                text = support.second,
+                checked = support.secondChecked,
             )
         }
     }
@@ -173,5 +164,16 @@ internal fun SupportListLine(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+private fun SupportIcon(
+    kind: DashboardSupportKind,
+    color: Color,
+) {
+    when (kind) {
+        DashboardSupportKind.SecondaryChecklist -> ChecklistIcon(color = color, modifier = Modifier.size(24.dp))
+        DashboardSupportKind.Tasks -> ListTodoIcon(color = color, modifier = Modifier.size(24.dp))
     }
 }

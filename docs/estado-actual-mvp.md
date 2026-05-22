@@ -36,6 +36,7 @@ La app ya tiene base Android con:
 
 - Kotlin + Jetpack Compose.
 - Persistencia local con Room.
+- Datos sensibles locales por defecto.
 - Drawer navigation.
 - Pantallas: Dashboard, Checklist, Sobriedad, Progreso, Riesgo, Configuracion.
 - Tablas v1 para capas, actividades, logs, rachas y eventos de riesgo.
@@ -111,10 +112,25 @@ Referencia:
 
 - `docs/tono-comunicacion.md`
 
+### Privacidad, identidad y portabilidad
+
+La direccion futura es local-first y privacy-first:
+
+- autenticacion opcional, no obligatoria;
+- datos sensibles solo en el dispositivo;
+- cuenta remota separada del perfil local;
+- export/import cifrado como mecanismo de portabilidad entre dispositivos.
+
+Auth futura puede servir para identidad, licencia, recuperacion no sensible o
+integraciones no sensibles. No debe convertir el servidor en fuente de verdad
+de sueno, recaidas, abstinencias, uso digital, logs personales ni scoring.
+
 ## No hacer todavia
 
-- No implementar export/import todavia.
-- No agregar backend, login, analytics, nube ni comunidad.
+- No implementar export/import todavia, aunque queda como feature futura
+  necesaria cuando el esquema local este estable.
+- No agregar servidor remoto como fuente de datos personales, login
+  obligatorio, analytics remotos, nube de logs sensibles ni comunidad.
 - No meter tracking automatico de celular hasta decidir permisos y privacidad.
 - No complejizar algoritmo antes de tener logs confiables.
 - No convertir la app en fitness, productividad pura o moralismo de sobriedad.

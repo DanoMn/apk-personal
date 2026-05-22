@@ -18,7 +18,7 @@ otro repositorio y no debe mezclarse con esta app.
 
 - Lee este archivo antes de editar codigo o documentacion.
 - Respuestas, documentos `.md` e interacciones en espanol.
-- Codigo fuente, nombres de clases, funciones, variables y commits en ingles cuando aplique.
+- Codigo fuente, nombres de clases, funciones, variables y commits en ingles cuando aplique. Preferible en ingles casi siempre.
 - No uses `&&` para encadenar comandos. Usa `;` o comandos separados.
 - No ejecutes `docker-compose build`; este proyecto Android no lo necesita.
 - No agregues atribucion de IA en commits.

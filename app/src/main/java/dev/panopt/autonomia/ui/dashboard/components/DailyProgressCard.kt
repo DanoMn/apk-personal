@@ -21,12 +21,16 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.panopt.autonomia.domain.dashboard.DashboardDailyProgressState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 
 private val DashboardSans = FontFamily.SansSerif
 
 @Composable
-internal fun DailyProgressCard(palette: DashboardPalette) {
+internal fun DailyProgressCard(
+    palette: DashboardPalette,
+    progress: DashboardDailyProgressState,
+) {
     Spacer(modifier = Modifier.height(11.52.dp))
 
     Column(
@@ -51,7 +55,7 @@ internal fun DailyProgressCard(palette: DashboardPalette) {
                 lineHeight = 20.sp,
             )
             Text(
-                text = "64%",
+                text = "${progress.percent}%",
                 color = palette.colorCardboard,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Bold,
@@ -70,7 +74,7 @@ internal fun DailyProgressCard(palette: DashboardPalette) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.64f)
+                    .fillMaxWidth(progress.progress.coerceIn(0f, 1f))
                     .clip(RoundedCornerShape(99.dp))
                     .background(palette.colorCoral),
             )
@@ -82,14 +86,14 @@ internal fun DailyProgressCard(palette: DashboardPalette) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "3 pendientes",
+                text = progress.pendingLabel,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 12.16.sp,
                 lineHeight = 14.sp,
             )
             Text(
-                text = "4 de 5 capas activas",
+                text = progress.activeLayersLabel,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 12.16.sp,

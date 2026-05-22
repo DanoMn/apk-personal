@@ -37,24 +37,20 @@ Durante la sesión anterior, tomamos decisiones fundamentales sobre el núcleo d
 
 Darle vida al Dashboard conectando el repositorio ya sembrado con la interfaz estática, creando el puente de lógica (ViewModel).
 
-## Roadmap Técnico Obligatorio (Próximos Pasos)
+### Roadmap Técnico Obligatorio
 
-Las siguientes tareas coinciden exactamente con lo marcado en el archivo `task.md` como pendiente. Debes ejecutarlas en orden:
+1. **Crear y Conectar el `DashboardViewModel`**:
+   - Deberás crear un ViewModel (usando Factory injection, ya que Hilt no está instalado en `build.gradle.kts` para el MVP).
+   - Este ViewModel debe instanciar el `AutonomiaRepository`.
 
-### Task técnica 4 — ViewModels e Inyección de Dependencias
-- Crear `DashboardViewModel`.
-- Configurar inyección manual o Factory para proveer la instancia de `AutonomiaRepository` a este ViewModel (dado que no hay Hilt configurado actualmente).
-- Enganchar el ViewModel a la `MainActivity.kt`.
+2. **Implementar el Algoritmo de Inferencia**:
+   - Crear un `StateFlow<DashboardState>` que combine los flujos de la BD (capas, actividades, logs de hoy, abstinencias, eventos de riesgo).
+   - Reconstruir la lógica que decide qué `ScoreState` es el actual basado en los hechos. (Ej: Si no hay cuidado personal y hay recaída, el estado baja. Si hay prácticas clave, sube a `Motion` o `Plenitude`).
+   - Reconstruir la evaluación de las dimensiones (`DashboardDimension`: Sobriedad, Cuidado Básico, Práctica, Riesgo).
 
-### Task técnica 5 — Algoritmo de Inferencia (Dominio)
-- Implementar el cálculo del `ScoreState` global basado en la recolección de hechos brutos desde la base de datos (actividades de hoy, recaídas, eventos de riesgo).
-- Implementar el cálculo individual de cada `DashboardDimension` (Cuidado Básico, Práctica, Sobriedad, Riesgo) haciéndolas reactivas.
-- Combinar estos cálculos y flujos en un único `StateFlow<DashboardState>` emitido hacia la UI.
-
-### Task técnica 6 — Conexión de UI (Compose)
-- Consumir el `DashboardState` emitido por el ViewModel dentro de `DashboardScreen`.
-- Enlazar todos los clicks (taps) en la UI hacia los *intents* correspondientes del ViewModel (ej. `viewModel.toggleActivity(id)`, `viewModel.markAbstinence(id)`).
-- Reemplazar toda la data quemada/estática en los componentes por los datos reales provenientes de Room.
+3. **Inyección Reactiva a Compose**:
+   - Conectar los datos en vivo a `DashboardScreen.kt` y a cada tarjeta (`StatusCard`, `DailyProgressCard`, `ChecklistPreviewSection`, etc.).
+   - Hacer que los *taps* disparen funciones en el ViewModel (`toggleActivity`, `markAbstinence`, etc.) cerrando el ciclo reactivo.
 
 ## 4. Reglas Críticas (Protocolo Meta-Prompting)
 

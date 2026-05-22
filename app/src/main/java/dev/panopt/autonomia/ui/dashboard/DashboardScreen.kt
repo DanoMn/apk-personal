@@ -12,13 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +26,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.ui.dashboard.components.ActionButtons
 import dev.panopt.autonomia.ui.dashboard.components.AnchorPhraseCard
 import dev.panopt.autonomia.ui.dashboard.components.ChecklistPreviewSection
@@ -41,17 +41,25 @@ import dev.panopt.autonomia.ui.dashboard.components.SupportsSection
 import dev.panopt.autonomia.ui.dashboard.components.TopBar
 import dev.panopt.autonomia.ui.dashboard.components.WeekSection
 import dev.panopt.autonomia.ui.dashboard.components.rememberDrawerWidth
-import kotlinx.coroutines.launch
 
 @Composable
-fun DashboardScreen(
+internal fun DashboardScreen(
+    state: DashboardState,
     isDarkMode: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    onToggleActivity: (String, Boolean) -> Unit,
+    onToggleAbstinenceClean: (String, Boolean) -> Unit,
+    onSaveActivityValue: (String, Int) -> Unit,
+    onSaveSleep: (String, String, String, String, SleepQuality, String) -> Unit,
+    onToggleAbstinenceRelapse: (String, Boolean) -> Unit,
+    onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
+    onSetFocusSignal: (String) -> Unit,
+    onCreateTask: (String, String?, Boolean) -> Unit,
+    onCompleteTask: (String) -> Unit,
 ) {
     val palette = dashboardPalette(isDarkMode)
     var isDrawerOpen by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
+    var activeSheet by remember { mutableStateOf<DashboardSheet?>(null) }
 
     BackHandler(enabled = isDrawerOpen) {
         isDrawerOpen = false
@@ -67,7 +75,7 @@ fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(top = 16.dp, bottom = 32.dp),
         ) {
@@ -75,23 +83,38 @@ fun DashboardScreen(
                 palette = palette,
                 onOpenDrawer = { isDrawerOpen = true },
             )
-            StatusCard(palette = palette)
-            DailyProgressCard(palette = palette)
-            AnchorPhraseCard(palette = palette)
+            StatusCard(palette = palette, status = state.status)
+            DailyProgressCard(palette = palette, progress = state.dailyProgress)
+            AnchorPhraseCard(palette = palette, phrase = state.anchorPhrase)
             ActionButtons(
                 palette = palette,
-                onChecklistClick = {
-                    coroutineScope.launch {
-                        scrollState.animateScrollTo((scrollState.maxValue * 0.55f).toInt())
-                    }
-                },
+                onChecklistClick = { activeSheet = DashboardSheet.EntryMenu },
+                onRiskClick = { activeSheet = DashboardSheet.Relapse },
             )
-            LayersSection(palette = palette)
-            SignalsSection(palette = palette)
-            SobrietySection(palette = palette)
-            ChecklistPreviewSection(palette = palette)
-            SupportsSection(palette = palette)
-            WeekSection(palette = palette)
+            LayersSection(palette = palette, layers = state.layers)
+            SignalsSection(
+                palette = palette,
+                signals = state.signals,
+                onSleepClick = { activeSheet = DashboardSheet.Sleep },
+                onSignalSettingsClick = { activeSheet = DashboardSheet.Activities },
+            )
+            SobrietySection(
+                palette = palette,
+                tracks = state.sobrietyTracks,
+                onToggleClean = onToggleAbstinenceClean,
+            )
+            ChecklistPreviewSection(
+                palette = palette,
+                items = state.checklistItems,
+                onToggle = onToggleActivity,
+            )
+            SupportsSection(
+                palette = palette,
+                supports = state.supports,
+                onOpenSecondaryChecklist = { activeSheet = DashboardSheet.SecondaryChecklist },
+                onOpenTasks = { activeSheet = DashboardSheet.Tasks },
+            )
+            WeekSection(palette = palette, rows = state.weekRows)
         }
 
         if (isDrawerOpen) {
@@ -121,7 +144,29 @@ fun DashboardScreen(
             modifier = Modifier.offset(x = drawerOffset),
             onClose = { isDrawerOpen = false },
             onThemeChange = onThemeChange,
+            onOpenChecklist = { activeSheet = DashboardSheet.Checklist },
+            onOpenTasks = { activeSheet = DashboardSheet.Tasks },
+            onOpenRelapse = { activeSheet = DashboardSheet.Relapse },
+            onOpenActivitySettings = { activeSheet = DashboardSheet.Activities },
         )
+
+        activeSheet?.let { sheet ->
+            DashboardSheetHost(
+                sheet = sheet,
+                state = state,
+                palette = palette,
+                onDismiss = { activeSheet = null },
+                onSwitchSheet = { activeSheet = it },
+                onToggleActivity = onToggleActivity,
+                onSaveActivityValue = onSaveActivityValue,
+                onSaveSleep = onSaveSleep,
+                onToggleRelapse = onToggleAbstinenceRelapse,
+                onCreateActivity = onCreateActivity,
+                onSetFocusSignal = onSetFocusSignal,
+                onCreateTask = onCreateTask,
+                onCompleteTask = onCompleteTask,
+            )
+        }
     }
 }
 

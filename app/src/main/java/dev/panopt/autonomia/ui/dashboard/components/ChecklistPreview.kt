@@ -19,9 +19,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -42,6 +39,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.panopt.autonomia.domain.dashboard.DashboardChecklistItemState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
 import dev.panopt.autonomia.ui.dashboard.InteriorLayerIcon
@@ -51,17 +49,13 @@ import dev.panopt.autonomia.ui.dashboard.ProjectTriangleIcon
 import dev.panopt.autonomia.ui.dashboard.WavesIcon
 
 @Composable
-internal fun ChecklistPreviewSection(palette: DashboardPalette) {
-    val items = listOf(
-        ChecklistPreviewItem("meditation", "Meditar antes de dormir", "Interior", "5 min", DashboardIconKind.Interior),
-        ChecklistPreviewItem("gym", "Gimnasio o caminata fuerte", "Cuerpo", "45 min", DashboardIconKind.Body),
-        ChecklistPreviewItem("digitaliza", "Avanzar Digitaliza", "Proyecto", "30 min", DashboardIconKind.Project),
-        ChecklistPreviewItem("ep", "Componer EP", "Proyecto", "20 min", DashboardIconKind.Project),
-        ChecklistPreviewItem("phone", "No celular en cama", "Conducta", "noche", DashboardIconKind.Conduct),
-    )
-    var checkedIds by rememberSaveable { mutableStateOf(listOf("gym", "digitaliza")) }
-    val pendingItems = items.filterNot { it.id in checkedIds }
-    val completedItems = items.filter { it.id in checkedIds }
+internal fun ChecklistPreviewSection(
+    palette: DashboardPalette,
+    items: List<DashboardChecklistItemState>,
+    onToggle: (String, Boolean) -> Unit,
+) {
+    val pendingItems = items.filterNot { it.completed }
+    val completedItems = items.filter { it.completed }
 
     SectionHeader(
         palette = palette,
@@ -84,7 +78,7 @@ internal fun ChecklistPreviewSection(palette: DashboardPalette) {
                     item = item,
                     checked = false,
                     onToggle = {
-                        checkedIds = checkedIds + item.id
+                        onToggle(item.id, true)
                     },
                 )
             }
@@ -99,21 +93,13 @@ internal fun ChecklistPreviewSection(palette: DashboardPalette) {
                     item = item,
                     checked = true,
                     onToggle = {
-                        checkedIds = checkedIds - item.id
+                        onToggle(item.id, false)
                     },
                 )
             }
         }
     }
 }
-
-internal data class ChecklistPreviewItem(
-    val id: String,
-    val title: String,
-    val layer: String,
-    val value: String,
-    val iconKind: DashboardIconKind,
-)
 
 internal enum class DashboardIconKind {
     Interior,
@@ -146,11 +132,12 @@ internal fun DashboardIconKind.Icon(
 @Composable
 internal fun CheckItem(
     palette: DashboardPalette,
-    item: ChecklistPreviewItem,
+    item: DashboardChecklistItemState,
     checked: Boolean,
     onToggle: () -> Unit,
 ) {
-    val layerColor = item.iconKind.color(palette)
+    val iconKind = item.iconKind()
+    val layerColor = iconKind.color(palette)
     val rowAlpha by animateFloatAsState(
         targetValue = if (checked) 0.58f else 1f,
         animationSpec = tween(durationMillis = 180),
@@ -202,9 +189,9 @@ internal fun CheckItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.12.dp),
             ) {
-                item.iconKind.Icon(color = layerColor, modifier = Modifier.size(14.dp))
+                iconKind.Icon(color = layerColor, modifier = Modifier.size(14.dp))
                 Text(
-                    text = item.layer,
+                    text = item.layerName,
                     color = layerColor,
                     fontFamily = DashboardSans,
                     fontSize = 12.16.sp,
@@ -224,6 +211,15 @@ internal fun CheckItem(
         )
     }
 }
+
+internal fun DashboardChecklistItemState.iconKind(): DashboardIconKind =
+    when (layerId) {
+        "layer_interior" -> DashboardIconKind.Interior
+        "layer_cuerpo" -> DashboardIconKind.Body
+        "layer_proyecto" -> DashboardIconKind.Project
+        "layer_conducta" -> DashboardIconKind.Conduct
+        else -> DashboardIconKind.Conduct
+    }
 
 @Composable
 internal fun CheckBoxMark(

@@ -175,3 +175,15 @@ data class AnchorPhraseDailySlotEntity(
     val phraseId: String,
     val resolvedAt: Long,
 )
+
+@Entity(tableName = "sleep_logs")
+data class SleepLogEntity(
+    @PrimaryKey val date: String,
+    val plannedSleepAt: String,
+    val plannedWakeAt: String,
+    val sleptAt: String,
+    val wokeAt: String,
+    val quality: String,
+    val note: String = "",
+    val updatedAt: Long,
+)

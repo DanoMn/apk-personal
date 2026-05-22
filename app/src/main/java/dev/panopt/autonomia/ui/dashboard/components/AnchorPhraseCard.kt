@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.panopt.autonomia.domain.dashboard.DashboardAnchorPhraseState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.mix
 
@@ -22,7 +23,10 @@ private val DashboardSans = FontFamily.SansSerif
 private val DashboardSerif = FontFamily.Serif
 
 @Composable
-internal fun AnchorPhraseCard(palette: DashboardPalette) {
+internal fun AnchorPhraseCard(
+    palette: DashboardPalette,
+    phrase: DashboardAnchorPhraseState,
+) {
     Spacer(modifier = Modifier.height(11.52.dp))
 
     Column(
@@ -33,7 +37,7 @@ internal fun AnchorPhraseCard(palette: DashboardPalette) {
             .padding(17.6.dp),
     ) {
         Text(
-            text = "\"Life can only be understood backwards; but it must be lived forwards.\"",
+            text = "\"${phrase.text}\"",
             color = palette.textMain,
             fontFamily = DashboardSerif,
             fontWeight = FontWeight.Normal,
@@ -42,7 +46,7 @@ internal fun AnchorPhraseCard(palette: DashboardPalette) {
         )
         Spacer(modifier = Modifier.height(10.4.dp))
         Text(
-            text = "Soren Kierkegaard",
+            text = phrase.authorReference,
             color = palette.textMuted,
             fontFamily = DashboardSans,
             fontSize = 12.48.sp,

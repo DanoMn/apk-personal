@@ -10,29 +10,6 @@ data class Layer(
     val active: Boolean = true,
 )
 
-data class TrackedActivity(
-    val id: String,
-    val layerId: String,
-    val name: String,
-    val description: String,
-    val type: ActivityType,
-    val role: ActivityRole,
-    val displaySurface: DisplaySurface,
-    val contributionRole: ContributionRole,
-    val importanceTier: ImportanceTier,
-    val cadence: ActivityCadence? = null,
-    val targetValue: Int? = null,
-    val minimumValue: Int? = null,
-    val targetCount: Int? = null,
-    val targetPeriod: TargetPeriod? = null,
-    val unit: ActivityUnit,
-    val active: Boolean = true,
-    val archived: Boolean = false,
-    val sortOrder: Int,
-    val createdAt: Long = 0L,
-    val updatedAt: Long = 0L,
-)
-
 data class ActivityLog(
     val activityId: String,
     val date: String,
@@ -104,14 +81,25 @@ data class AnchorPhrase(
     val updatedAt: Long,
 )
 
+data class SleepLog(
+    val date: String,
+    val plannedSleepAt: String,
+    val plannedWakeAt: String,
+    val sleptAt: String,
+    val wokeAt: String,
+    val quality: SleepQuality,
+    val note: String = "",
+    val updatedAt: Long = 0L,
+)
+
 // -- Enums --
 
 enum class ScoreState(val uiAlias: String) {
     NoData("Sin datos"),
-    Restoration("Recuperación"),
-    Attention("Bajo movimiento"),
+    Restoration("Restauración"),
+    Attention("Atención"),
     Motion("En marcha"),
-    Plenitude("Estable"),
+    Plenitude("Plenitud"),
     Unbreakable("Inquebrantable")
 }
 
@@ -128,5 +116,6 @@ enum class AbstinenceStatus { Unknown, Clean, Relapse }
 enum class TaskStatus { Pending, Done, Archived }
 enum class PhraseFamily { Containment, MinimalAction, RegulationClarity, Persistence, IdentityValues, Recognition, Contemplation }
 enum class AttributionStatus { Clear, Traditional, Disputed, NeedsReview }
+enum class SleepQuality { Low, Acceptable, Good }
 
 fun todayKey(): String = LocalDate.now().toString()

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
+import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
 import dev.panopt.autonomia.ui.dashboard.InfinityIcon
 import dev.panopt.autonomia.ui.dashboard.InteriorLayerIcon
 import dev.panopt.autonomia.ui.dashboard.ProjectTriangleIcon
@@ -69,61 +70,33 @@ internal fun SectionHeader(
 }
 
 @Composable
-internal fun LayersSection(palette: DashboardPalette) {
+internal fun LayersSection(
+    palette: DashboardPalette,
+    layers: List<DashboardLayerState>,
+) {
     SectionHeader(
         palette = palette,
         title = "Capas de hoy",
-        note = "4 de 5 activas",
+        note = "${layers.count { it.progress > 0f }} de ${layers.size} activas",
     )
+
+    if (layers.isEmpty()) return
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(7.2.dp),
     ) {
-        LayerPill(
-            label = "Interior",
-            color = palette.layerInterior,
-            progress = 0.35f,
-            palette = palette,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            InteriorLayerIcon(color = iconColor, modifier = Modifier.size(32.dp))
-        }
-        LayerPill(
-            label = "Cuerpo",
-            color = palette.layerBody,
-            progress = 0.78f,
-            palette = palette,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            WavesIcon(color = iconColor, modifier = Modifier.size(32.dp))
-        }
-        LayerPill(
-            label = "Conducta",
-            color = palette.layerConduct,
-            progress = 0.92f,
-            palette = palette,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            InfinityIcon(color = iconColor, modifier = Modifier.size(32.dp))
-        }
-        LayerPill(
-            label = "Vinculos",
-            color = palette.layerVinculos,
-            progress = 0.20f,
-            palette = palette,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            VinculosLayerIcon(color = iconColor, modifier = Modifier.size(32.dp))
-        }
-        LayerPill(
-            label = "Proyecto",
-            color = palette.layerProject,
-            progress = 0.70f,
-            palette = palette,
-            modifier = Modifier.weight(1f),
-        ) { iconColor ->
-            ProjectTriangleIcon(color = iconColor, modifier = Modifier.size(32.dp))
+        layers.forEach { layer ->
+            val color = layer.layerColor(palette)
+            LayerPill(
+                label = layer.name,
+                color = color,
+                progress = layer.progress,
+                palette = palette,
+                modifier = Modifier.weight(1f),
+            ) { iconColor ->
+                LayerIcon(layerId = layer.id, color = iconColor)
+            }
         }
     }
 }
@@ -179,3 +152,28 @@ internal fun LayerPill(
         }
     }
 }
+
+@Composable
+private fun LayerIcon(
+    layerId: String,
+    color: Color,
+) {
+    when (layerId) {
+        "layer_interior" -> InteriorLayerIcon(color = color, modifier = Modifier.size(32.dp))
+        "layer_cuerpo" -> WavesIcon(color = color, modifier = Modifier.size(32.dp))
+        "layer_conducta" -> InfinityIcon(color = color, modifier = Modifier.size(32.dp))
+        "layer_vinculos" -> VinculosLayerIcon(color = color, modifier = Modifier.size(32.dp))
+        "layer_proyecto" -> ProjectTriangleIcon(color = color, modifier = Modifier.size(32.dp))
+        else -> InfinityIcon(color = color, modifier = Modifier.size(32.dp))
+    }
+}
+
+private fun DashboardLayerState.layerColor(palette: DashboardPalette): Color =
+    when (id) {
+        "layer_interior" -> palette.layerInterior
+        "layer_cuerpo" -> palette.layerBody
+        "layer_conducta" -> palette.layerConduct
+        "layer_vinculos" -> palette.layerVinculos
+        "layer_proyecto" -> palette.layerProject
+        else -> palette.textMuted
+    }

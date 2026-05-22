@@ -65,6 +65,10 @@ internal fun NavigationDrawer(
     modifier: Modifier,
     onClose: () -> Unit,
     onThemeChange: (Boolean) -> Unit,
+    onOpenChecklist: () -> Unit,
+    onOpenTasks: () -> Unit,
+    onOpenRelapse: () -> Unit,
+    onOpenActivitySettings: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -130,21 +134,30 @@ internal fun NavigationDrawer(
             DrawerLink(
                 palette = palette,
                 text = "Checklist",
-                onClick = onClose,
+                onClick = {
+                    onClose()
+                    onOpenChecklist()
+                },
             ) {
                 ChecklistIcon(color = it)
             }
             DrawerLink(
                 palette = palette,
                 text = "Pendientes",
-                onClick = onClose,
+                onClick = {
+                    onClose()
+                    onOpenTasks()
+                },
             ) {
                 ListTodoIcon(color = it)
             }
             DrawerLink(
                 palette = palette,
-                text = "Riesgo",
-                onClick = onClose,
+                text = "Recaidas",
+                onClick = {
+                    onClose()
+                    onOpenRelapse()
+                },
             ) {
                 ShieldAlertIcon(color = it)
             }
@@ -165,14 +178,20 @@ internal fun NavigationDrawer(
             DrawerLink(
                 palette = palette,
                 text = "Capas y actividades",
-                onClick = onClose,
+                onClick = {
+                    onClose()
+                    onOpenActivitySettings()
+                },
             ) {
                 LayerStackIcon(color = it)
             }
             DrawerLink(
                 palette = palette,
                 text = "Configuración",
-                onClick = onClose,
+                onClick = {
+                    onClose()
+                    onOpenActivitySettings()
+                },
             ) {
                 SlidersIcon(color = it)
             }

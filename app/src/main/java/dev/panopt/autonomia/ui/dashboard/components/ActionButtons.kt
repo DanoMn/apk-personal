@@ -36,6 +36,7 @@ private val DashboardSans = FontFamily.SansSerif
 internal fun ActionButtons(
     palette: DashboardPalette,
     onChecklistClick: () -> Unit,
+    onRiskClick: () -> Unit,
 ) {
     Spacer(modifier = Modifier.height(13.6.dp))
 
@@ -79,8 +80,8 @@ internal fun ActionButtons(
                 .size(56.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(mix(palette.risk, 0.22f, palette.bgSurface))
-                .clickable(role = Role.Button, onClick = {})
-                .semantics { contentDescription = "Abrir protocolo de riesgo" },
+                .clickable(role = Role.Button, onClick = onRiskClick)
+                .semantics { contentDescription = "Registrar recaida de sobriedad" },
             contentAlignment = Alignment.Center,
         ) {
             FlagIcon(color = Color(0xFFF0B0A7), modifier = Modifier.size(28.dp))
