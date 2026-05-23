@@ -23,6 +23,14 @@ otro repositorio y no debe mezclarse con esta app.
 - No ejecutes `docker-compose build`; este proyecto Android no lo necesita.
 - No agregues atribucion de IA en commits.
 - No hagas `git reset --hard`, `git checkout --` ni reverts destructivos salvo pedido explicito.
+- Si necesitas compilar el proyecto en la terminal, configura primero la ruta de Java:
+  - **PowerShell (Windows nativo)**: `$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"`
+  - **WSL (solo WSL, invocando PowerShell desde Linux)**:
+    ```powershell
+    powershell.exe -Command "$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; Set-Location D:\APK-Personal; .\gradlew.bat assembleDebug --no-daemon"
+    ```
+    Para tests: reemplazar `assembleDebug` por `test`.
+- **NUNCA ejecutes tests (`gradlew test`) para cambios triviales** (arreglos de strings, imports, ajustes de layout minimos, limpieza de seeds). Solo ejecuta tests cuando el cambio toca logica de negocio, queries Room, o el usuario lo pide explicito.
 
 ## Estado actual del producto
 
@@ -43,6 +51,34 @@ La fuente de verdad de producto/dominio esta en:
 - `docs/especificacion-actividades-sobriedad-v1.md`
 - `docs/definicion-tablas-room-v1.md`
 - `docs/tono-comunicacion.md`
+
+## Nombres canonicos del frontend
+
+Fuente: `docs/vocal_mapa_componentes_v_0_2_borrador.md` y `docs/nucleo-dominio-autonomia.md`.
+
+Usa estos nombres para TODOS los textos visibles en la UI. No uses los nombres tecnicos en la interfaz.
+
+| Nombre UI canonico | Nombre tecnico (Room / codigo) | Antes |
+|--------------------|-------------------------------|-------|
+| Mis anclas | `PrimaryChecklist` | Checklist principal |
+| Cuidado base | `SecondaryChecklist` | Checklist secundaria |
+| Metas | `isGoal = true` | Goals |
+| Pendientes | `Task` | Tasks |
+| Senal destacada | `isFocusSignal = true` | Focus signal |
+| Registrar ancla | — | Registrar checklist |
+| Anclas disponibles | — | Actividades disponibles |
+| Anclas actuales | — | (sin cambios) |
+| Anclas pendientes | — | Faltan ahora |
+| Crear ancla | — | Crear y agregar a mis anclas |
+| Editar ancla | — | — |
+| Capas | `Layer` | (sin cambios) |
+| Sobriedad | `AbstinenceTrack` | (sin cambios) |
+| Frase ancla | `AnchorPhrase` | (sin cambios) |
+| Modo riesgo | `RiskEvent` | (sin cambios) |
+| Sueno | `SleepLog` | (sin cambios) |
+| Progreso semanal | `WeekRow` | Resumen semanal |
+
+Regla: si agregas un texto nuevo en la UI, consulta esta tabla antes de hardcodear.
 
 ## Arquitectura actual
 

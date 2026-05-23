@@ -40,9 +40,10 @@ La APK debug queda en:
 app\build\outputs\apk\debug\app-debug.apk
 ```
 
-Tambien puedes compilar directo si ya tienes `JAVA_HOME` y Android SDK:
+Tambien puedes compilar directo si ya tienes el Android SDK. Recuerda configurar tu `JAVA_HOME`:
 
 ```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 .\gradlew.bat assembleDebug
 ```
 

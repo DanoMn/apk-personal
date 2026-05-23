@@ -53,6 +53,27 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **AppGraph manual**: Preferir un `AppGraph` manual antes de introducir Hilt. Evaluar DI pesado solo cuando haya varias pantallas y dependencias repetidas.
 * **DashboardEngine futuro**: La inferencia actual de dashboard debe migrar desde `ui/dashboard/DashboardInference.kt` hacia `domain/dashboard/DashboardEngine.kt`.
 
+### Pantalla de Configuracion de Checklist / Mis Anclas (22/05/2026)
+
+* **Mis anclas**: `Activity` configuradas con `displaySurface = PrimaryChecklist`. Son las anclas que el usuario elige para su base diaria. Viven en la tabla `activities`.
+* **Filtro por capa**: Las 5 capas canonicas (Interior, Cuerpo, Conducta, Vinculos, Proyecto) sirven como filtros en la UI de configuracion. Cada actividad tiene `layerId` que la vincula a una capa.
+* **Tipos de actividad con tiempo**: `ActivityType.Time` tiene `targetValue` (minutos objetivo). No todas las actividades tienen tiempo; `ActivityType.Check` y `ActivityType.SelfCare` son booleanas.
+* **Goals (metas semanales/mensuales)**: Se modelan como `Activity` con `cadence` `Weekly`/`Monthly` y `targetPeriod` `Week`/`Month`. Campo `targetCount` almacena frecuencia objetivo (ej. 3 veces por semana).
+* **Arquitectura actual**: Una sola `Activity` → `MainActivity` que aloja `DashboardScreen`. No hay navegacion con NavHost. Los paneles secundarios usan bottom sheets (`DashboardSheetHost` con enum `DashboardSheet`).
+* **Drawer actual**: El drawer ya tiene un link "Checklist" que dispara `onOpenChecklist` y abre `DashboardSheet.Checklist`. La nueva pantalla de configuracion debe conectarse desde el drawer o desde un sheet.
+* **DashboardPalette**: Centraliza colores para dark/light mode. Se usa `mix()` para blends. Los colores de capas: `layerInterior`, `layerBody`, `layerConduct`, `layerVinculos`, `layerProject`.
+* **ActivityEntity vs Activity (dominio)**: `ActivityEntity` vive en Room con campos string para enums. `ActivityDefinition` vive en `domain/activity/`. Los mappers estan en `data/local/mapper/DomainMappers.kt`.
+* **Seed actual de actividades**: 8 actividades base (Meditar, Ejercicio, Digitaliza, Musica, Dientes, Banarse, Cocinar, Trastes). 4 PrimaryChecklist, 4 SecondaryChecklist.
+* **Bottom sheet patron**: `DashboardSheetHost` usa `Column` con `heightIn(max=680.dp)`, clip top corners `26.dp`, handle de 48x4dp, backdrop negro 48% opacidad.
+* **Navegacion pantallas**: `MainActivity` usa enum `AppScreen` (Dashboard, ChecklistConfig) para navegar entre pantallas completas. El drawer abre `ChecklistConfigScreen` como pagina completa, no como sheet.
+* **ChecklistPanel (sheet)**: El flujo Dashboard → "Registra checklist" → Checklist principal muestra SOLO actividades que ya estan en `PrimaryChecklist`. El boton "Configurar actividades" abre `DashboardSheet.Activities` (viejo). Debe redirigir a la pagina nueva.
+* **ChecklistConfigPanel (sheet rapido)**: Bottom sheet accesible desde el dashboard para configurar anclas sin salir. Coexiste con la pagina completa.
+* **ChecklistConfigScreen (pagina completa)**: Pagina propia accesible desde drawer. Tiene top bar, back button, busqueda, filtros, y seccion de creacion custom.
+* **Creacion de actividad personalizada**: El `ActivitySettingsPanel` tiene formulario para crear actividades custom (nombre, capa, minutos, secundaria, goal, mensual). Usa `onCreateActivity(name, layerId, minutes, isSecondary, isGoal, isMonthlyGoal)`. Esta funcionalidad debe replicarse en `ChecklistConfigScreen`.
+* **Seed IDs**: Los IDs de actividades predeterminadas empiezan con `act_` (ej. `act_meditar`, `act_ejercicio`). Los custom usan UUID. Esto permite distinguir cuales son borrables.
+* **Zona de pulgar (UX mobile)**: Los controles de accion (guardar, confirmar) deben estar en la zona inferior de la pantalla para accesibilidad con una mano.
+* **Sheet sin gesto de cierre**: El `DashboardSheetHost` actual usa `Box` + `Column` custom, no Material3 `ModalBottomSheet`. No tiene swipe-down nativo.
+
 ### Identidad, Privacidad y Portabilidad (22/05/2026)
 
 * **Auth opcional**: Vocal podra usar Google, Auth0, Credential Manager u otro proveedor en el futuro, pero el login no debe ser obligatorio para usar la app local.
@@ -60,3 +81,20 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Datos sensibles locales**: Los registros personales viven en el dispositivo. Un servidor remoto no debe ser fuente de verdad de datos sensibles.
 * **Export/import cifrado**: La portabilidad entre dispositivos se resuelve con `ExportPackage` cifrado por defecto, manifest de version/integridad y validacion en import.
 * **Servidor remoto limitado**: Auth puede servir para identidad, licencia, recuperacion futura no sensible o integraciones no sensibles; no para almacenar diario personal ni calcular scoring.
+
+### Sistema de Pendientes con Selección de Capas (22/05/2026)
+
+* **Asociación de Capas en Tareas**: Las tareas (`Task`) pueden estar asociadas a una de las 5 capas principales de la aplicación: `Interior`, `Cuerpo`, `Conducta`, `Vínculos` o `Proyecto`. Si no está asociada a ninguna, se considera de contribución Neutral.
+* **Interfaz de Creación de Pendientes**: Consiste en un campo de texto para el título del pendiente, y una fila horizontal debajo que muestra los 5 símbolos de las capas. El usuario puede tocar cualquiera de estos símbolos para asociar el pendiente a esa capa. Al tocarlo se destaca visualmente con el color de su respectiva capa. Si lo vuelve a tocar, se deselecciona. Al confirmar la creación del pendiente con el botón "Agregar pendiente", este se guarda en la base de datos con la capa seleccionada.
+* **Visualización de la Lista de Pendientes**: Cada pendiente activo en la lista se renderiza en una tarjeta plana. Si tiene una capa asignada, se muestra su símbolo característico al lado izquierdo del título de la tarea, pintado con el color correspondiente de la capa. Al lado derecho, se incluye un check circular sutil para completar la tarea de forma directa ("check, check, check").
+* **Flujo de Acciones de Pendientes**: El ViewModel expone `tasksFlow()` que lee desde Room. `createTask` recibe el título de la tarea, el `layerId` (nullable) y un booleano `contributesToCore` (que es true si el `layerId` no es nulo). `completeTask` marca la tarea como `Done` en Room.
+
+### Diagnostico de Bugs — Dashboard y Anclas (22/05/2026)
+
+* **Bug 1 — Actividad personalizada con goal no visible**: En `AutonomiaRepository.createActivity()`, cuando `isGoal=true`, el `displaySurface` se sobrescribe a `Contextual` ignorando el `displaySurface` que eligio el usuario (PrimaryChecklist). Esto hace que la actividad se cree pero no aparezca en "Mis anclas". Causa: linea `displaySurface = if (isGoal) DisplaySurface.Contextual.name else displaySurface.name` en `AutonomiaRepository.kt:172`.
+* **Bug 2 — Datos seed contaminan testing**: `DefaultSeeds.kt` siembra 30+ actividades y 3 abstinence tracks en cada inicio que la BD este vacia. El usuario quiere BD limpia para testear.
+* **Bug 3 — Inconsistencia dashboard vs configuracion**: `buildDashboardState` excluye goals con `filterNot { it.isGoal() }`, pero `activityOptions` los incluye. Ademas, el panel de configuracion (`ChecklistConfigPanel`) no filtra goals de `currentAnchors`. Combinado con Bug 1, genera la ilusion de que las actividades "desaparecen".
+* **Bug 4 — ActionButtons con 6 botones en grid**: Debe ser UN solo boton blanco ("Registrar checklist" o "Configuracion rapida") + boton rojo al costado. El boton blanco debe abrir `DashboardSheet.EntryMenu` que ya existe.
+* **Bug 5 — Sueno en panel rapido**: El boton de sueno esta en `ActionButtons` y `EntryMenuPanel`. Debe removerse de ambos. Sueno se accede desde la senal de sueno en `SignalsSection` (ya funciona).
+* **Funcion `isGoal()`**: Definida en `ActivityPolicy.kt:16-20`. Retorna true si `cadence` es Weekly/Monthly o `targetPeriod` es Week/Month. Se usa en `buildDashboardState` para excluir goals del pipeline diario.
+* **EntryMenuPanel**: Ya existe en `DashboardSheet.kt:244-264` con opciones: Mis anclas, Cuidado base, Pendientes, Actividades/proyectos/goals, Recaidas. No se usa actualmente porque `ActionButtons` dispara sheets individuales en vez de abrir EntryMenu.
