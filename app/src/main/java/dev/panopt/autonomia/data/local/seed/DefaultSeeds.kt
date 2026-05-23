@@ -4,11 +4,9 @@ import dev.panopt.autonomia.ActivityRole
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
-import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 
@@ -26,137 +24,125 @@ internal object DefaultSeeds {
         LayerEntity("layer_proyecto", "Proyecto", "Futuro, identidad, trabajo y creacion.", 50),
     )
 
-    val activities: List<ActivityEntity> = listOf(
-        // All seed activities use DisplaySurface.Available — they appear
-        // in "Anclas disponibles" but are NOT pre-assigned to any checklist.
-        // The user moves them to PrimaryChecklist manually.
-
-        // Interior
-        activity("act_meditar", "layer_interior", "Meditar",
-            ActivityType.Time, ActivityRole.Practice,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            targetValue = 5, minimumValue = 1, unit = ActivityUnit.Minutes, sortOrder = 10),
-        activity("act_escribir", "layer_interior", "Escribir",
-            ActivityType.Note, ActivityRole.Practice,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            unit = ActivityUnit.Text, sortOrder = 11),
-
-        // Cuerpo
-        activity("act_ejercicio", "layer_cuerpo", "Ejercicio / gimnasio / caminar",
-            ActivityType.Time, ActivityRole.Practice,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            targetValue = 40, unit = ActivityUnit.Minutes, sortOrder = 20),
-        activity("act_dormir_temprano", "layer_cuerpo", "Dormir temprano",
-            ActivityType.TimeOfDay, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            unit = ActivityUnit.Time, sortOrder = 21),
-
-        // Conducta
-        activity("act_no_celular_cama", "layer_conducta", "No celular antes de dormir",
-            ActivityType.Check, ActivityRole.DigitalHygiene,
-            DisplaySurface.Available, ContributionRole.Protective, ImportanceTier.High,
-            unit = ActivityUnit.Boolean, sortOrder = 30),
-        activity("act_no_decidir_madrugada", "layer_conducta", "No decidir de madrugada",
-            ActivityType.Check, ActivityRole.Boundary,
-            DisplaySurface.Available, ContributionRole.Protective, ImportanceTier.High,
-            unit = ActivityUnit.Boolean, sortOrder = 31),
-
-        // Vínculos
-        activity("act_no_aislarme", "layer_vinculos", "No aislarme",
-            ActivityType.Check, ActivityRole.RelationalHabit,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            unit = ActivityUnit.Boolean, sortOrder = 40),
-
-        // Proyecto
-        activity("act_digitaliza", "layer_proyecto", "Avanzar Digitaliza",
-            ActivityType.Time, ActivityRole.ProjectWork,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.Critical,
-            targetValue = 30, unit = ActivityUnit.Minutes, sortOrder = 50),
-        activity("act_musica", "layer_proyecto", "Musica / composicion",
-            ActivityType.Time, ActivityRole.ProjectWork,
-            DisplaySurface.Available, ContributionRole.Core, ImportanceTier.High,
-            targetValue = 20, unit = ActivityUnit.Minutes, sortOrder = 51),
-
-        // Interior (secondary)
-        activity("act_leer", "layer_interior", "Leer",
-            ActivityType.Time, ActivityRole.Learning,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            targetValue = 20, unit = ActivityUnit.Minutes, sortOrder = 12),
-
-        // Cuerpo (secondary)
-        activity("act_agua", "layer_cuerpo", "Tomar agua",
-            ActivityType.Count, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            targetValue = 8, unit = ActivityUnit.Count, sortOrder = 22),
-        activity("act_banarse", "layer_cuerpo", "Banarse",
-            ActivityType.Check, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            unit = ActivityUnit.Boolean, sortOrder = 23),
-        activity("act_dientes", "layer_cuerpo", "Cepillarse los dientes",
-            ActivityType.Check, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            unit = ActivityUnit.Boolean, sortOrder = 24),
-        activity("act_ropa", "layer_cuerpo", "Cambiarse de ropa",
-            ActivityType.Check, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Low,
-            unit = ActivityUnit.Boolean, sortOrder = 25),
-        activity("act_comer", "layer_cuerpo", "Comer algo decente",
-            ActivityType.Check, ActivityRole.SelfCare,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            unit = ActivityUnit.Boolean, sortOrder = 26),
-
-        // Conducta (secondary)
-        activity("act_orden_minimo", "layer_conducta", "Orden minimo",
-            ActivityType.Time, ActivityRole.DomesticOrder,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            targetValue = 15, unit = ActivityUnit.Minutes, sortOrder = 32),
-
-        // Vínculos (secondary)
-        activity("act_interaccion", "layer_vinculos", "Una interaccion limpia",
-            ActivityType.Note, ActivityRole.RelationalHabit,
-            DisplaySurface.Available, ContributionRole.Support, ImportanceTier.Medium,
-            unit = ActivityUnit.Text, sortOrder = 41),
-    )
-
     val abstinenceTracks: List<AbstinenceTrackEntity> = emptyList()
 
     // New seed data for v4 schema
     private val seedTime = System.currentTimeMillis()
 
     val activityDefinitions: List<ActivityDefinitionEntity> = listOf(
-        // -- Anchors (10) --
+        // === Interior: 5 anchors ===
         activityDef("act_meditar", "layer_interior", "Meditar",
             ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 10),
         activityDef("act_escribir", "layer_interior", "Escribir",
             ActivityType.Note, ActivityRole.Practice, ActivityUnit.Text,
             ContributionRole.Core, ImportanceTier.High, "anchor", 11),
-        activityDef("act_ejercicio", "layer_cuerpo", "Ejercicio / gimnasio / caminar",
+        activityDef("act_leer", "layer_interior", "Leer",
+            ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 12),
+        activityDef("act_aprender", "layer_interior", "Aprender",
+            ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 13),
+        activityDef("act_estudiar", "layer_interior", "Estudiar",
+            ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 14),
+
+        // === Cuerpo: 7 anchors ===
+        activityDef("act_ejercicio", "layer_cuerpo", "Ejercicio",
             ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 20),
-        activityDef("act_dormir_temprano", "layer_cuerpo", "Dormir temprano",
-            ActivityType.TimeOfDay, ActivityRole.SelfCare, ActivityUnit.Time,
+        activityDef("act_caminar", "layer_cuerpo", "Caminar",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 21),
+        activityDef("act_correr", "layer_cuerpo", "Correr",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 22),
+        activityDef("act_gimnasio", "layer_cuerpo", "Gimnasio",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 23),
+        activityDef("act_estirar", "layer_cuerpo", "Estirar",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 24),
+        activityDef("act_yoga", "layer_cuerpo", "Yoga",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 25),
+        activityDef("act_deporte", "layer_cuerpo", "Deporte",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 26),
+
+        // === Conducta: 5 anchors ===
         activityDef("act_no_celular_cama", "layer_conducta", "No celular antes de dormir",
             ActivityType.Check, ActivityRole.DigitalHygiene, ActivityUnit.Boolean,
             ContributionRole.Protective, ImportanceTier.High, "anchor", 30),
         activityDef("act_no_decidir_madrugada", "layer_conducta", "No decidir de madrugada",
             ActivityType.Check, ActivityRole.Boundary, ActivityUnit.Boolean,
             ContributionRole.Protective, ImportanceTier.High, "anchor", 31),
+        activityDef("act_educacion_financiera", "layer_conducta", "Educación financiera",
+            ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 32),
+        activityDef("act_gestion_financiera", "layer_conducta", "Gestión financiera",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 33),
+        activityDef("act_autonomia_alimentaria", "layer_conducta", "Autonomía alimentaria",
+            ActivityType.Check, ActivityRole.Practice, ActivityUnit.Boolean,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 34),
+
+        // === Vínculos: 7 anchors ===
         activityDef("act_no_aislarme", "layer_vinculos", "No aislarme",
             ActivityType.Check, ActivityRole.RelationalHabit, ActivityUnit.Boolean,
             ContributionRole.Core, ImportanceTier.High, "anchor", 40),
+        activityDef("act_cultivar_vinculo", "layer_vinculos", "Cultivar vínculo",
+            ActivityType.Note, ActivityRole.RelationalHabit, ActivityUnit.Text,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 41),
+        activityDef("act_grupo_estudio", "layer_vinculos", "Grupo de estudio",
+            ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 42),
+        activityDef("act_entrenamiento_grupal", "layer_vinculos", "Entrenamiento grupal",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 43),
+        activityDef("act_voluntariado", "layer_vinculos", "Voluntariado recurrente",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 44),
+        activityDef("act_proyecto_compartido", "layer_vinculos", "Proyecto compartido",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 45),
+        activityDef("act_mentoria", "layer_vinculos", "Mentoría",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 46),
+
+        // === Proyecto: 9 anchors ===
         activityDef("act_digitaliza", "layer_proyecto", "Avanzar Digitaliza",
             ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.Critical, "anchor", 50),
-        activityDef("act_musica", "layer_proyecto", "Musica / composicion",
+        activityDef("act_musica", "layer_proyecto", "Música",
             ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 51),
-        activityDef("act_leer", "layer_interior", "Leer",
+        activityDef("act_trabajar_proyecto", "layer_proyecto", "Trabajar en proyecto",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 52),
+        activityDef("act_crear", "layer_proyecto", "Crear",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 53),
+        activityDef("act_practicar_habilidad", "layer_proyecto", "Practicar habilidad",
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 54),
+        activityDef("act_estudiar_carrera", "layer_proyecto", "Estudiar carrera",
             ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
-            ContributionRole.Support, ImportanceTier.Medium, "anchor", 12),
+            ContributionRole.Core, ImportanceTier.High, "anchor", 55),
+        activityDef("act_construir_negocio", "layer_proyecto", "Construir negocio",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 56),
+        activityDef("act_desarrollar_producto", "layer_proyecto", "Desarrollar producto",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 57),
+        activityDef("act_crear_contenido", "layer_proyecto", "Crear contenido",
+            ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 58),
 
-        // -- Supports (7) --
+        // === Soportes: 7 ===
+        activityDef("act_dormir_temprano", "layer_cuerpo", "Dormir temprano",
+            ActivityType.TimeOfDay, ActivityRole.SelfCare, ActivityUnit.Time,
+            ContributionRole.Core, ImportanceTier.High, "anchor", 27),
         activityDef("act_agua", "layer_cuerpo", "Tomar agua",
             ActivityType.Count, ActivityRole.SelfCare, ActivityUnit.Count,
             ContributionRole.Support, ImportanceTier.Medium, "support", 22),
@@ -183,42 +169,6 @@ internal object DefaultSeeds {
     val userActivityConfigs: List<UserActivityConfigEntity> = emptyList()
 
     // -- helper --
-    private fun activity(
-        id: String,
-        layerId: String,
-        name: String,
-        type: ActivityType,
-        role: ActivityRole,
-        displaySurface: DisplaySurface,
-        contributionRole: ContributionRole,
-        importanceTier: ImportanceTier,
-        targetValue: Int? = null,
-        minimumValue: Int? = null,
-        targetCount: Int? = null,
-        unit: ActivityUnit,
-        sortOrder: Int,
-    ): ActivityEntity = ActivityEntity(
-        id = id,
-        layerId = layerId,
-        name = name,
-        description = "",
-        type = type.name,
-        role = role.name,
-        displaySurface = displaySurface.name,
-        contributionRole = contributionRole.name,
-        importanceTier = importanceTier.name,
-        cadence = null,
-        targetValue = targetValue,
-        minimumValue = minimumValue,
-        targetCount = targetCount,
-        targetPeriod = null,
-        unit = unit.name,
-        active = true,
-        archived = false,
-        sortOrder = sortOrder,
-        createdAt = 0L,
-        updatedAt = 0L,
-    )
     private fun activityDef(
         id: String,
         layerId: String,
