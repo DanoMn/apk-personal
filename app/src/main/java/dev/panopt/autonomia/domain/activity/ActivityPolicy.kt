@@ -2,16 +2,16 @@ package dev.panopt.autonomia.domain.activity
 
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityLog
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityUnit
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.TargetPeriod
 
 fun ActivityDefinition.isAnchor(): Boolean =
-    displaySurface == DisplaySurface.PrimaryChecklist && !isGoal()
+    activityType == ActivitySurface.Anchor && !isGoal()
 
 fun ActivityDefinition.isSupport(): Boolean =
-    displaySurface == DisplaySurface.SecondaryChecklist && !isGoal()
+    activityType == ActivitySurface.Support && !isGoal()
 
 fun ActivityDefinition.isGoal(): Boolean =
     cadence == ActivityCadence.Weekly ||

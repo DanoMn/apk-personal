@@ -5,8 +5,8 @@ import dev.panopt.autonomia.AbstinenceSeverity
 import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityLog
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.SleepLog
@@ -116,7 +116,7 @@ object ScoreEngine {
         }
 
         val visibleActivities = input.activities
-            .filter { it.active && !it.archived && it.displaySurface != DisplaySurface.Silent }
+            .filter { it.active && !it.archived }
             .sortedBy { it.sortOrder }
         val todayLogsByActivity = input.todayActivityLogs.associateBy { it.activityId }
         val periodLogsByActivity = input.periodActivityLogs.groupBy { it.activityId }
@@ -130,16 +130,16 @@ object ScoreEngine {
         val layerScores = activeLayers.map { layer ->
             val layerActivities = visibleActivities.filter { it.layerId == layer.id && !it.isGoal() }
             val primaryRatio = layerActivities
-                .filter { it.displaySurface == DisplaySurface.PrimaryChecklist }
+                .filter { it.activityType == ActivitySurface.Anchor }
                 .weightedActivityRatio(todayLogsByActivity)
             val secondaryRatio = layerActivities
-                .filter { it.displaySurface == DisplaySurface.SecondaryChecklist }
+                .filter { it.activityType == ActivitySurface.Support }
                 .weightedActivityRatio(todayLogsByActivity)
             val taskRatio = completedTasks
                 .filter { it.layerId == layer.id }
                 .weightedTaskRatio()
-            val hasPrimary = layerActivities.any { it.displaySurface == DisplaySurface.PrimaryChecklist }
-            val hasSecondary = layerActivities.any { it.displaySurface == DisplaySurface.SecondaryChecklist }
+            val hasPrimary = layerActivities.any { it.activityType == ActivitySurface.Anchor }
+            val hasSecondary = layerActivities.any { it.activityType == ActivitySurface.Support }
             val hasTasks = input.tasks.any { it.layerId == layer.id && it.contributionRole != ContributionRole.Neutral }
             val hasSleep = layer.id == BODY_LAYER_ID && sleepScore != null
             val hasSobriety = layer.id == CONDUCT_LAYER_ID && activeTracks.isNotEmpty()

@@ -137,11 +137,13 @@ internal data class DashboardActivityOptionState(
     val actualValue: Int,
     val isCompletedToday: Boolean,
     val isFocusSignal: Boolean,
-    val displaySurface: String,
+    val displaySurface: String, // DEPRECATED — replaced by activityType
+    val activityType: String = "", // NEW — replaces displaySurface
     val isGoal: Boolean = false,
 )
 
 internal data class DashboardTaskState(
     val id: String,
     val title: String,
+    val layerId: String? = null,
 )

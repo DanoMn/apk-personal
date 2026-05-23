@@ -6,10 +6,10 @@ import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.ActivityRole
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.AnchorPhrase
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.RiskEvent
 import dev.panopt.autonomia.ScoreState
@@ -46,7 +46,7 @@ internal fun buildDashboardState(
     val activeLayers = layers.filter { it.active }.sortedBy { it.sortOrder }
     val layerById = activeLayers.associateBy { it.id }
     val visibleActivities = activities
-        .filter { it.active && !it.archived && it.displaySurface != DisplaySurface.Silent }
+        .filter { it.active && !it.archived && it.activityType != ActivitySurface.Task }
         .sortedBy { it.sortOrder }
     val goalActivities = visibleActivities.filter { it.isGoal() }
     val dashboardActivities = visibleActivities.filterNot { it.isGoal() }
@@ -56,12 +56,12 @@ internal fun buildDashboardState(
     }
     val completedActivityIds = completedActivities.map { it.id }.toSet()
 
-    val primaryActivities = dashboardActivities.filter { it.displaySurface == DisplaySurface.PrimaryChecklist }
-    val secondaryActivities = dashboardActivities.filter { it.displaySurface == DisplaySurface.SecondaryChecklist }
+    val primaryActivities = dashboardActivities.filter { it.activityType == ActivitySurface.Anchor }
+    val secondaryActivities = emptyList<ActivityDefinition>() // Disabled until secondary checklist logic is defined
     val coreActivities = dashboardActivities.filter { it.contributionRole == ContributionRole.Core }
     val timeActivities = dashboardActivities.filter { it.unit == ActivityUnit.Minutes }
     val selfCareActivities = dashboardActivities.filter {
-        it.role == ActivityRole.SelfCare || it.displaySurface == DisplaySurface.SecondaryChecklist
+        it.activityType == ActivitySurface.Support
     }
 
     val completedCount = completedActivities.size
@@ -188,7 +188,8 @@ internal fun buildDashboardState(
                 actualValue = log?.actualValue ?: activity.targetValue ?: activity.minimumValue ?: 0,
                 isCompletedToday = activity.isCompletedBy(log),
                 isFocusSignal = activity.id == focusSignalActivityId,
-                displaySurface = activity.displaySurface.name,
+                displaySurface = activity.displaySurface.name, // deprecated, keep for now
+                activityType = activity.activityType.name,
                 isGoal = activity.isGoal(),
             )
         },
@@ -205,7 +206,7 @@ internal fun buildDashboardState(
         pendingTasks = tasks
             .filter { it.status == TaskStatus.Pending }
             .sortedBy { it.dueDate ?: "9999-99-99" }
-            .map { DashboardTaskState(id = it.id, title = it.title) },
+            .map { DashboardTaskState(id = it.id, title = it.title, layerId = it.layerId) },
     )
 }
 
