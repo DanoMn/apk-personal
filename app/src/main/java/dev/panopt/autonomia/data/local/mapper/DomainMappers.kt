@@ -7,6 +7,7 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.ActivityRole
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.AnchorPhrase
@@ -24,6 +25,7 @@ import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
+import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AnchorPhraseEntity
@@ -31,6 +33,7 @@ import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepLogEntity
 import dev.panopt.autonomia.data.TaskEntity
+import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 
 internal fun LayerEntity.toDomain(): Layer =
@@ -59,6 +62,48 @@ internal fun ActivityEntity.toDomain(): ActivityDefinition =
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
+
+// New mapper for merged domain model (used in PR 2 when repository merges flows)
+internal fun mergeToDomain(
+    definition: ActivityDefinitionEntity,
+    config: UserActivityConfigEntity,
+): ActivityDefinition = ActivityDefinition(
+    id = definition.id,
+    layerId = definition.layerId,
+    name = config.customName ?: definition.name,
+    description = config.customDescription ?: definition.description,
+    type = runCatching { ActivityType.valueOf(definition.type) }.getOrDefault(ActivityType.Check),
+    role = runCatching { ActivityRole.valueOf(definition.role) }.getOrDefault(ActivityRole.Practice),
+    displaySurface = runCatching { DisplaySurface.valueOf(config.activityType) }.getOrDefault(DisplaySurface.PrimaryChecklist),
+    activityType = runCatching { ActivitySurface.valueOf(config.activityType) }.getOrDefault(ActivitySurface.Anchor),
+    contributionRole = runCatching { ContributionRole.valueOf(definition.contributionRole) }.getOrDefault(ContributionRole.Core),
+    importanceTier = runCatching { ImportanceTier.valueOf(definition.importanceTier) }.getOrDefault(ImportanceTier.Medium),
+    cadence = config.cadence?.let { runCatching { ActivityCadence.valueOf(it) }.getOrNull() },
+    targetValue = config.targetValue,
+    minimumValue = config.minimumValue,
+    targetCount = config.targetCount,
+    targetPeriod = config.targetPeriod?.let { runCatching { TargetPeriod.valueOf(it) }.getOrNull() },
+    unit = runCatching { ActivityUnit.valueOf(definition.unit) }.getOrDefault(ActivityUnit.Boolean),
+    active = config.active,
+    archived = config.archived,
+    sortOrder = config.sortOrder,
+    createdAt = definition.createdAt,
+    updatedAt = config.updatedAt,
+)
+
+// Temporary helper for catalog browsing (definition-only, no config)
+internal fun ActivityDefinitionEntity.toDomain(): ActivityDefinition = ActivityDefinition(
+    id = id, layerId = layerId, name = name, description = description,
+    type = runCatching { ActivityType.valueOf(type) }.getOrDefault(ActivityType.Check),
+    role = runCatching { ActivityRole.valueOf(role) }.getOrDefault(ActivityRole.Practice),
+    displaySurface = DisplaySurface.Available, // Catalog-only, no placement yet
+    activityType = ActivitySurface.Anchor, // Default, overridden when config exists
+    contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Core),
+    importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
+    cadence = null, targetValue = null, minimumValue = null, targetCount = null, targetPeriod = null,
+    unit = runCatching { ActivityUnit.valueOf(unit) }.getOrDefault(ActivityUnit.Boolean),
+    active = false, archived = false, sortOrder = sortOrder, createdAt = createdAt, updatedAt = updatedAt,
+)
 
 internal fun ActivityLogEntity.toDomain(): ActivityLog =
     ActivityLog(
