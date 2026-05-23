@@ -66,6 +66,7 @@ internal fun NavigationDrawer(
     onClose: () -> Unit,
     onThemeChange: (Boolean) -> Unit,
     onOpenChecklist: () -> Unit,
+    onOpenSupports: () -> Unit = {},
     onOpenTasks: () -> Unit,
     onOpenRelapse: () -> Unit,
     onOpenActivitySettings: () -> Unit,
@@ -139,6 +140,17 @@ internal fun NavigationDrawer(
                     onOpenChecklist()
                 },
             ) {
+                ChecklistIcon(color = it)
+            }
+            DrawerLink(
+                palette = palette,
+                text = "Soportes",
+                onClick = {
+                    onClose()
+                    onOpenSupports()
+                },
+            ) {
+                // Heart-hand icon for support theme
                 ChecklistIcon(color = it)
             }
             DrawerLink(

@@ -16,6 +16,8 @@ import dev.panopt.autonomia.ui.checklist.ChecklistConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
+import dev.panopt.autonomia.ui.supports.SupportsConfigScreen
+import dev.panopt.autonomia.ui.tasks.TasksScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +54,8 @@ class MainActivity : ComponentActivity() {
                     onAddToChecklist = dashboardViewModel::addActivityToChecklist,
                     onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
                     onNavigateToChecklistConfig = { currentScreen = AppScreen.ChecklistConfig },
+                    onToggleSupport = dashboardViewModel::onToggleSupport,
+                    onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
                 )
                 AppScreen.ChecklistConfig -> ChecklistConfigScreen(
                     layers = dashboardState.layers,
@@ -61,6 +65,22 @@ class MainActivity : ComponentActivity() {
                     onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
                     onCreateActivity = dashboardViewModel::createActivity,
                     onDeleteActivity = dashboardViewModel::deleteActivity,
+                    onBack = { currentScreen = AppScreen.Dashboard },
+                )
+                AppScreen.Supports -> SupportsConfigScreen(
+                    layers = dashboardState.layers,
+                    activityOptions = dashboardState.activityOptions,
+                    palette = palette,
+                    onAddToSupports = dashboardViewModel::addToSupports,
+                    onRemoveFromSupports = dashboardViewModel::removeFromSupports,
+                    onBack = { currentScreen = AppScreen.Dashboard },
+                )
+                AppScreen.Tasks -> TasksScreen(
+                    pendingTasks = dashboardState.pendingTasks,
+                    layers = dashboardState.layers,
+                    palette = palette,
+                    onCreateTask = dashboardViewModel::createTask,
+                    onCompleteTask = dashboardViewModel::completeTask,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
             }
@@ -86,4 +106,6 @@ class MainActivity : ComponentActivity() {
 private enum class AppScreen {
     Dashboard,
     ChecklistConfig,
+    Supports,
+    Tasks,
 }
