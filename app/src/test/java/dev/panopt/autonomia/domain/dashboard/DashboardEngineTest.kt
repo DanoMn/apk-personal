@@ -5,6 +5,7 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.ActivityRole
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
@@ -108,6 +109,7 @@ class DashboardEngineTest {
             type = ActivityType.Time,
             role = role,
             displaySurface = DisplaySurface.PrimaryChecklist,
+            activityType = ActivitySurface.Anchor,
             contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,
             cadence = ActivityCadence.Daily,

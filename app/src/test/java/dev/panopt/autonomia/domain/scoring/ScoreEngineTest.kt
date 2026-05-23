@@ -7,6 +7,7 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.ActivityRole
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
@@ -284,6 +285,11 @@ class ScoreEngineTest {
             type = ActivityType.Time,
             role = ActivityRole.Practice,
             displaySurface = displaySurface,
+            activityType = when (displaySurface) {
+                DisplaySurface.PrimaryChecklist -> ActivitySurface.Anchor
+                DisplaySurface.SecondaryChecklist -> ActivitySurface.Support
+                else -> ActivitySurface.Anchor
+            },
             contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,
             cadence = ActivityCadence.Daily,
