@@ -141,6 +141,7 @@ internal data class DashboardActivityOptionState(
     val displaySurface: String, // DEPRECATED — replaced by activityType
     val activityType: String = "", // NEW — replaces displaySurface
     val isGoal: Boolean = false,
+    val isConfigured: Boolean = false, // true when user has a UserActivityConfig
 )
 
 internal data class DashboardTaskState(

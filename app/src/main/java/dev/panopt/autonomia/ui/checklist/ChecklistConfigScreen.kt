@@ -106,8 +106,8 @@ internal fun ChecklistConfigScreen(
         }
     }
 
-    val currentAnchors = activityOptions.filter { it.activityType == "Anchor" }
-    val availableActivities = activityOptions.filter { it.activityType != "Anchor" }
+    val currentAnchors = activityOptions.filter { it.isConfigured && it.activityType == "Anchor" }
+    val availableActivities = activityOptions.filter { !it.isConfigured && it.activityType == "Anchor" }
     val filteredActivities = availableActivities.filter { activity ->
         val matchesSearch = searchQuery.isBlank() ||
             activity.title.contains(searchQuery, ignoreCase = true)

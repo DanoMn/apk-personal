@@ -97,7 +97,11 @@ internal fun ActivityDefinitionEntity.toDomain(): ActivityDefinition = ActivityD
     type = runCatching { ActivityType.valueOf(type) }.getOrDefault(ActivityType.Check),
     role = runCatching { ActivityRole.valueOf(role) }.getOrDefault(ActivityRole.Practice),
     displaySurface = DisplaySurface.Available, // Catalog-only, no placement yet
-    activityType = ActivitySurface.Task, // Placeholder — replaced by config when user chooses
+    activityType = when (presetCategory) {
+        "anchor" -> ActivitySurface.Anchor
+        "support" -> ActivitySurface.Support
+        else -> ActivitySurface.Task
+    },
     contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Core),
     importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
     cadence = null, targetValue = null, minimumValue = null, targetCount = null, targetPeriod = null,

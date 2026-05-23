@@ -181,6 +181,7 @@ internal fun buildDashboardState(
         sleep = sleepLog.toSleepState(),
         activityOptions = catalogActivities.map { activity ->
             val log = todayLogsByActivity[activity.id]
+            val configuredIds = activities.map { it.id }.toSet()
             DashboardActivityOptionState(
                 id = activity.id,
                 title = activity.name,
@@ -190,9 +191,10 @@ internal fun buildDashboardState(
                 actualValue = log?.actualValue ?: activity.targetValue ?: activity.minimumValue ?: 0,
                 isCompletedToday = activity.isCompletedBy(log),
                 isFocusSignal = activity.id == focusSignalActivityId,
-                displaySurface = activity.displaySurface.name, // deprecated, keep for now
+                displaySurface = activity.displaySurface.name,
                 activityType = activity.activityType.name,
                 isGoal = activity.isGoal(),
+                isConfigured = activity.id in configuredIds,
             )
         },
         secondaryChecklistItems = secondaryActivities.map { activity ->

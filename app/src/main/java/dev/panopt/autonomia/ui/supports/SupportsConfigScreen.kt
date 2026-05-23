@@ -57,8 +57,8 @@ internal fun SupportsConfigScreen(
 ) {
     BackHandler(onBack = onBack)
 
-    val currentSupports = activityOptions.filter { it.activityType == "Support" }
-    val availableActivities = activityOptions.filter { it.activityType != "Support" && it.activityType != "Anchor" }
+    val currentSupports = activityOptions.filter { it.isConfigured && it.activityType == "Support" }
+    val availableActivities = activityOptions.filter { !it.isConfigured && it.activityType == "Support" }
 
     Box(
         modifier = Modifier

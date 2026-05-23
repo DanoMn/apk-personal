@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -82,9 +83,10 @@ internal fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 16.dp, bottom = 32.dp),
+                .padding(bottom = 32.dp),
         ) {
             TopBar(
                 palette = palette,
