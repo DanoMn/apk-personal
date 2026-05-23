@@ -43,6 +43,10 @@ internal class DashboardViewModel(
         repository.observeConfiguredActivities()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val catalogActivities: StateFlow<List<ActivityDefinition>> =
+        repository.observeCatalogActivities()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val activityLogs =
         combine(
             repository.activityLogsForDateFlow(dateKey),
@@ -89,16 +93,18 @@ internal class DashboardViewModel(
                     tasks = tasks,
                 )
             }
-        }.let { factFlow ->
+        }        .let { factFlow ->
             combine(
                 factFlow,
+                catalogActivities,
                 repository.anchorPhrasesFlow(),
                 repository.sleepLogForDateFlow(dateKey),
                 repository.focusSignalActivityIdFlow(),
-            ) { facts, anchorPhrases, sleepLog, focusSignalActivityId ->
+            ) { facts, catalogActivities, anchorPhrases, sleepLog, focusSignalActivityId ->
                 DashboardEngine.buildState(
                     layers = facts.core.layers,
                     activityDefinitions = facts.core.activities,
+                    catalogDefinitions = catalogActivities,
                     todayActivityLogs = facts.core.todayActivityLogs,
                     weekActivityLogs = facts.core.weekActivityLogs,
                     periodActivityLogs = facts.core.periodActivityLogs,

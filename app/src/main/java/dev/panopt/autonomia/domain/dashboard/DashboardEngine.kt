@@ -15,6 +15,7 @@ internal object DashboardEngine {
     fun buildState(
         layers: List<Layer>,
         activityDefinitions: List<ActivityDefinition>,
+        catalogDefinitions: List<ActivityDefinition> = activityDefinitions,
         todayActivityLogs: List<ActivityLog>,
         weekActivityLogs: List<ActivityLog>,
         periodActivityLogs: List<ActivityLog>,
@@ -31,6 +32,7 @@ internal object DashboardEngine {
         buildDashboardState(
             layers = layers,
             activities = activityDefinitions,
+            catalogActivities = catalogDefinitions,
             todayActivityLogs = todayActivityLogs,
             weekActivityLogs = weekActivityLogs,
             periodActivityLogs = periodActivityLogs,

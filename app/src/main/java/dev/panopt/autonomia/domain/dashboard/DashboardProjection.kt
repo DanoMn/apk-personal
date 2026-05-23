@@ -30,6 +30,7 @@ import kotlin.math.roundToInt
 internal fun buildDashboardState(
     layers: List<Layer>,
     activities: List<ActivityDefinition>,
+    catalogActivities: List<ActivityDefinition> = activities,
     todayActivityLogs: List<ActivityLog>,
     weekActivityLogs: List<ActivityLog>,
     periodActivityLogs: List<ActivityLog> = weekActivityLogs,
@@ -178,7 +179,7 @@ internal fun buildDashboardState(
         weekRows = weekRows,
         dimensions = dimensions,
         sleep = sleepLog.toSleepState(),
-        activityOptions = (dashboardActivities + goalActivities).map { activity ->
+        activityOptions = catalogActivities.map { activity ->
             val log = todayLogsByActivity[activity.id]
             DashboardActivityOptionState(
                 id = activity.id,

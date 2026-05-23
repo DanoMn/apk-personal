@@ -308,6 +308,11 @@ class AutonomiaRepository(context: Context) {
             }
         }
 
+    fun observeCatalogActivities(): Flow<List<ActivityDefinition>> =
+        dao.observeActivityDefinitions().map { definitions ->
+            definitions.map { it.toDomain() }
+        }
+
     suspend fun configureActivity(
         activityId: String,
         activityType: ActivitySurface,
