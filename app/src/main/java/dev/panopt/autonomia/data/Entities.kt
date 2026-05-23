@@ -1,6 +1,7 @@
 package dev.panopt.autonomia.data
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -174,6 +175,53 @@ data class AnchorPhraseDailySlotEntity(
     val scoreState: String,
     val phraseId: String,
     val resolvedAt: Long,
+)
+
+@Entity(
+    tableName = "activity_definitions",
+    indices = [Index("layerId")],
+)
+data class ActivityDefinitionEntity(
+    @PrimaryKey val id: String,
+    val layerId: String,
+    val name: String,
+    val description: String,
+    val type: String,           // Check | Time | Count | Note | TimeOfDay
+    val role: String,           // Practice | SelfCare | Boundary | DigitalHygiene | DomesticOrder | RelationalHabit | ProjectWork | Learning | Custom
+    val unit: String,           // Minutes | Boolean | Count | Time | Text
+    val contributionRole: String, // Core | Support | Protective | Recovery | Neutral
+    val importanceTier: String, // Low | Medium | High | Critical
+    val presetCategory: String?, // "anchor" | "support" | null (user-created)
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(
+    tableName = "user_activity_configs",
+    foreignKeys = [ForeignKey(
+        entity = ActivityDefinitionEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["activityId"],
+        onDelete = ForeignKey.CASCADE,
+    )],
+    indices = [Index("activityId", unique = true)],
+)
+data class UserActivityConfigEntity(
+    @PrimaryKey val activityId: String,  // FK → activity_definitions.id
+    val activityType: String,            // "Anchor" | "Support" | "Task"
+    val active: Boolean = true,
+    val archived: Boolean = false,
+    val customName: String? = null,
+    val customDescription: String? = null,
+    val cadence: String?,        // Weekly | Monthly (REQUIRED for Anchor, null otherwise)
+    val targetValue: Int?,       // REQUIRED for Anchor
+    val minimumValue: Int?,
+    val targetCount: Int?,       // REQUIRED for Anchor
+    val targetPeriod: String?,   // Week | Month (REQUIRED for Anchor)
+    val sortOrder: Int,
+    val createdAt: Long,
+    val updatedAt: Long,
 )
 
 @Entity(tableName = "sleep_logs")
