@@ -4,11 +4,14 @@ import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
+import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepLogEntity
 import dev.panopt.autonomia.data.TaskEntity
+import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.data.local.mapper.toDomain
+import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.defaultActualValue
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
@@ -91,10 +95,15 @@ class AutonomiaRepository(context: Context) {
         dao.observeSleepLogForDate(date).map { it?.toDomain() }
 
     suspend fun ensureSeeded() {
-        if (dao.layerCount() > 0) return
+        // Layers: only insert on first run (stable, user-agnostic)
+        if (dao.layerCount() == 0) {
+            dao.upsertLayers(DefaultSeeds.layers)
+        }
 
-        dao.upsertLayers(DefaultSeeds.layers)
+        // Activities and abstinence tracks: always upsert so new seeds
+        // reach existing installations without losing user-configured ones.
         dao.upsertActivities(DefaultSeeds.activities)
+        dao.upsertActivityDefinitions(DefaultSeeds.activityDefinitions)
         dao.upsertAbstinenceTracks(DefaultSeeds.abstinenceTracks)
     }
 
@@ -135,6 +144,10 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
+    suspend fun deleteActivity(activityId: String) {
+        dao.deleteActivity(activityId)
+    }
+
     suspend fun createActivity(
         name: String,
         layerId: String,
@@ -142,17 +155,20 @@ class AutonomiaRepository(context: Context) {
         displaySurface: DisplaySurface,
         isGoal: Boolean = false,
         isMonthlyGoal: Boolean = false,
+        targetCount: Int? = null,
+        targetPeriod: TargetPeriod? = null,
     ) {
         val trimmedName = name.trim()
         if (trimmedName.isBlank()) return
 
         val now = System.currentTimeMillis()
         val isProject = layerId == "layer_proyecto"
-        val targetPeriod = when {
+        val resolvedTargetPeriod = targetPeriod ?: when {
             !isGoal -> TargetPeriod.Day
             isMonthlyGoal -> TargetPeriod.Month
             else -> TargetPeriod.Week
         }
+        val resolvedTargetCount = targetCount ?: if (isGoal) 1 else null
         dao.upsertActivity(
             ActivityEntity(
                 id = "act_custom_${UUID.randomUUID()}",
@@ -161,18 +177,18 @@ class AutonomiaRepository(context: Context) {
                 description = "",
                 type = ActivityType.Time.name,
                 role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
-                displaySurface = if (isGoal) DisplaySurface.Contextual.name else displaySurface.name,
+                displaySurface = displaySurface.name,
                 contributionRole = ContributionRole.Core.name,
                 importanceTier = ImportanceTier.Medium.name,
-                cadence = when (targetPeriod) {
+                cadence = when (resolvedTargetPeriod) {
                     TargetPeriod.Day -> ActivityCadence.Daily
                     TargetPeriod.Week -> ActivityCadence.Weekly
                     TargetPeriod.Month -> ActivityCadence.Monthly
                 }.name,
                 targetValue = targetMinutes.coerceAtLeast(1),
                 minimumValue = 1,
-                targetCount = if (isGoal) 1 else null,
-                targetPeriod = targetPeriod.name,
+                targetCount = resolvedTargetCount,
+                targetPeriod = resolvedTargetPeriod.name,
                 unit = ActivityUnit.Minutes.name,
                 sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                 createdAt = now,
@@ -303,5 +319,92 @@ class AutonomiaRepository(context: Context) {
             completedAt = now,
             updatedAt = now,
         )
+    }
+
+    suspend fun addActivityToChecklist(
+        activityId: String,
+        targetValue: Int? = null,
+        targetCount: Int? = null,
+        targetPeriod: TargetPeriod? = null,
+    ) {
+        val cadence = when (targetPeriod) {
+            TargetPeriod.Week -> ActivityCadence.Weekly
+            TargetPeriod.Month -> ActivityCadence.Monthly
+            else -> null
+        }
+        dao.updateActivityConfig(
+            activityId = activityId,
+            displaySurface = DisplaySurface.PrimaryChecklist.name,
+            targetValue = targetValue,
+            targetCount = targetCount,
+            targetPeriod = targetPeriod?.name,
+            cadence = cadence?.name,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
+
+    suspend fun removeActivityFromChecklist(activityId: String) {
+        dao.updateActivityConfig(
+            activityId = activityId,
+            displaySurface = DisplaySurface.SecondaryChecklist.name,
+            targetValue = null,
+            targetCount = null,
+            targetPeriod = null,
+            cadence = null,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
+
+    // --- New repository methods for v4 entity split ---
+
+    fun observeActivityDefinitions(): Flow<List<ActivityDefinitionEntity>> =
+        dao.observeActivityDefinitions()
+
+    fun observeUserActivityConfigs(): Flow<List<UserActivityConfigEntity>> =
+        dao.observeUserActivityConfigs()
+
+    fun observeConfiguredActivities(): Flow<List<ActivityDefinition>> =
+        dao.observeUserActivityConfigs().combine(dao.observeActivityDefinitions()) { configs, definitions ->
+            val definitionMap = definitions.associateBy { it.id }
+            configs.mapNotNull { config ->
+                definitionMap[config.activityId]?.let { def ->
+                    mergeToDomain(def, config)
+                }
+            }
+        }
+
+    suspend fun configureActivity(
+        activityId: String,
+        activityType: ActivitySurface,
+        cadence: ActivityCadence? = null,
+        targetValue: Int? = null,
+        minimumValue: Int? = null,
+        targetCount: Int? = null,
+        targetPeriod: TargetPeriod? = null,
+        customName: String? = null,
+        customDescription: String? = null,
+    ) {
+        val now = System.currentTimeMillis()
+        dao.upsertUserActivityConfig(
+            UserActivityConfigEntity(
+                activityId = activityId,
+                activityType = activityType.name,
+                cadence = cadence?.name,
+                targetValue = targetValue,
+                minimumValue = minimumValue,
+                targetCount = targetCount,
+                targetPeriod = targetPeriod?.name,
+                customName = customName?.trim()?.takeIf { it.isNotBlank() },
+                customDescription = customDescription?.trim()?.takeIf { it.isNotBlank() },
+                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+    }
+
+    suspend fun toggleActivityArchive(activityId: String, archived: Boolean) {
+        // Will be completed in PR 3 when we add update methods
+        // For now, this is a placeholder
     }
 }
