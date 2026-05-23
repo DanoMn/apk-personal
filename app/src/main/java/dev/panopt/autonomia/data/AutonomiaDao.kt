@@ -186,6 +186,17 @@ interface AutonomiaDao {
     @Query("DELETE FROM user_activity_configs WHERE activityId = :activityId")
     suspend fun deleteUserActivityConfig(activityId: String)
 
+    @Query(
+        "UPDATE user_activity_configs SET active = :active, archived = :archived, " +
+            "updatedAt = :updatedAt WHERE activityId = :activityId",
+    )
+    suspend fun toggleUserActivityConfigActive(
+        activityId: String,
+        active: Boolean,
+        archived: Boolean,
+        updatedAt: Long,
+    )
+
     @Query("DELETE FROM user_activity_configs")
     suspend fun clearAllUserActivityConfigs()
 

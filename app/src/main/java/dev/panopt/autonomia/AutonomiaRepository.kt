@@ -405,7 +405,15 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun toggleActivityArchive(activityId: String, archived: Boolean) {
-        // Will be completed in PR 3 when we add update methods
-        // For now, this is a placeholder
+        dao.toggleUserActivityConfigActive(
+            activityId = activityId,
+            active = !archived,
+            archived = archived,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
+
+    suspend fun deleteUserActivityConfig(activityId: String) {
+        dao.deleteUserActivityConfig(activityId)
     }
 }

@@ -18,6 +18,7 @@ import dev.panopt.autonomia.todayKey
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -31,7 +32,7 @@ internal class DashboardViewModel(
     private val monthStartDateKey = today.withDayOfMonth(1).toString()
 
     private val activities: StateFlow<List<ActivityDefinition>> =
-        repository.activityDefinitionsFlow()
+        repository.observeConfiguredActivities()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val activityLogs =
@@ -249,6 +250,39 @@ internal class DashboardViewModel(
     fun removeActivityFromChecklist(activityId: String) {
         viewModelScope.launch {
             repository.removeActivityFromChecklist(activityId)
+        }
+    }
+
+    // --- Support activity methods (inverted semantics) ---
+
+    fun onToggleSupport(activityId: String) {
+        viewModelScope.launch {
+            val activity = activities.value.firstOrNull { it.id == activityId } ?: return@launch
+            // Get current completed state from today's logs
+            val todayLogs = repository.activityLogsForDateFlow(dateKey).first()
+            val log = todayLogs.firstOrNull { it.activityId == activityId }
+            val currentlyCompleted = log?.completed == true
+            // INVERTED: flip the completed flag
+            repository.setActivityCompleted(
+                activity = activity,
+                completed = !currentlyCompleted,
+                date = dateKey,
+            )
+        }
+    }
+
+    fun addToSupports(activityId: String) {
+        viewModelScope.launch {
+            repository.configureActivity(
+                activityId = activityId,
+                activityType = ActivitySurface.Support,
+            )
+        }
+    }
+
+    fun removeFromSupports(activityId: String) {
+        viewModelScope.launch {
+            repository.deleteUserActivityConfig(activityId)
         }
     }
 
