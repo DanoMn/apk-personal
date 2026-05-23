@@ -17,15 +17,6 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertLayers(layers: List<LayerEntity>)
 
-    @Query("SELECT * FROM activities ORDER BY sortOrder")
-    fun observeActivities(): Flow<List<ActivityEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun upsertActivities(activities: List<ActivityEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertActivity(activity: ActivityEntity)
-
     @Query("SELECT * FROM activity_logs WHERE date = :date")
     fun observeActivityLogsForDate(date: String): Flow<List<ActivityLogEntity>>
 
@@ -111,29 +102,8 @@ interface AutonomiaDao {
     @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long)
 
-    @Query(
-        "UPDATE activities SET displaySurface = :displaySurface, targetValue = :targetValue, " +
-            "targetCount = :targetCount, targetPeriod = :targetPeriod, cadence = :cadence, " +
-            "updatedAt = :updatedAt WHERE id = :activityId",
-    )
-    suspend fun updateActivityConfig(
-        activityId: String,
-        displaySurface: String,
-        targetValue: Int?,
-        targetCount: Int?,
-        targetPeriod: String?,
-        cadence: String?,
-        updatedAt: Long,
-    )
-
-    @Query("DELETE FROM activities WHERE id = :activityId")
-    suspend fun deleteActivity(activityId: String)
-
     @Query("DELETE FROM activity_logs")
     suspend fun clearAllActivityLogs()
-
-    @Query("DELETE FROM activities")
-    suspend fun clearAllActivities()
 
     @Query("DELETE FROM abstinence_logs")
     suspend fun clearAllAbstinenceLogs()

@@ -5,11 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.panopt.autonomia.AutonomiaRepository
+import dev.panopt.autonomia.ActivityCadence
+import dev.panopt.autonomia.ActivityRole
 import dev.panopt.autonomia.ActivitySurface
-import dev.panopt.autonomia.DisplaySurface
+import dev.panopt.autonomia.ActivityType
+import dev.panopt.autonomia.ActivityUnit
+import dev.panopt.autonomia.ContributionRole
+import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.app.AppGraph
+import dev.panopt.autonomia.data.ActivityDefinitionEntity
+import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
 import dev.panopt.autonomia.domain.dashboard.DashboardState
@@ -22,6 +29,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 internal class DashboardViewModel(
     private val repository: AutonomiaRepository,
@@ -139,7 +147,7 @@ internal class DashboardViewModel(
 
     fun deleteActivity(activityId: String) {
         viewModelScope.launch {
-            repository.deleteActivity(activityId)
+            repository.deleteUserActivityConfig(activityId)
         }
     }
 
@@ -201,20 +209,55 @@ internal class DashboardViewModel(
         targetPeriod: TargetPeriod? = null,
     ) {
         viewModelScope.launch {
-            repository.createActivity(
-                name = name,
-                layerId = layerId,
-                targetMinutes = targetMinutes,
-                displaySurface = if (isSecondary) {
-                    DisplaySurface.SecondaryChecklist
-                } else {
-                    DisplaySurface.PrimaryChecklist
-                },
-                activityType = if (isSecondary) ActivitySurface.Support else ActivitySurface.Anchor,
-                isGoal = isGoal,
-                isMonthlyGoal = isMonthlyGoal,
-                targetCount = targetCount,
-                targetPeriod = targetPeriod,
+            val trimmedName = name.trim()
+            if (trimmedName.isBlank()) return@launch
+            val now = System.currentTimeMillis()
+            val activityId = "act_custom_${UUID.randomUUID()}"
+            val activityType = if (isSecondary) ActivitySurface.Support else ActivitySurface.Anchor
+            val isProject = layerId == "layer_proyecto"
+            val resolvedTargetPeriod = targetPeriod ?: when {
+                !isGoal -> TargetPeriod.Day
+                isMonthlyGoal -> TargetPeriod.Month
+                else -> TargetPeriod.Week
+            }
+            val resolvedTargetCount = targetCount ?: if (isGoal) 1 else null
+            val resolvedCadence = when (resolvedTargetPeriod) {
+                TargetPeriod.Day -> ActivityCadence.Daily
+                TargetPeriod.Week -> ActivityCadence.Weekly
+                TargetPeriod.Month -> ActivityCadence.Monthly
+            }
+            // Insert definition
+            repository.upsertActivityDefinition(
+                ActivityDefinitionEntity(
+                    id = activityId,
+                    layerId = layerId,
+                    name = trimmedName,
+                    description = "",
+                    type = ActivityType.Time.name,
+                    role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
+                    unit = ActivityUnit.Minutes.name,
+                    contributionRole = ContributionRole.Core.name,
+                    importanceTier = ImportanceTier.Medium.name,
+                    presetCategory = null,
+                    sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    createdAt = now,
+                    updatedAt = now,
+                )
+            )
+            // Insert config
+            repository.upsertUserActivityConfig(
+                UserActivityConfigEntity(
+                    activityId = activityId,
+                    activityType = activityType.name,
+                    cadence = resolvedCadence.name,
+                    targetValue = targetMinutes.coerceAtLeast(1),
+                    minimumValue = 1,
+                    targetCount = resolvedTargetCount,
+                    targetPeriod = resolvedTargetPeriod.name,
+                    sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    createdAt = now,
+                    updatedAt = now,
+                )
             )
         }
     }

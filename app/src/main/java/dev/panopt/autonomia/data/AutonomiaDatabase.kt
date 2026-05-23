@@ -10,7 +10,6 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         LayerEntity::class,
-        ActivityEntity::class,
         ActivityDefinitionEntity::class,
         UserActivityConfigEntity::class,
         ActivityLogEntity::class,

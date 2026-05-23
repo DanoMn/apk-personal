@@ -64,9 +64,6 @@ class AutonomiaRepository(context: Context) {
     fun layersFlow(): Flow<List<Layer>> =
         dao.observeLayers().map { layers -> layers.map { it.toDomain() } }
 
-    fun activityDefinitionsFlow(): Flow<List<ActivityDefinition>> =
-        dao.observeActivities().map { activities -> activities.map { it.toDomain() } }
-
     fun activityLogsForDateFlow(date: String): Flow<List<ActivityLog>> =
         dao.observeActivityLogsForDate(date).map { logs -> logs.map { it.toDomain() } }
 
@@ -139,60 +136,6 @@ class AutonomiaRepository(context: Context) {
                 completed = true,
                 actualValue = actualValue.coerceAtLeast(0),
                 updatedAt = System.currentTimeMillis(),
-            ),
-        )
-    }
-
-    suspend fun deleteActivity(activityId: String) {
-        dao.deleteActivity(activityId)
-    }
-
-    suspend fun createActivity(
-        name: String,
-        layerId: String,
-        targetMinutes: Int,
-        displaySurface: DisplaySurface,
-        activityType: ActivitySurface = ActivitySurface.Anchor,
-        isGoal: Boolean = false,
-        isMonthlyGoal: Boolean = false,
-        targetCount: Int? = null,
-        targetPeriod: TargetPeriod? = null,
-    ) {
-        val trimmedName = name.trim()
-        if (trimmedName.isBlank()) return
-
-        val now = System.currentTimeMillis()
-        val isProject = layerId == "layer_proyecto"
-        val resolvedTargetPeriod = targetPeriod ?: when {
-            !isGoal -> TargetPeriod.Day
-            isMonthlyGoal -> TargetPeriod.Month
-            else -> TargetPeriod.Week
-        }
-        val resolvedTargetCount = targetCount ?: if (isGoal) 1 else null
-        dao.upsertActivity(
-            ActivityEntity(
-                id = "act_custom_${UUID.randomUUID()}",
-                layerId = layerId,
-                name = trimmedName,
-                description = "",
-                type = ActivityType.Time.name,
-                role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
-                displaySurface = displaySurface.name,
-                contributionRole = ContributionRole.Core.name,
-                importanceTier = ImportanceTier.Medium.name,
-                cadence = when (resolvedTargetPeriod) {
-                    TargetPeriod.Day -> ActivityCadence.Daily
-                    TargetPeriod.Week -> ActivityCadence.Weekly
-                    TargetPeriod.Month -> ActivityCadence.Monthly
-                }.name,
-                targetValue = targetMinutes.coerceAtLeast(1),
-                minimumValue = 1,
-                targetCount = resolvedTargetCount,
-                targetPeriod = resolvedTargetPeriod.name,
-                unit = ActivityUnit.Minutes.name,
-                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                createdAt = now,
-                updatedAt = now,
             ),
         )
     }
@@ -330,29 +273,21 @@ class AutonomiaRepository(context: Context) {
         val cadence = when (targetPeriod) {
             TargetPeriod.Week -> ActivityCadence.Weekly
             TargetPeriod.Month -> ActivityCadence.Monthly
-            else -> null
+            TargetPeriod.Day -> ActivityCadence.Daily
+            else -> ActivityCadence.Daily
         }
-        dao.updateActivityConfig(
+        configureActivity(
             activityId = activityId,
-            displaySurface = DisplaySurface.PrimaryChecklist.name,
+            activityType = ActivitySurface.Anchor,
+            cadence = cadence,
             targetValue = targetValue,
             targetCount = targetCount,
-            targetPeriod = targetPeriod?.name,
-            cadence = cadence?.name,
-            updatedAt = System.currentTimeMillis(),
+            targetPeriod = targetPeriod,
         )
     }
 
     suspend fun removeActivityFromChecklist(activityId: String) {
-        dao.updateActivityConfig(
-            activityId = activityId,
-            displaySurface = DisplaySurface.SecondaryChecklist.name,
-            targetValue = null,
-            targetCount = null,
-            targetPeriod = null,
-            cadence = null,
-            updatedAt = System.currentTimeMillis(),
-        )
+        dao.deleteUserActivityConfig(activityId)
     }
 
     // --- New repository methods for v4 entity split ---
@@ -414,5 +349,13 @@ class AutonomiaRepository(context: Context) {
 
     suspend fun deleteUserActivityConfig(activityId: String) {
         dao.deleteUserActivityConfig(activityId)
+    }
+
+    suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity) {
+        dao.upsertActivityDefinition(definition)
+    }
+
+    suspend fun upsertUserActivityConfig(config: UserActivityConfigEntity) {
+        dao.upsertUserActivityConfig(config)
     }
 }
