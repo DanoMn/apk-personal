@@ -133,7 +133,7 @@ internal fun NavigationDrawer(
             }
             DrawerLink(
                 palette = palette,
-                text = "Checklist",
+                text = "Mis anclas",
                 onClick = {
                     onClose()
                     onOpenChecklist()

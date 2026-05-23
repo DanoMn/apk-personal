@@ -59,7 +59,7 @@ internal fun ChecklistPreviewSection(
 
     SectionHeader(
         palette = palette,
-        title = "Faltan ahora",
+        title = "Anclas pendientes",
         note = if (pendingItems.size == 1) "1 pendiente" else "${pendingItems.size} pendientes",
     )
 

@@ -3,6 +3,7 @@ package dev.panopt.autonomia.ui.dashboard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import dev.panopt.autonomia.TargetPeriod
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +57,9 @@ internal fun DashboardScreen(
     onSetFocusSignal: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
+    onAddToChecklist: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onRemoveFromChecklist: (String) -> Unit,
+    onNavigateToChecklistConfig: () -> Unit,
 ) {
     val palette = dashboardPalette(isDarkMode)
     var isDrawerOpen by remember { mutableStateOf(false) }
@@ -88,8 +92,8 @@ internal fun DashboardScreen(
             AnchorPhraseCard(palette = palette, phrase = state.anchorPhrase)
             ActionButtons(
                 palette = palette,
-                onChecklistClick = { activeSheet = DashboardSheet.EntryMenu },
-                onRiskClick = { activeSheet = DashboardSheet.Relapse },
+                onQuickConfigClick = { activeSheet = DashboardSheet.EntryMenu },
+                onRiesgoClick = { activeSheet = DashboardSheet.Relapse },
             )
             LayersSection(palette = palette, layers = state.layers)
             SignalsSection(
@@ -144,7 +148,7 @@ internal fun DashboardScreen(
             modifier = Modifier.offset(x = drawerOffset),
             onClose = { isDrawerOpen = false },
             onThemeChange = onThemeChange,
-            onOpenChecklist = { activeSheet = DashboardSheet.Checklist },
+            onOpenChecklist = onNavigateToChecklistConfig,
             onOpenTasks = { activeSheet = DashboardSheet.Tasks },
             onOpenRelapse = { activeSheet = DashboardSheet.Relapse },
             onOpenActivitySettings = { activeSheet = DashboardSheet.Activities },
@@ -163,8 +167,11 @@ internal fun DashboardScreen(
                 onToggleRelapse = onToggleAbstinenceRelapse,
                 onCreateActivity = onCreateActivity,
                 onSetFocusSignal = onSetFocusSignal,
+                onAddToChecklist = onAddToChecklist,
+                onRemoveFromChecklist = onRemoveFromChecklist,
                 onCreateTask = onCreateTask,
                 onCompleteTask = onCompleteTask,
+                onNavigateToChecklistConfig = onNavigateToChecklistConfig,
             )
         }
     }

@@ -22,7 +22,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.ui.dashboard.ChecklistIcon
@@ -32,59 +31,67 @@ import dev.panopt.autonomia.ui.dashboard.mix
 
 private val DashboardSans = FontFamily.SansSerif
 
+/**
+ * Quick-action buttons row matching the prototype:
+ * one primary white button ("Configuración rápida") that opens the EntryMenu bottom sheet,
+ * and a red risk button at the side for rapid relapse access.
+ *
+ * Sleep configuration is accessed from the Signals section, not from here.
+ */
 @Composable
 internal fun ActionButtons(
     palette: DashboardPalette,
-    onChecklistClick: () -> Unit,
-    onRiskClick: () -> Unit,
+    onQuickConfigClick: () -> Unit,
+    onRiesgoClick: () -> Unit,
 ) {
-    Spacer(modifier = Modifier.height(13.6.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(11.52.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Primary white button: opens entry menu with all config options
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(54.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(palette.colorCardboard)
-                .clickable(role = Role.Button, onClick = onChecklistClick)
-                .semantics { contentDescription = "Registrar checklist" }
+                .clickable(role = Role.Button, onClick = onQuickConfigClick)
+                .semantics { contentDescription = "Configuración rápida" }
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                ChecklistIcon(
-                    color = palette.bgBase,
-                    modifier = Modifier.size(24.dp),
-                )
+                ChecklistIcon(color = palette.bgBase, modifier = Modifier.size(22.dp))
                 Text(
-                    text = "Registrar checklist",
+                    text = "Configuración rápida",
                     color = palette.bgBase,
                     fontFamily = DashboardSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 15.sp,
                 )
             }
         }
 
+        // Red risk button: rapid relapse access
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .size(58.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(mix(palette.risk, 0.22f, palette.bgSurface))
-                .clickable(role = Role.Button, onClick = onRiskClick)
-                .semantics { contentDescription = "Registrar recaida de sobriedad" },
+                .clickable(role = Role.Button, onClick = onRiesgoClick)
+                .semantics { contentDescription = "Abrir protocolo de riesgo" },
             contentAlignment = Alignment.Center,
         ) {
-            FlagIcon(color = Color(0xFFF0B0A7), modifier = Modifier.size(28.dp))
+            FlagIcon(
+                color = Color(0xFFF0B0A7),
+                modifier = Modifier.size(26.dp),
+            )
         }
     }
 }

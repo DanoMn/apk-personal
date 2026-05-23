@@ -8,7 +8,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
+import dev.panopt.autonomia.ui.checklist.ChecklistConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
@@ -25,24 +29,41 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by dashboardViewModel.isDarkMode.collectAsStateWithLifecycle()
             val palette = dashboardPalette(isDarkMode)
 
+            var currentScreen by remember { mutableStateOf(AppScreen.Dashboard) }
+
             SideEffect {
                 applySystemBars(isDarkMode = isDarkMode, bgColor = palette.bgBase.toArgb())
             }
 
-            DashboardScreen(
-                state = dashboardState,
-                isDarkMode = isDarkMode,
-                onThemeChange = dashboardViewModel::setDarkMode,
-                onToggleActivity = dashboardViewModel::toggleActivity,
-                onToggleAbstinenceClean = dashboardViewModel::toggleAbstinenceClean,
-                onSaveActivityValue = dashboardViewModel::saveActivityValue,
-                onSaveSleep = dashboardViewModel::saveSleep,
-                onToggleAbstinenceRelapse = dashboardViewModel::toggleAbstinenceRelapse,
-                onCreateActivity = dashboardViewModel::createActivity,
-                onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
-                onCreateTask = dashboardViewModel::createTask,
-                onCompleteTask = dashboardViewModel::completeTask,
-            )
+            when (currentScreen) {
+                AppScreen.Dashboard -> DashboardScreen(
+                    state = dashboardState,
+                    isDarkMode = isDarkMode,
+                    onThemeChange = dashboardViewModel::setDarkMode,
+                    onToggleActivity = dashboardViewModel::toggleActivity,
+                    onToggleAbstinenceClean = dashboardViewModel::toggleAbstinenceClean,
+                    onSaveActivityValue = dashboardViewModel::saveActivityValue,
+                    onSaveSleep = dashboardViewModel::saveSleep,
+                    onToggleAbstinenceRelapse = dashboardViewModel::toggleAbstinenceRelapse,
+                    onCreateActivity = dashboardViewModel::createActivity,
+                    onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
+                    onCreateTask = dashboardViewModel::createTask,
+                    onCompleteTask = dashboardViewModel::completeTask,
+                    onAddToChecklist = dashboardViewModel::addActivityToChecklist,
+                    onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
+                    onNavigateToChecklistConfig = { currentScreen = AppScreen.ChecklistConfig },
+                )
+                AppScreen.ChecklistConfig -> ChecklistConfigScreen(
+                    layers = dashboardState.layers,
+                    activityOptions = dashboardState.activityOptions,
+                    palette = palette,
+                    onAddToChecklist = dashboardViewModel::addActivityToChecklist,
+                    onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
+                    onCreateActivity = dashboardViewModel::createActivity,
+                    onDeleteActivity = dashboardViewModel::deleteActivity,
+                    onBack = { currentScreen = AppScreen.Dashboard },
+                )
+            }
         }
     }
 
@@ -60,4 +81,9 @@ class MainActivity : ComponentActivity() {
                 View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         }
     }
+}
+
+private enum class AppScreen {
+    Dashboard,
+    ChecklistConfig,
 }
