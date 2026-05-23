@@ -1,11 +1,12 @@
 # Definición de tablas Room v1
 
-Este esquema es el primer núcleo estable de la app. La idea es guardar hechos locales, no conclusiones finales. El dashboard puede inferir señales desde estos registros sin acoplar la lógica de salud mental a Compose.
+> **Nota de version**: Este documento fue actualizado para reflejar la migracion v3 → v4 (2026-05-22). La tabla `activities` fue dividida en `activity_definitions` + `user_activity_configs`. El enum `DisplaySurface` fue reemplazado por `ActivitySurface`.
 
 ## Principio de diseño
 
 - `layers` define las capas de vida.
-- `activities` define qué se puede practicar o cuidar dentro de cada capa.
+- `activity_definitions` define el catalogo inmutable de actividades (que se puede practicar o cuidar dentro de cada capa).
+- `user_activity_configs` guarda la configuracion del usuario para cada actividad (tipo, metas, cadencia, archivado).
 - `activity_logs` guarda lo hecho en una fecha concreta.
 - `abstinence_tracks` separa las rachas críticas o moderadas del checklist diario.
 - `abstinence_logs` guarda si un día fue limpio o hubo recaída.
@@ -25,9 +26,11 @@ Capas configurables del sistema personal.
 | `sortOrder` | `Int` | Orden de UI. |
 | `active` | `Boolean` | Permite ocultar sin borrar historial. |
 
-Seeds actuales: Interior, Cuerpo, Conducta, Casa/comida, Vínculos, Proyecto.
+Seeds actuales: Interior, Cuerpo, Conducta, Vinculos, Proyecto.
 
-## `activities`
+## `activities` (DEPRECATED)
+
+> **Deprecada en v4**. Esta tabla fue reemplazada por `activity_definitions` + `user_activity_configs`. Se mantiene esta seccion como referencia historica. La entidad `ActivityEntity` en codigo sigue presente pero sera removida en una limpieza futura.
 
 Actividades editables a futuro. Por ahora se inicializan desde seed.
 
@@ -45,6 +48,76 @@ Actividades editables a futuro. Por ahora se inicializan desde seed.
 | `importance` | `Int` | Peso futuro para métricas. |
 | `active` | `Boolean` | Ocultar sin borrar historial. |
 | `sortOrder` | `Int` | Orden de UI. |
+
+## `activity_definitions` (NEW — v4)
+
+Catalogo inmutable de actividades. Define QUE se puede hacer, sin estado de usuario.
+
+| Campo | Tipo | Nota |
+| --- | --- | --- |
+| `id` | `String` | Primary key estable. `act_*` para presets, `act_custom_<uuid>` para custom. |
+| `layerId` | `String` | Capa a la que pertenece. |
+| `name` | `String` | Nombre visible. |
+| `description` | `String` | Ayuda breve o intencion. |
+| `type` | `String` | `Time`, `Check`, `SelfCare`, `AbstinenceSupport`, `Weekly`, `TimeOfDay`, `Note`. |
+| `role` | `String` | `Practice`, `SelfCare`, `ProjectWork`, `DomesticOrder`, `RelationalHabit`. |
+| `unit` | `String` | `Minutes`, `Count`, `Boolean`, `Time`, `Text`. |
+| `contributionRole` | `String` | `Core`, `Support`, `Protective`, `Neutral`. |
+| `importanceTier` | `String` | `Low`, `Medium`, `High`, `Critical`. |
+| `presetCategory` | `String?` | `"anchor"` o `"support"` para presets; `null` para custom. |
+| `sortOrder` | `Int` | Orden de UI. |
+| `createdAt` | `Long` | Timestamp local. |
+| `updatedAt` | `Long` | Timestamp local. |
+
+Indice: `idx_def_layer` sobre `layerId`.
+
+## `user_activity_configs` (NEW — v4)
+
+Configuracion de usuario por actividad. Define COMO el usuario usa cada actividad.
+
+| Campo | Tipo | Nota |
+| --- | --- | --- |
+| `id` | `Long` | Primary key auto-generada. |
+| `activityId` | `String` | FK → `activity_definitions.id`. Unico (una config por actividad). |
+| `activityType` | `String` | `"Anchor"`, `"Support"`, `"Task"` — reemplaza el viejo `DisplaySurface`. |
+| `active` | `Boolean` | Actividad activa para el usuario. Default `true`. |
+| `archived` | `Boolean` | Archivada sin borrar historial. Default `false`. |
+| `cadence` | `String?` | `Daily`, `Weekly`, `Monthly`. |
+| `targetValue` | `Int?` | Objetivo base, por ejemplo minutos esperados. |
+| `minimumValue` | `Int?` | Minimo para contar como hecho. |
+| `targetCount` | `Int?` | Veces por periodo (para goals). |
+| `targetPeriod` | `String?` | `Day`, `Week`, `Month`. |
+| `sortOrder` | `Int` | Orden de UI. |
+| `updatedAt` | `Long` | Timestamp local. |
+
+Indice unico: `idx_conf_activity` sobre `activityId`.
+FK con `ON DELETE CASCADE`: borrar una definicion borra sus configs.
+
+## `ActivitySurface` enum (NEW — v4)
+
+Reemplaza el viejo `DisplaySurface` (6 variantes: `Silent`, `Available`, `Compact`, `Contextual`, `PrimaryChecklist`, `SecondaryChecklist`).
+
+| Valor | Significado | UI canonico |
+| --- | --- | --- |
+| `Anchor` | Actividad principal del dia. Visible en checklist principal. | "Ancla", "Mis anclas" |
+| `Support` | Actividad de cuidado base. Visible en checklist secundaria. | "Cuidado base" |
+| `Task` | Actividad no visible en checklists diarios. Solo en catalogo. | — |
+
+Mapeo de migracion (v3 → v4):
+- `PrimaryChecklist` + `Contextual` → `Anchor`
+- `SecondaryChecklist` → `Support`
+- `Available` + `Compact` → sin config (solo catalogo, `activityType` default `Anchor`)
+- `Silent` → `Anchor` con `archived = true`
+
+## Migracion v3 → v4 (MIGRATION_3_4)
+
+1. CREATE `activity_definitions` con indice en `layerId`
+2. CREATE `user_activity_configs` con FK a `activity_definitions` e indice unico en `activityId`
+3. COPY definiciones desde `activities` (mapeando `presetCategory` via CASE)
+4. COPY configs desde `activities` (mapeando `displaySurface` → `activityType`, solo rows con config)
+5. DROP `activities`
+
+`activity_logs.activityId` sigue apuntando a `user_activity_configs.activityId` (mismos valores de ID, sin cambios en logs). |
 
 Regla actual de actividades de tiempo: tap registra `targetValue`; mantener presionado permite registrar minutos reales de hoy.
 
