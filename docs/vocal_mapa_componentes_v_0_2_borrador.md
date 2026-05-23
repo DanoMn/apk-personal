@@ -59,7 +59,7 @@ Estos componentes son obligatorios porque sin ellos la app no puede funcionar co
 
 | Componente                       | Rol                          | Por qué es core                                                              |
 | -------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
-| Mis anclas / checklist principal | Entrada principal de datos   | Sin anclas no hay hábitos base que medir.                                    |
+| Mis anclas                       | Entrada principal de datos   | Sin anclas no hay hábitos base que medir.                                    |
 | Sueño                            | Base fisiológica del scoring | El sueño debe pesar fuerte porque condiciona estabilidad, cuerpo y conducta. |
 | Cinco capas                      | Modelo conceptual            | Organizan dónde impactan las acciones.                                       |
 | Score de base                    | Lectura acumulada            | Traduce hechos en una lectura operativa.                                     |
@@ -91,7 +91,7 @@ Checklist principal
 Concepto técnico probable:
 
 ```text
-Activity con displaySurface = PrimaryChecklist
+ActivityDefinition con UserActivityConfig de ActivitySurface.Anchor
 ```
 
 Definición:
@@ -300,7 +300,7 @@ Capas finales:
 Las capas reciben información desde:
 
 - Mis anclas;
-- cuidado base;
+- Soportes;
 - tareas;
 - sueño;
 - abstinencias;
@@ -367,7 +367,7 @@ Hay componentes que pueden activarse según el tipo de usuario o nivel de compro
 
 | Componente         | Tipo                   | Obligatorio                       | Comentario                                           |
 | ------------------ | ---------------------- | --------------------------------- | ---------------------------------------------------- |
-| Cuidado base       | Feature progresiva     | No necesariamente al inicio       | Puede aparecer cuando el usuario quiere más soporte. |
+| Soportes            | Feature progresiva     | No necesariamente al inicio       | Puede aparecer cuando el usuario quiere más soporte. |
 | Pendientes / Tasks | Feature progresiva     | No                                | Requiere más compromiso con la app.                  |
 | ActivityTarget     | Configuración opcional | No                                | Ayuda a leer consistencia.                           |
 | Abstinencias       | Feature opt-in         | Solo para usuarios que la activan | Puede pesar fuerte si está activa.                   |
@@ -376,46 +376,68 @@ Hay componentes que pueden activarse según el tipo de usuario o nivel de compro
 
 ---
 
-## 9. Cuidado base como feature progresiva
+## 9. Soportes como feature progresiva
 
 Nombre UI:
 
 ```text
-Cuidado base
+Soportes
 ```
 
 Antes:
 
 ```text
-Checklist secundaria
+Cuidado base / Checklist secundaria
 ```
 
-Definición:
+Concepto tecnico:
+
+```text
+ActivityDefinition con UserActivityConfig de ActivitySurface.Support
+```
+
+Definicion:
 
 ```text
 Acciones simples de mantenimiento diario que sostienen cuerpo, dignidad y estructura.
 ```
 
+UX inversa:
+
+```text
+El usuario marca lo que NO hizo. El sistema asume que todo esta hecho
+por defecto y solo registra omisiones. A diferencia de las Anclas,
+donde el usuario marca lo que SI hizo.
+```
+
 Ejemplos:
 
-- bañarse;
+- banarse;
 - cepillarse los dientes;
 - comer algo simple;
 - tomar agua;
 - cambiarse de ropa;
-- ordenar mínimo.
+- ordenar minimo.
 
 Regla conceptual:
 
 ```text
-Cuidado base no es productividad.
-Es dignidad y mantenimiento mínimo.
+Soportes no es productividad.
+Es dignidad y mantenimiento minimo.
 ```
 
-Puede ser especialmente útil para:
+Relacion con Anclas:
+
+```text
+Las Anclas son la base personal activa que el usuario quiere sostener.
+Los Soportes son el piso minimo que deberia estar cubierto sin esfuerzo consciente.
+No compiten: las Anclas pesan mas en el score, los Soportes protegen contra el abandono.
+```
+
+Puede ser especialmente util para:
 
 - usuarios cansados;
-- usuarios en restauración;
+- usuarios en restauracion;
 - usuarios saliendo de abandono;
 - usuarios que necesitan volver al cuerpo.
 
@@ -654,7 +676,7 @@ Configuración probable:
 ```text
 Mis anclas
 Sueño
-Cuidado base
+Soportes
 Pendientes
 ActivityTargets
 Resumen semanal
@@ -698,7 +720,7 @@ Mis anclas
 Sueño
 Abstinencias
 Modo riesgo
-Cuidado base
+Soportes
 Frases de contención
 ```
 
@@ -765,7 +787,7 @@ Mapa conceptual:
 
 ```text
 Mis anclas
-Cuidado base
+Soportes
 Tasks relevantes
 Abstinencias activas
 Modo riesgo
@@ -864,7 +886,7 @@ Deben entenderse como fuentes de información para las capas o como señales esp
 | Componente | Cómo afecta |
 | --- | --- |
 | Mis anclas | Alimentan capas según actividad. |
-| Cuidado base | Alimenta principalmente Cuerpo y Conducta. |
+| Soportes | Alimenta principalmente Cuerpo y Conducta. |
 | Tasks relevantes | Alimentan capa asociada si tienen aporte real. |
 | ActivityTargets | Ayudan a leer consistencia, no son puntos directos. |
 | Abstinencias activas | Alimentan Conducta y pueden generar señales críticas. |
@@ -891,7 +913,7 @@ Donde las capas se alimentan de:
 
 ```text
 Mis anclas
-Cuidado base
+Soportes
 Tasks relevantes
 Abstinencias activas
 Modo riesgo
@@ -941,7 +963,7 @@ Estas preguntas deben resolverse antes del documento de score:
 
 1. ¿Sueño debe ser obligatorio desde onboarding o puede registrarse después del primer día?
 2. ¿Cuántas anclas mínimas necesita el usuario para empezar?
-3. ¿Cuidado base aparece desde el inicio o se desbloquea/sugiere en restauración?
+3. ¿Soportes aparece desde el inicio o se desbloquea/sugiere en restauración?
 4. ¿Las abstinencias se preguntan en onboarding o se ofrecen después con cuidado?
 5. ¿El usuario elige su tipo de uso o la app solo ofrece configuración progresiva?
 6. ¿ActivityTarget aparece al crear ancla o solo después de usarla unos días?
@@ -1001,7 +1023,7 @@ Mis anclas + sueño + capas + score + estado + tono.
 Y módulos activables:
 
 ```text
-Cuidado base
+Soportes
 Pendientes
 ActivityTargets
 Abstinencias

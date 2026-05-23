@@ -60,23 +60,18 @@ Usa estos nombres para TODOS los textos visibles en la UI. No uses los nombres t
 
 | Nombre UI canonico | Nombre tecnico (Room / codigo) | Antes |
 |--------------------|-------------------------------|-------|
-| Mis anclas | `PrimaryChecklist` | Checklist principal |
-| Cuidado base | `SecondaryChecklist` | Checklist secundaria |
-| Metas | `isGoal = true` | Goals |
-| Pendientes | `Task` | Tasks |
-| Senal destacada | `isFocusSignal = true` | Focus signal |
-| Registrar ancla | — | Registrar checklist |
-| Anclas disponibles | — | Actividades disponibles |
-| Anclas actuales | — | (sin cambios) |
-| Anclas pendientes | — | Faltan ahora |
-| Crear ancla | — | Crear y agregar a mis anclas |
-| Editar ancla | — | — |
-| Capas | `Layer` | (sin cambios) |
-| Sobriedad | `AbstinenceTrack` | (sin cambios) |
-| Frase ancla | `AnchorPhrase` | (sin cambios) |
-| Modo riesgo | `RiskEvent` | (sin cambios) |
-| Sueno | `SleepLog` | (sin cambios) |
-| Progreso semanal | `WeekRow` | Resumen semanal |
+| Mis anclas | `ActivitySurface.Anchor` | Checklist principal / PrimaryChecklist |
+| Soportes | `ActivitySurface.Support` | Checklist secundaria / Cuidado base |
+| Pendientes | `ActivitySurface.Task` | Tasks |
+| Metas | targets en `UserActivityConfigEntity` | Goals / isGoal |
+| Catalogo | `ActivityDefinitionEntity` | Actividades disponibles |
+| Mis actividades | `UserActivityConfigEntity` | — |
+| Registro diario | `ActivityLogEntity` | (sin cambios) |
+| Capas | `LayerEntity` | (sin cambios) |
+| Sobriedad | `AbstinenceTrackEntity` | (sin cambios) |
+| Frase ancla | `AnchorPhraseEntity` | (sin cambios) |
+| Modo riesgo | `RiskEventEntity` | (sin cambios) |
+| Sueno | `SleepLogEntity` | (sin cambios) |
 
 Regla: si agregas un texto nuevo en la UI, consulta esta tabla antes de hardcodear.
 
@@ -87,6 +82,18 @@ Regla: si agregas un texto nuevo en la UI, consulta esta tabla antes de hardcode
 - La base de datos guarda hechos.
 - El dominio interpreta hechos y produce estado, senales y recomendaciones.
 - Compose solo debe presentar estado y enviar acciones.
+
+### Modelo de actividades (3 entidades)
+
+- `ActivityDefinitionEntity`: catalogo inmutable (que actividad existe, como se mide).
+- `UserActivityConfigEntity`: configuracion del usuario (tipo ancla/soporte/task, targets, activo/archivado).
+- `ActivityLogEntity`: registro diario.
+
+### Reglas de superficie
+
+- **Anclas**: UX normal (usuario marca lo que SI hizo). Targets obligatorios (cadence, targetValue, targetCount, targetPeriod).
+- **Soportes**: UX inversa (usuario marca lo que NO hizo). Sin targets.
+- **Tasks**: una sola vez, sin recurrencia.
 
 ## Prioridades vigentes
 

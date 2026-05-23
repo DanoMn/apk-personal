@@ -5,22 +5,21 @@ Proyecto: Vocal / Autonomía sin límites
 Fuente: `docs/decisiones-capas-actividades-v1.md` secciones 6, 7 y 10
 Objetivo: dataset oficial de actividades semilla para las 5 capas.
 
-## DisplaySurface: estado `Available`
+## ActivitySurface
 
-Se agrega `Available` al enum `DisplaySurface` (junto a `PrimaryChecklist`, `SecondaryChecklist`, `Compact`, `Contextual`, `Silent`).
+Las actividades del seed existen en `ActivityDefinitionEntity` (catalogo inmutable) sin `UserActivityConfigEntity` asociada. Eso equivale al viejo `Available`: existen en el catalogo, no estan en ninguna superficie activa. El usuario las agrega a `Mis anclas`, `Soportes` o `Pendientes` desde la UI cuando las configura.
 
-```
-Available = actividad del dataset que existe pero NO está asignada a ninguna checklist.
-           Aparece en "Anclas disponibles" del panel de configuración.
-           No aparece en el dashboard (ni PrimaryChecklist ni SecondaryChecklist).
-           El usuario la mueve manualmente a PrimaryChecklist cuando la elige como ancla.
-```
+| Superficie | UI | UX | Targets |
+|------------|-----|-----|---------|
+| `Anchor` | Mis anclas | Normal: usuario marca lo que SI hizo | Obligatorios |
+| `Support` | Soportes | Inversa: usuario marca lo que NO hizo | Sin targets |
+| `Task` | Pendientes | Una sola vez, sin recurrencia | Sin targets |
 
-Las 17 actividades del seed usan `Available`. Cero pre-configuración.
+Sin configuracion de usuario, la actividad no aparece en ninguna superficie. Cero pre-configuracion.
 
 ---
 
-## Checklist principal (PrimaryChecklist)
+## Mis anclas (Anchor)
 
 Base personal que el usuario quiere sostener. Pocas, claras, representativas.
 
@@ -38,7 +37,7 @@ Base personal que el usuario quiere sostener. Pocas, claras, representativas.
 
 ---
 
-## Checklist secundaria (SecondaryChecklist)
+## Soportes (Support)
 
 Mantenimiento diario, cuidado personal, soporte ligero.
 

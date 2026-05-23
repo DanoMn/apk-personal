@@ -107,7 +107,7 @@ separacion final del codigo.
 Regla actual de superficie:
 
 ```text
-Mis anclas = Activity configuradas con displaySurface = PrimaryChecklist.
+Mis anclas = actividades configuradas con ActivitySurface.Anchor.
 ```
 
 Reglas:
@@ -115,10 +115,50 @@ Reglas:
 - deben ser elegidas o aceptadas por el usuario;
 - deben ser pocas;
 - alimentan las capas;
-- pesan mas que checklist secundaria y tasks;
-- no deben convertirse en una lista infinita.
+- pesan mas que Soportes y Pendientes;
+- no deben convertirse en una lista infinita;
+- targets obligatorios (cadence, targetValue, targetCount, targetPeriod): UX normal, el usuario marca lo que SI hizo.
 
 Sin anclas no hay suficiente base diaria para leer estabilidad.
+
+### Soportes
+
+Nombre UI recomendado:
+
+```text
+Soportes
+```
+
+Definicion:
+
+```text
+Acciones de mantenimiento diario que sostienen dignidad y estructura.
+```
+
+Conceptualmente son actividades configuradas con `ActivitySurface.Support`.
+
+UX inversa:
+
+```text
+El usuario marca lo que NO hizo. El sistema asume que todo esta hecho
+por defecto y solo registra omisiones.
+```
+
+Ejemplos:
+
+- banarse;
+- cepillarse los dientes;
+- tomar agua;
+- comer algo decente;
+- cambiarse de ropa;
+- orden minimo.
+
+Reglas:
+
+- sin targets;
+- complementan las anclas, no compiten con ellas;
+- especialmente utiles para usuarios en restauracion o saliendo de abandono;
+- no son obligatorias para el sistema.
 
 ### Sueno
 
@@ -382,33 +422,35 @@ clinica ni como una pantalla de productividad pesada.
 
 ## Activities, logs y tasks
 
-### Activity
+### ActivityDefinitionEntity
 
-`Activity` define una accion recurrente o configurable que el usuario puede
-elegir y registrar.
-
-En el codigo actual esta representada por `TrackedActivity`, pero el nombre no
-es ideal. `TrackedActivity` no significa "hecho ya trackeado"; significa
-"actividad configurada y registrable".
+Define que actividad existe y como se mide. Es el catalogo inmutable.
 
 Campos conceptuales importantes:
 
 - capa;
-- tipo de medicion;
-- superficie de aparicion;
-- rol;
-- aporte a estabilidad;
-- importancia;
-- objetivo opcional;
-- frecuencia opcional;
-- estado activo o archivado.
+- tipo de medicion (Time, Count, Check, Note);
+- unidad (minutos, cantidad, booleano, texto);
+- rol (Practice, SelfCare, Learning, etc.);
+- aporte a estabilidad (Core, Support, Protective);
+- importancia (Critical, High, Medium, Low).
 
-`displaySurface` define donde aparece:
+### UserActivityConfigEntity
 
-- `PrimaryChecklist`: Mis anclas.
-- `SecondaryChecklist`: cuidado base o soporte.
-- `Contextual`: metas, senales o flujos especificos.
-- `Silent`: no aparece como accion directa.
+Configuracion personal que el usuario asigna a una actividad del catalogo.
+
+Campos clave:
+
+- `activitySurface`: `Anchor`, `Support` o `Task`.
+- `isActive`: activo o archivado.
+- targets (`cadence`, `targetValue`, `targetCount`, `targetPeriod`): obligatorios para Anchor, ausentes en Support y Task.
+- `isFocusSignal`: senal destacada en dashboard.
+
+Reglas de superficie:
+
+- `Anchor` (Mis anclas): UX normal, usuario marca lo que SI hizo. Targets obligatorios.
+- `Support` (Soportes): UX inversa, usuario marca lo que NO hizo. Sin targets.
+- `Task` (Pendientes): una sola vez, sin recurrencia.
 
 ### ActivityLog
 
@@ -528,7 +570,7 @@ Reglas de score v1:
 - las capas producen una base visible de 700 a 900;
 - goals semanales/mensuales pueden aportar bonus de 0 a 100;
 - `Plenitude` e `Unbreakable` requieren base sostenida y goals consistentes;
-- checklist principal pesa mas que checklist secundaria;
+- Anclas pesan mas que Soportes;
 - tasks pesan menos y solo cuentan si aportan a una capa;
 - sueno bajo o ausente impide lecturas altas;
 - recaidas en abstinencias activas pueden limitar fuertemente el estado;
@@ -674,7 +716,7 @@ El dashboard actual debe mantenerse como referencia:
 - senales importantes;
 - abstinencias activas si el usuario las activo;
 - preview de Mis anclas;
-- soportes como cuidado base y tasks;
+- Soportes y Pendientes;
 - resumen semanal.
 
 Senales importantes:
