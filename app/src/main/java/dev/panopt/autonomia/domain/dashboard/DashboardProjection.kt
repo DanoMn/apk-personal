@@ -57,12 +57,12 @@ internal fun buildDashboardState(
     val completedActivityIds = completedActivities.map { it.id }.toSet()
 
     val primaryActivities = dashboardActivities.filter { it.activityType == ActivitySurface.Anchor }
-    val secondaryActivities = emptyList<ActivityDefinition>() // Disabled until secondary checklist logic is defined
-    val coreActivities = dashboardActivities.filter { it.contributionRole == ContributionRole.Core }
-    val timeActivities = dashboardActivities.filter { it.unit == ActivityUnit.Minutes }
     val selfCareActivities = dashboardActivities.filter {
         it.activityType == ActivitySurface.Support
     }
+    val secondaryActivities = selfCareActivities
+    val coreActivities = dashboardActivities.filter { it.contributionRole == ContributionRole.Core }
+    val timeActivities = dashboardActivities.filter { it.unit == ActivityUnit.Minutes }
 
     val completedCount = completedActivities.size
     val dailyProgress = ratio(completedCount, dashboardActivities.size)
@@ -166,6 +166,7 @@ internal fun buildDashboardState(
                 layerName = layerById[activity.layerId]?.name.orEmpty(),
                 value = activity.valueLabel(),
                 completed = activity.id in completedActivityIds,
+                activityType = activity.activityType.name,
             )
         },
         supports = buildSupports(
@@ -201,6 +202,7 @@ internal fun buildDashboardState(
                 layerName = layerById[activity.layerId]?.name.orEmpty(),
                 value = activity.valueLabel(),
                 completed = activity.id in completedActivityIds,
+                activityType = activity.activityType.name,
             )
         },
         pendingTasks = tasks

@@ -80,6 +80,7 @@ internal data class DashboardChecklistItemState(
     val layerName: String,
     val value: String,
     val completed: Boolean,
+    val activityType: String = "",
 )
 
 internal data class DashboardSupportState(
