@@ -102,7 +102,6 @@ class AutonomiaRepository(context: Context) {
 
         // Activities and abstinence tracks: always upsert so new seeds
         // reach existing installations without losing user-configured ones.
-        dao.upsertActivities(DefaultSeeds.activities)
         dao.upsertActivityDefinitions(DefaultSeeds.activityDefinitions)
         dao.upsertAbstinenceTracks(DefaultSeeds.abstinenceTracks)
     }
