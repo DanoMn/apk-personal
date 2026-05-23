@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.panopt.autonomia.AutonomiaRepository
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
@@ -134,6 +136,12 @@ internal class DashboardViewModel(
         }
     }
 
+    fun deleteActivity(activityId: String) {
+        viewModelScope.launch {
+            repository.deleteActivity(activityId)
+        }
+    }
+
     fun toggleAbstinenceClean(trackId: String, isMarkedCleanToday: Boolean) {
         viewModelScope.launch {
             if (isMarkedCleanToday) {
@@ -188,6 +196,8 @@ internal class DashboardViewModel(
         isSecondary: Boolean,
         isGoal: Boolean,
         isMonthlyGoal: Boolean,
+        targetCount: Int? = null,
+        targetPeriod: TargetPeriod? = null,
     ) {
         viewModelScope.launch {
             repository.createActivity(
@@ -199,8 +209,11 @@ internal class DashboardViewModel(
                 } else {
                     DisplaySurface.PrimaryChecklist
                 },
+                activityType = if (isSecondary) ActivitySurface.Support else ActivitySurface.Anchor,
                 isGoal = isGoal,
                 isMonthlyGoal = isMonthlyGoal,
+                targetCount = targetCount,
+                targetPeriod = targetPeriod,
             )
         }
     }
@@ -214,6 +227,28 @@ internal class DashboardViewModel(
     fun completeTask(taskId: String) {
         viewModelScope.launch {
             repository.completeTask(taskId)
+        }
+    }
+
+    fun addActivityToChecklist(
+        activityId: String,
+        targetValue: Int?,
+        targetCount: Int?,
+        targetPeriod: TargetPeriod?,
+    ) {
+        viewModelScope.launch {
+            repository.addActivityToChecklist(
+                activityId = activityId,
+                targetValue = targetValue,
+                targetCount = targetCount,
+                targetPeriod = targetPeriod,
+            )
+        }
+    }
+
+    fun removeActivityFromChecklist(activityId: String) {
+        viewModelScope.launch {
+            repository.removeActivityFromChecklist(activityId)
         }
     }
 

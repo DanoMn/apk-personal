@@ -153,6 +153,7 @@ class AutonomiaRepository(context: Context) {
         layerId: String,
         targetMinutes: Int,
         displaySurface: DisplaySurface,
+        activityType: ActivitySurface = ActivitySurface.Anchor,
         isGoal: Boolean = false,
         isMonthlyGoal: Boolean = false,
         targetCount: Int? = null,

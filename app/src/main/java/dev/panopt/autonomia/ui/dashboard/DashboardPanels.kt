@@ -1,5 +1,7 @@
 package dev.panopt.autonomia.ui.dashboard
 
+import dev.panopt.autonomia.TargetPeriod
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,11 +35,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardChecklistItemState
@@ -44,6 +55,7 @@ import dev.panopt.autonomia.domain.dashboard.DashboardSobrietyTrackState
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.DashboardTaskState
 import dev.panopt.autonomia.ui.dashboard.components.CheckItem
+import dev.panopt.autonomia.ui.dashboard.components.ChecklistConfigPanel
 
 internal enum class DashboardSheet {
     EntryMenu,
@@ -52,6 +64,7 @@ internal enum class DashboardSheet {
     Sleep,
     Tasks,
     Activities,
+    ChecklistConfig,
     Relapse,
 }
 
@@ -68,8 +81,11 @@ internal fun DashboardSheetHost(
     onToggleRelapse: (String, Boolean) -> Unit,
     onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
     onSetFocusSignal: (String) -> Unit,
+    onAddToChecklist: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onRemoveFromChecklist: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
+    onNavigateToChecklistConfig: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -89,12 +105,24 @@ internal fun DashboardSheetHost(
         ) {
             Box(
                 modifier = Modifier
-                    .size(width = 48.dp, height = 4.dp)
-                    .clip(RoundedCornerShape(99.dp))
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .align(Alignment.CenterHorizontally),
-            )
-            Spacer(modifier = Modifier.height(14.dp))
+                    .fillMaxWidth()
+                    .padding(bottom = 14.dp)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 20f) {
+                                onDismiss()
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 48.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(Color.White.copy(alpha = 0.16f))
+                )
+            }
 
             when (sheet) {
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
@@ -106,21 +134,24 @@ internal fun DashboardSheetHost(
                     onOpenRelapse = { onSwitchSheet(DashboardSheet.Relapse) },
                 )
                 DashboardSheet.Checklist -> ChecklistPanel(
-                    title = "Registrar checklist",
+                    title = "Registrar ancla",
                     items = state.checklistItems,
                     activityOptions = state.activityOptions.filter {
-                        !it.isGoal && it.displaySurface == "PrimaryChecklist"
+                        !it.isGoal && it.activityType == "Anchor"
                     },
                     palette = palette,
                     onToggleActivity = onToggleActivity,
                     onSaveActivityValue = onSaveActivityValue,
-                    onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
+                    onOpenActivities = {
+                        onDismiss()
+                        onNavigateToChecklistConfig()
+                    },
                 )
                 DashboardSheet.SecondaryChecklist -> ChecklistPanel(
-                    title = "Checklist secundaria",
+                    title = "Cuidado base",
                     items = state.secondaryChecklistItems,
                     activityOptions = state.activityOptions.filter {
-                        !it.isGoal && it.displaySurface == "SecondaryChecklist"
+                        !it.isGoal && it.activityType == "Support"
                     },
                     palette = palette,
                     onToggleActivity = onToggleActivity,
@@ -149,6 +180,13 @@ internal fun DashboardSheetHost(
                     onSaveActivityValue = onSaveActivityValue,
                     onCreateActivity = onCreateActivity,
                     onSetFocusSignal = onSetFocusSignal,
+                )
+                DashboardSheet.ChecklistConfig -> ChecklistConfigPanel(
+                    layers = state.layers,
+                    activityOptions = state.activityOptions,
+                    palette = palette,
+                    onAddToChecklist = onAddToChecklist,
+                    onRemoveFromChecklist = onRemoveFromChecklist,
                 )
                 DashboardSheet.Relapse -> RelapsePanel(
                     tracks = state.sobrietyTracks,
@@ -214,17 +252,104 @@ private fun EntryMenuPanel(
     onOpenActivities: () -> Unit,
     onOpenRelapse: () -> Unit,
 ) {
-    SheetTitle(title = "Registrar", note = "hechos y configuracion", palette = palette)
+    SheetTitle(title = "Configuración rápida", note = "hechos y registro", palette = palette)
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        SheetButton(text = "Checklist principal", palette = palette, primary = true, onClick = onOpenChecklist)
-        SheetButton(text = "Checklist secundaria", palette = palette, primary = false, onClick = onOpenSecondaryChecklist)
-        SheetButton(text = "Pendientes puntuales", palette = palette, primary = false, onClick = onOpenTasks)
-        SheetButton(text = "Actividades, proyectos y goals", palette = palette, primary = false, onClick = onOpenActivities)
-        SheetButton(text = "Recaidas de sobriedad", palette = palette, primary = false, onClick = onOpenRelapse)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EntryGridCard(
+                palette = palette,
+                icon = { ChecklistIcon(color = it, modifier = Modifier.size(28.dp)) },
+                label = "Anclas",
+                description = "Registrar ancla",
+                onClick = onOpenChecklist,
+                modifier = Modifier.weight(1f),
+            )
+            EntryGridCard(
+                palette = palette,
+                icon = { GlassWaterIcon(color = it, modifier = Modifier.size(28.dp)) },
+                label = "Cuidado",
+                description = "Cuidado base",
+                onClick = onOpenSecondaryChecklist,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EntryGridCard(
+                palette = palette,
+                icon = { ListTodoIcon(color = it, modifier = Modifier.size(28.dp)) },
+                label = "Pendientes",
+                description = "Tareas abiertas",
+                onClick = onOpenTasks,
+                modifier = Modifier.weight(1f),
+            )
+            EntryGridCard(
+                palette = palette,
+                icon = { BarChartIcon(color = it) },
+                label = "Actividades",
+                description = "Metas y señales",
+                onClick = onOpenActivities,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EntryGridCard(
+                palette = palette,
+                icon = { FlagIcon(color = it, modifier = Modifier.size(28.dp)) },
+                label = "Recaídas",
+                description = "Registrar recaída",
+                onClick = onOpenRelapse,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun EntryGridCard(
+    palette: DashboardPalette,
+    icon: @Composable (Color) -> Unit,
+    label: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(72.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(palette.bgSurface)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = description }
+            .padding(8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            icon(palette.textMain)
+            Text(
+                text = label,
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -238,6 +363,7 @@ private fun ActivityValueRow(
     var valueText by remember(activity.id, activity.actualValue) {
         mutableStateOf(activity.actualValue.coerceAtLeast(activity.targetValue).toString())
     }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     Row(
         modifier = Modifier
@@ -269,18 +395,18 @@ private fun ActivityValueRow(
             value = valueText,
             onValueChange = { valueText = it.filter(Char::isDigit).take(4) },
             palette = palette,
-            modifier = Modifier.size(width = 62.dp, height = 42.dp),
+            modifier = Modifier
+                .size(width = 62.dp, height = 42.dp)
+                .onFocusChanged { focusState ->
+                    if (!focusState.isFocused) {
+                        onSaveActivityValue(activity.id, valueText.toIntOrNull() ?: activity.targetValue)
+                    }
+                },
             keyboardType = KeyboardType.Number,
-        )
-        SheetMiniButton(
-            text = "Guardar",
-            palette = palette,
-            onClick = { onSaveActivityValue(activity.id, valueText.toIntOrNull() ?: activity.targetValue) },
-        )
-        SheetMiniButton(
-            text = if (activity.isCompletedToday) "Quitar" else "Meta",
-            palette = palette,
-            onClick = { onToggleActivity(activity.id, !activity.isCompletedToday) },
+            onDone = {
+                onSaveActivityValue(activity.id, valueText.toIntOrNull() ?: activity.targetValue)
+                focusManager.clearFocus()
+            }
         )
     }
 }
@@ -339,8 +465,7 @@ private fun TasksPanel(
     onCompleteTask: (String) -> Unit,
 ) {
     var title by remember { mutableStateOf("") }
-    var contributesToCore by remember { mutableStateOf(false) }
-    var layerId by remember(layers) { mutableStateOf(layers.firstOrNull()?.id.orEmpty()) }
+    var selectedLayerId by remember { mutableStateOf<String?>(null) }
     SheetTitle(title = "Pendientes", note = "${tasks.size} abiertos", palette = palette)
 
     Column(
@@ -353,10 +478,22 @@ private fun TasksPanel(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(palette.bgSurface)
-                    .padding(12.dp),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                if (task.layerId != null) {
+                    val layerColor = getLayerColor(task.layerId, palette)
+                    Box(
+                        modifier = Modifier.size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LayerIcon(layerId = task.layerId, color = layerColor, modifier = Modifier.size(20.dp))
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+
                 Text(
                     text = task.title,
                     modifier = Modifier.weight(1f),
@@ -367,55 +504,97 @@ private fun TasksPanel(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                SheetMiniButton(text = "Listo", palette = palette) { onCompleteTask(task.id) }
-            }
-        }
-        PanelField("Nuevo pendiente", title, { title = it }, palette, Modifier.fillMaxWidth())
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Checkbox(checked = contributesToCore, onCheckedChange = { contributesToCore = it })
-            Text(
-                text = "Aporta al core",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontSize = 13.sp,
-            )
-        }
-        if (contributesToCore) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                layers.forEach { layer ->
-                    val selected = layer.id == layerId
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (selected) palette.colorCardboard else palette.bgSurface)
-                            .clickable { layerId = layer.id },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = layer.name.take(4),
-                            color = if (selected) palette.bgBase else palette.textMuted,
-                            fontFamily = DashboardSans,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                        )
+
+                var completedClicked by remember(task.id) { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(if (completedClicked) palette.colorCoral.copy(alpha = 0.2f) else Color.Transparent)
+                        .clickable {
+                            completedClicked = true
+                            onCompleteTask(task.id)
+                        }
+                        .border(
+                            width = 1.5.dp,
+                            color = if (completedClicked) palette.colorCoral else palette.textMuted.copy(alpha = 0.4f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (completedClicked) {
+                        CheckIcon(color = palette.colorCoral, modifier = Modifier.size(16.dp))
                     }
                 }
             }
         }
+        PanelField("Nuevo pendiente", title, { title = it }, palette, Modifier.fillMaxWidth())
+        
+        SheetSubtitle(text = "Asociar a capa", palette = palette)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val layerIds = listOf("layer_interior", "layer_cuerpo", "layer_conducta", "layer_vinculos", "layer_proyecto")
+            layerIds.forEach { id ->
+                val isSelected = selectedLayerId == id
+                val baseColor = getLayerColor(id, palette)
+                val iconColor = if (isSelected) baseColor else mix(baseColor, 0.4f, palette.bgSurface2)
+                val backgroundColor = if (isSelected) mix(baseColor, 0.15f, palette.bgSurface2) else palette.bgSurface2
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(backgroundColor)
+                        .clickable {
+                            selectedLayerId = if (isSelected) null else id
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    LayerIcon(layerId = id, color = iconColor, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
         SheetButton(
             text = "Agregar pendiente",
             palette = palette,
             primary = true,
             onClick = {
-                onCreateTask(title, layerId.takeIf { contributesToCore }, contributesToCore)
-                title = ""
+                val finalTitle = title.trim()
+                if (finalTitle.isNotBlank()) {
+                    onCreateTask(finalTitle, selectedLayerId, selectedLayerId != null)
+                    title = ""
+                    selectedLayerId = null
+                }
             },
         )
+    }
+}
+
+@Composable
+private fun LayerIcon(layerId: String, color: Color, modifier: Modifier = Modifier) {
+    when (layerId) {
+        "layer_interior" -> InteriorLayerIcon(color = color, modifier = modifier)
+        "layer_cuerpo" -> WavesIcon(color = color, modifier = modifier)
+        "layer_conducta" -> InfinityIcon(color = color, modifier = modifier)
+        "layer_vinculos" -> VinculosLayerIcon(color = color, modifier = modifier)
+        "layer_proyecto" -> ProjectTriangleIcon(color = color, modifier = modifier)
+    }
+}
+
+private fun getLayerColor(layerId: String, palette: DashboardPalette): Color {
+    return when (layerId) {
+        "layer_interior" -> palette.layerInterior
+        "layer_cuerpo" -> palette.layerBody
+        "layer_conducta" -> palette.layerConduct
+        "layer_vinculos" -> palette.layerVinculos
+        "layer_proyecto" -> palette.layerProject
+        else -> palette.textMuted
     }
 }
 
@@ -435,7 +614,7 @@ private fun ActivitySettingsPanel(
     var isGoal by remember { mutableStateOf(false) }
     var isMonthlyGoal by remember { mutableStateOf(false) }
 
-    SheetTitle(title = "Actividades", note = "checklist, goals y senales", palette = palette)
+    SheetTitle(title = "Actividades", note = "anclas, metas y senales", palette = palette)
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -704,6 +883,7 @@ private fun PanelTextField(
     palette: DashboardPalette,
     modifier: Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
+    onDone: (() -> Unit)? = null,
 ) {
     BasicTextField(
         value = value,
@@ -712,13 +892,20 @@ private fun PanelTextField(
             color = palette.textMain,
             fontFamily = DashboardSans,
             fontSize = 14.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         ),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboardType,
+            imeAction = if (onDone != null) androidx.compose.ui.text.input.ImeAction.Done else androidx.compose.ui.text.input.ImeAction.Default
+        ),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+            onDone = { onDone?.invoke() }
+        ),
         singleLine = true,
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(palette.bgSurface2)
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 4.dp, vertical = 12.dp),
     )
 }
 
