@@ -20,7 +20,7 @@ interface AutonomiaDao {
     @Query("SELECT * FROM activities ORDER BY sortOrder")
     fun observeActivities(): Flow<List<ActivityEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertActivities(activities: List<ActivityEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -44,7 +44,7 @@ interface AutonomiaDao {
     @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
     fun observeAbstinenceTracks(): Flow<List<AbstinenceTrackEntity>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertAbstinenceTracks(tracks: List<AbstinenceTrackEntity>)
 
     @Query("SELECT * FROM abstinence_logs WHERE date = :date")
@@ -110,4 +110,88 @@ interface AutonomiaDao {
 
     @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long)
+
+    @Query(
+        "UPDATE activities SET displaySurface = :displaySurface, targetValue = :targetValue, " +
+            "targetCount = :targetCount, targetPeriod = :targetPeriod, cadence = :cadence, " +
+            "updatedAt = :updatedAt WHERE id = :activityId",
+    )
+    suspend fun updateActivityConfig(
+        activityId: String,
+        displaySurface: String,
+        targetValue: Int?,
+        targetCount: Int?,
+        targetPeriod: String?,
+        cadence: String?,
+        updatedAt: Long,
+    )
+
+    @Query("DELETE FROM activities WHERE id = :activityId")
+    suspend fun deleteActivity(activityId: String)
+
+    @Query("DELETE FROM activity_logs")
+    suspend fun clearAllActivityLogs()
+
+    @Query("DELETE FROM activities")
+    suspend fun clearAllActivities()
+
+    @Query("DELETE FROM abstinence_logs")
+    suspend fun clearAllAbstinenceLogs()
+
+    @Query("DELETE FROM risk_events")
+    suspend fun clearAllRiskEvents()
+
+    @Query("DELETE FROM tasks")
+    suspend fun clearAllTasks()
+
+    // --- New queries for activity_definitions ---
+
+    @Query("SELECT * FROM activity_definitions ORDER BY sortOrder")
+    fun observeActivityDefinitions(): Flow<List<ActivityDefinitionEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun upsertActivityDefinitions(definitions: List<ActivityDefinitionEntity>)
+
+    // --- New queries for user_activity_configs ---
+
+    @Query("SELECT * FROM user_activity_configs WHERE active = 1 AND archived = 0")
+    fun observeUserActivityConfigs(): Flow<List<UserActivityConfigEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertUserActivityConfig(config: UserActivityConfigEntity)
+
+    @Query(
+        "UPDATE user_activity_configs SET activityType = :activityType, " +
+            "targetValue = :targetValue, targetCount = :targetCount, " +
+            "targetPeriod = :targetPeriod, cadence = :cadence, active = :active, " +
+            "archived = :archived, sortOrder = :sortOrder, updatedAt = :updatedAt " +
+            "WHERE activityId = :activityId",
+    )
+    suspend fun updateUserActivityConfig(
+        activityId: String,
+        activityType: String,
+        targetValue: Int?,
+        targetCount: Int?,
+        targetPeriod: String?,
+        cadence: String?,
+        active: Boolean,
+        archived: Boolean,
+        sortOrder: Int,
+        updatedAt: Long,
+    )
+
+    @Query("DELETE FROM user_activity_configs WHERE activityId = :activityId")
+    suspend fun deleteUserActivityConfig(activityId: String)
+
+    @Query("DELETE FROM user_activity_configs")
+    suspend fun clearAllUserActivityConfigs()
+
+    @Query("DELETE FROM activity_definitions")
+    suspend fun clearAllActivityDefinitions()
+
+    @Query("DELETE FROM sleep_logs")
+    suspend fun clearAllSleepLogs()
 }
