@@ -2,6 +2,7 @@ package dev.panopt.autonomia.domain.activity
 
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityRole
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
@@ -16,7 +17,8 @@ data class ActivityDefinition(
     val description: String,
     val type: ActivityType,
     val role: ActivityRole,
-    val displaySurface: DisplaySurface,
+    val displaySurface: DisplaySurface,      // DEPRECATED — will be removed in PR 3
+    val activityType: ActivitySurface = ActivitySurface.Anchor, // NEW
     val contributionRole: ContributionRole,
     val importanceTier: ImportanceTier,
     val cadence: ActivityCadence? = null,

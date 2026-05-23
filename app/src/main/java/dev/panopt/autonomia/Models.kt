@@ -105,7 +105,8 @@ enum class ScoreState(val uiAlias: String) {
 
 enum class ActivityType { Check, Time, Count, Note, TimeOfDay, SelfCare, AbstinenceSupport, Weekly }
 enum class ActivityRole { Practice, SelfCare, Boundary, DigitalHygiene, DomesticOrder, RelationalHabit, ProjectWork, Learning, Custom }
-enum class DisplaySurface { PrimaryChecklist, SecondaryChecklist, Compact, Contextual, Silent }
+enum class DisplaySurface { PrimaryChecklist, SecondaryChecklist, Available, Compact, Contextual, Silent }
+enum class ActivitySurface { Anchor, Support, Task }
 enum class ContributionRole { Core, Support, Protective, Recovery, Neutral }
 enum class ImportanceTier { Low, Medium, High, Critical }
 enum class ActivityCadence { Daily, Weekly, Monthly, Custom, EventBased }
