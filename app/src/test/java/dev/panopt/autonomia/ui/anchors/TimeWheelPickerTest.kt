@@ -1,4 +1,4 @@
-package dev.panopt.autonomia.ui.checklist
+package dev.panopt.autonomia.ui.anchors
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -147,8 +147,8 @@ class DashboardProjectionTest {
     }
 
     @Test
-    fun `DashboardChecklistItemState has activityType default value`() {
-        val item = DashboardChecklistItemState(
+    fun `DashboardCheckItemState has activityType default value`() {
+        val item = DashboardCheckItemState(
             id = "test",
             title = "Test",
             layerId = "layer_interior",
@@ -161,8 +161,8 @@ class DashboardProjectionTest {
     }
 
     @Test
-    fun `DashboardChecklistItemState accepts explicit activityType`() {
-        val item = DashboardChecklistItemState(
+    fun `DashboardCheckItemState accepts explicit activityType`() {
+        val item = DashboardCheckItemState(
             id = "test",
             title = "Test",
             layerId = "layer_interior",

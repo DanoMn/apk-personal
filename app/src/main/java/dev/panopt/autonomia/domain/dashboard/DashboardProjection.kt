@@ -121,6 +121,7 @@ internal fun buildDashboardState(
         coreCount = coreActivities.size,
         riskEvents = riskEvents,
     )
+    val configuredById = activities.associateBy { it.id }
 
     return DashboardState(
         isLoading = false,
@@ -159,8 +160,8 @@ internal fun buildDashboardState(
                 isMarkedCleanToday = status == AbstinenceStatus.Clean,
             )
         },
-        checklistItems = primaryActivities.map { activity ->
-            DashboardChecklistItemState(
+        anchorItems = primaryActivities.map { activity ->
+            DashboardCheckItemState(
                 id = activity.id,
                 title = activity.name,
                 layerId = activity.layerId,
@@ -181,24 +182,25 @@ internal fun buildDashboardState(
         sleep = sleepLog.toSleepState(),
         activityOptions = catalogActivities.map { activity ->
             val log = todayLogsByActivity[activity.id]
-            val configuredIds = activities.map { it.id }.toSet()
+            val configured = configuredById[activity.id]
+            val effective = configured ?: activity
             DashboardActivityOptionState(
                 id = activity.id,
-                title = activity.name,
+                title = effective.name,
                 layerId = activity.layerId,
                 layerName = layerById[activity.layerId]?.name.orEmpty(),
-                targetValue = activity.targetValue ?: activity.minimumValue ?: 1,
-                actualValue = log?.actualValue ?: activity.targetValue ?: activity.minimumValue ?: 0,
-                isCompletedToday = activity.isCompletedBy(log),
+                targetValue = configured?.targetValue ?: activity.targetValue ?: activity.minimumValue ?: 1,
+                actualValue = log?.actualValue ?: configured?.targetValue ?: activity.targetValue ?: activity.minimumValue ?: 0,
+                isCompletedToday = effective.isCompletedBy(log),
                 isFocusSignal = activity.id == focusSignalActivityId,
-                displaySurface = activity.displaySurface.name,
-                activityType = activity.activityType.name,
-                isGoal = activity.isGoal(),
-                isConfigured = activity.id in configuredIds,
+                displaySurface = effective.displaySurface.name,
+                activityType = effective.activityType.name,
+                isGoal = effective.isGoal(),
+                isConfigured = configured != null,
             )
         },
-        secondaryChecklistItems = secondaryActivities.map { activity ->
-            DashboardChecklistItemState(
+        supportItems = secondaryActivities.map { activity ->
+            DashboardCheckItemState(
                 id = activity.id,
                 title = activity.name,
                 layerId = activity.layerId,
@@ -513,8 +515,8 @@ private fun buildSupports(
 
     return listOf(
         DashboardSupportState(
-            kind = DashboardSupportKind.SecondaryChecklist,
-            title = "Checklist secundaria",
+            kind = DashboardSupportKind.Support,
+            title = "Soportes",
             value = "$completedSecondaryCount/${secondaryActivities.size}",
             copy = "cuidado basico",
             first = firstSecondary?.name ?: "Sin cuidado base",

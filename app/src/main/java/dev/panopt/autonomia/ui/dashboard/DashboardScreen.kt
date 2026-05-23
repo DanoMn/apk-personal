@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,7 +33,7 @@ import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.ui.dashboard.components.ActionButtons
 import dev.panopt.autonomia.ui.dashboard.components.AnchorPhraseCard
-import dev.panopt.autonomia.ui.dashboard.components.ChecklistPreviewSection
+import dev.panopt.autonomia.ui.dashboard.components.AnchorPreviewSection
 import dev.panopt.autonomia.ui.dashboard.components.DailyProgressCard
 import dev.panopt.autonomia.ui.dashboard.components.LayersSection
 import dev.panopt.autonomia.ui.dashboard.components.NavigationDrawer
@@ -59,9 +60,9 @@ internal fun DashboardScreen(
     onSetFocusSignal: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
-    onAddToChecklist: (String, Int?, Int?, TargetPeriod?) -> Unit,
-    onRemoveFromChecklist: (String) -> Unit,
-    onNavigateToChecklistConfig: () -> Unit,
+    onAddAnchor: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onRemoveAnchor: (String) -> Unit,
+    onNavigateToAnchorConfig: () -> Unit,
     onToggleSupport: (String) -> Unit = {},
     onNavigateToSupportsConfig: () -> Unit = {},
 ) {
@@ -84,6 +85,7 @@ internal fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp),
@@ -112,21 +114,21 @@ internal fun DashboardScreen(
                 tracks = state.sobrietyTracks,
                 onToggleClean = onToggleAbstinenceClean,
             )
-            ChecklistPreviewSection(
+            AnchorPreviewSection(
                 palette = palette,
-                items = state.checklistItems,
+                items = state.anchorItems,
                 onToggle = onToggleActivity,
             )
             SupportsPreviewSection(
                 palette = palette,
-                items = state.secondaryChecklistItems,
+                items = state.supportItems,
                 onToggle = onToggleSupport,
                 onOpenConfig = onNavigateToSupportsConfig,
             )
             SupportsSection(
                 palette = palette,
                 supports = state.supports,
-                onOpenSecondaryChecklist = { activeSheet = DashboardSheet.SecondaryChecklist },
+                onOpenSupports = { activeSheet = DashboardSheet.Support },
                 onOpenTasks = { activeSheet = DashboardSheet.Tasks },
             )
             WeekSection(palette = palette, rows = state.weekRows)
@@ -159,7 +161,7 @@ internal fun DashboardScreen(
             modifier = Modifier.offset(x = drawerOffset),
             onClose = { isDrawerOpen = false },
             onThemeChange = onThemeChange,
-            onOpenChecklist = onNavigateToChecklistConfig,
+            onOpenAnchors = onNavigateToAnchorConfig,
             onOpenSupports = onNavigateToSupportsConfig,
             onOpenTasks = { activeSheet = DashboardSheet.Tasks },
             onOpenRelapse = { activeSheet = DashboardSheet.Relapse },
@@ -179,11 +181,11 @@ internal fun DashboardScreen(
                 onToggleRelapse = onToggleAbstinenceRelapse,
                 onCreateActivity = onCreateActivity,
                 onSetFocusSignal = onSetFocusSignal,
-                onAddToChecklist = onAddToChecklist,
-                onRemoveFromChecklist = onRemoveFromChecklist,
+                onAddAnchor = onAddAnchor,
+                onRemoveAnchor = onRemoveAnchor,
                 onCreateTask = onCreateTask,
                 onCompleteTask = onCompleteTask,
-                onNavigateToChecklistConfig = onNavigateToChecklistConfig,
+                onNavigateToAnchorConfig = onNavigateToAnchorConfig,
             )
         }
     }

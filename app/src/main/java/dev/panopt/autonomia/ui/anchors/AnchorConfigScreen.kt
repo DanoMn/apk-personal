@@ -1,4 +1,4 @@
-package dev.panopt.autonomia.ui.checklist
+package dev.panopt.autonomia.ui.anchors
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -59,16 +59,16 @@ import dev.panopt.autonomia.ui.dashboard.mix
 import kotlinx.coroutines.delay
 
 /**
- * Full-screen page for configuring the primary checklist ("Mis anclas").
+ * Full-screen page for configuring anchors ("Mis anclas").
  * Accessible from the navigation drawer. Independent of the dashboard sheet system.
  */
 @Composable
-internal fun ChecklistConfigScreen(
+internal fun AnchorConfigScreen(
     layers: List<DashboardLayerState>,
     activityOptions: List<DashboardActivityOptionState>,
     palette: DashboardPalette,
-    onAddToChecklist: (activityId: String, targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
-    onRemoveFromChecklist: (activityId: String) -> Unit,
+    onAddAnchor: (activityId: String, targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    onRemoveAnchor: (activityId: String) -> Unit,
     onDeleteActivity: (activityId: String) -> Unit,
     onCreateActivity: (name: String, layerId: String, targetMinutes: Int, isSecondary: Boolean, isGoal: Boolean, isMonthlyGoal: Boolean, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
     onBack: () -> Unit,
@@ -201,7 +201,7 @@ internal fun ChecklistConfigScreen(
                     activity = configuringActivity!!,
                     palette = palette,
                     onConfirm = { targetValue, targetCount, targetPeriod ->
-                        onAddToChecklist(configuringActivity!!.id, targetValue, targetCount, targetPeriod)
+                        onAddAnchor(configuringActivity!!.id, targetValue, targetCount, targetPeriod)
                         configuringActivity = null
                     },
                     onDismiss = { configuringActivity = null },
@@ -269,7 +269,7 @@ internal fun ChecklistConfigScreen(
                                     AnchorCard(
                                         activity = anchor,
                                         palette = palette,
-                                        onRemove = { onRemoveFromChecklist(anchor.id) },
+                                        onRemove = { onRemoveAnchor(anchor.id) },
                                         onDelete = { onDeleteActivity(anchor.id) },
                                     )
                                 }
@@ -320,7 +320,7 @@ internal fun ChecklistConfigScreen(
                                 text = if (searchQuery.isNotBlank()) {
                                     "Sin resultados para \"$searchQuery\""
                                 } else {
-                                    "Todas las actividades estan en tu checklist"
+                                    "Todas las actividades estan en tus anclas"
                                 },
                                 color = palette.textMuted,
                                 fontFamily = DashboardSans,

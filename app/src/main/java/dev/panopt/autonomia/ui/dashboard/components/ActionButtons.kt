@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.panopt.autonomia.ui.dashboard.ChecklistIcon
+import dev.panopt.autonomia.ui.dashboard.AnchorIcon
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.FlagIcon
 import dev.panopt.autonomia.ui.dashboard.mix
@@ -67,7 +67,7 @@ internal fun ActionButtons(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                ChecklistIcon(color = palette.bgBase, modifier = Modifier.size(22.dp))
+                AnchorIcon(color = palette.bgBase, modifier = Modifier.size(22.dp))
                 Text(
                     text = "Configuración rápida",
                     color = palette.bgBase,

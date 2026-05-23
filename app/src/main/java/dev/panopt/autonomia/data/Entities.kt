@@ -15,33 +15,6 @@ data class LayerEntity(
 )
 
 @Entity(
-    tableName = "activities",
-    indices = [Index("layerId")],
-)
-data class ActivityEntity(
-    @PrimaryKey val id: String,
-    val layerId: String,
-    val name: String,
-    val description: String,
-    val type: String,
-    val role: String,
-    val displaySurface: String,
-    val contributionRole: String,
-    val importanceTier: String,
-    val cadence: String?,
-    val targetValue: Int?,
-    val minimumValue: Int?,
-    val targetCount: Int?,
-    val targetPeriod: String?,
-    val unit: String,
-    val active: Boolean = true,
-    val archived: Boolean = false,
-    val sortOrder: Int,
-    val createdAt: Long,
-    val updatedAt: Long,
-)
-
-@Entity(
     tableName = "activity_logs",
     primaryKeys = ["activityId", "date"],
     indices = [Index("date")],

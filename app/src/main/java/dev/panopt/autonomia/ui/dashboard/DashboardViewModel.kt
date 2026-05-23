@@ -280,14 +280,14 @@ internal class DashboardViewModel(
         }
     }
 
-    fun addActivityToChecklist(
+    fun addActivityAsAnchor(
         activityId: String,
         targetValue: Int?,
         targetCount: Int?,
         targetPeriod: TargetPeriod?,
     ) {
         viewModelScope.launch {
-            repository.addActivityToChecklist(
+            repository.addActivityAsAnchor(
                 activityId = activityId,
                 targetValue = targetValue,
                 targetCount = targetCount,
@@ -296,9 +296,9 @@ internal class DashboardViewModel(
         }
     }
 
-    fun removeActivityFromChecklist(activityId: String) {
+    fun removeActivityAsAnchor(activityId: String) {
         viewModelScope.launch {
-            repository.removeActivityFromChecklist(activityId)
+            repository.removeActivityAsAnchor(activityId)
         }
     }
 

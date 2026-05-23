@@ -11,13 +11,13 @@ internal data class DashboardState(
     val layers: List<DashboardLayerState> = emptyList(),
     val signals: List<DashboardSignalState> = emptyList(),
     val sobrietyTracks: List<DashboardSobrietyTrackState> = emptyList(),
-    val checklistItems: List<DashboardChecklistItemState> = emptyList(),
+    val anchorItems: List<DashboardCheckItemState> = emptyList(),
     val supports: List<DashboardSupportState> = emptyList(),
     val weekRows: List<DashboardWeekRowState> = emptyList(),
     val dimensions: List<DashboardDimensionState> = emptyList(),
     val sleep: DashboardSleepState = DashboardSleepState(),
     val activityOptions: List<DashboardActivityOptionState> = emptyList(),
-    val secondaryChecklistItems: List<DashboardChecklistItemState> = emptyList(),
+    val supportItems: List<DashboardCheckItemState> = emptyList(),
     val pendingTasks: List<DashboardTaskState> = emptyList(),
 )
 
@@ -73,7 +73,7 @@ internal data class DashboardSobrietyTrackState(
     val isMarkedCleanToday: Boolean,
 )
 
-internal data class DashboardChecklistItemState(
+internal data class DashboardCheckItemState(
     val id: String,
     val title: String,
     val layerId: String,
@@ -95,7 +95,7 @@ internal data class DashboardSupportState(
 )
 
 internal enum class DashboardSupportKind {
-    SecondaryChecklist,
+    Support,
     Tasks,
 }
 

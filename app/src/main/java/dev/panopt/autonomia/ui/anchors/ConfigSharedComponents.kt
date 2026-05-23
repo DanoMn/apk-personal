@@ -1,4 +1,4 @@
-package dev.panopt.autonomia.ui.checklist
+package dev.panopt.autonomia.ui.anchors
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size

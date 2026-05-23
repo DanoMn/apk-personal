@@ -40,11 +40,11 @@ import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
-import dev.panopt.autonomia.ui.checklist.GoalPreset
-import dev.panopt.autonomia.ui.checklist.GoalPresetGrid
-import dev.panopt.autonomia.ui.checklist.LayerStampSmall
-import dev.panopt.autonomia.ui.checklist.TimeWheelPicker
-import dev.panopt.autonomia.ui.checklist.layerColor
+import dev.panopt.autonomia.ui.anchors.GoalPreset
+import dev.panopt.autonomia.ui.anchors.GoalPresetGrid
+import dev.panopt.autonomia.ui.anchors.LayerStampSmall
+import dev.panopt.autonomia.ui.anchors.TimeWheelPicker
+import dev.panopt.autonomia.ui.anchors.layerColor
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
 import dev.panopt.autonomia.ui.dashboard.DashboardSerif
@@ -52,16 +52,16 @@ import dev.panopt.autonomia.ui.dashboard.SearchIcon
 import dev.panopt.autonomia.ui.dashboard.mix
 
 /**
- * Panel for configuring the primary checklist ("Mis anclas").
+ * Panel for configuring anchors ("Mis anclas").
  * Shows current anchors, available activities, layer filters, and search.
  */
 @Composable
-internal fun ChecklistConfigPanel(
+internal fun AnchorConfigPanel(
     layers: List<DashboardLayerState>,
     activityOptions: List<DashboardActivityOptionState>,
     palette: DashboardPalette,
-    onAddToChecklist: (activityId: String, targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
-    onRemoveFromChecklist: (activityId: String) -> Unit,
+    onAddAnchor: (activityId: String, targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    onRemoveAnchor: (activityId: String) -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedLayerFilter by remember { mutableStateOf<String?>(null) }
@@ -108,7 +108,7 @@ internal fun ChecklistConfigPanel(
             activity = configuringActivity!!,
             palette = palette,
             onConfirm = { targetValue, targetCount, targetPeriod ->
-                onAddToChecklist(configuringActivity!!.id, targetValue, targetCount, targetPeriod)
+                onAddAnchor(configuringActivity!!.id, targetValue, targetCount, targetPeriod)
                 configuringActivity = null
             },
             onDismiss = { configuringActivity = null },
@@ -155,7 +155,7 @@ internal fun ChecklistConfigPanel(
                             AnchorRow(
                                 activity = anchor,
                                 palette = palette,
-                                onRemove = { onRemoveFromChecklist(anchor.id) },
+                                onRemove = { onRemoveAnchor(anchor.id) },
                             )
                         }
                     }
@@ -178,7 +178,7 @@ internal fun ChecklistConfigPanel(
                     text = if (searchQuery.isNotBlank()) {
                         "Sin resultados para \"$searchQuery\""
                     } else {
-                        "Todas las actividades estan en tu checklist"
+                        "Todas las actividades estan en tus anclas"
                     },
                     color = palette.textMuted,
                     fontFamily = DashboardSans,

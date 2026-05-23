@@ -2,7 +2,6 @@ package dev.panopt.autonomia
 
 import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
-import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
@@ -264,7 +263,7 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
-    suspend fun addActivityToChecklist(
+    suspend fun addActivityAsAnchor(
         activityId: String,
         targetValue: Int? = null,
         targetCount: Int? = null,
@@ -286,7 +285,7 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
-    suspend fun removeActivityFromChecklist(activityId: String) {
+    suspend fun removeActivityAsAnchor(activityId: String) {
         dao.deleteUserActivityConfig(activityId)
     }
 

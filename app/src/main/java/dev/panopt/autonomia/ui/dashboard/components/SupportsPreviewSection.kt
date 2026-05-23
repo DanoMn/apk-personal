@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.panopt.autonomia.domain.dashboard.DashboardChecklistItemState
+import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
 
@@ -27,7 +27,7 @@ import dev.panopt.autonomia.ui.dashboard.DashboardSans
 @Composable
 internal fun SupportsPreviewSection(
     palette: DashboardPalette,
-    items: List<DashboardChecklistItemState>,
+    items: List<DashboardCheckItemState>,
     onToggle: (String) -> Unit,
     onOpenConfig: () -> Unit,
 ) {

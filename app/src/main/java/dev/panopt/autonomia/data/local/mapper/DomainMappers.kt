@@ -26,7 +26,6 @@ import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
-import dev.panopt.autonomia.data.ActivityEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AnchorPhraseEntity
 import dev.panopt.autonomia.data.LayerEntity
@@ -39,31 +38,7 @@ import dev.panopt.autonomia.domain.activity.ActivityDefinition
 internal fun LayerEntity.toDomain(): Layer =
     Layer(id = id, name = name, description = description, sortOrder = sortOrder, active = active)
 
-internal fun ActivityEntity.toDomain(): ActivityDefinition =
-    ActivityDefinition(
-        id = id,
-        layerId = layerId,
-        name = name,
-        description = description,
-        type = runCatching { ActivityType.valueOf(type) }.getOrDefault(ActivityType.Check),
-        role = runCatching { ActivityRole.valueOf(role) }.getOrDefault(ActivityRole.Practice),
-        displaySurface = runCatching { DisplaySurface.valueOf(displaySurface) }.getOrDefault(DisplaySurface.PrimaryChecklist),
-        contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Core),
-        importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
-        cadence = cadence?.let { runCatching { ActivityCadence.valueOf(it) }.getOrNull() },
-        targetValue = targetValue,
-        minimumValue = minimumValue,
-        targetCount = targetCount,
-        targetPeriod = targetPeriod?.let { runCatching { TargetPeriod.valueOf(it) }.getOrNull() },
-        unit = runCatching { ActivityUnit.valueOf(unit) }.getOrDefault(ActivityUnit.Boolean),
-        active = active,
-        archived = archived,
-        sortOrder = sortOrder,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-    )
-
-// New mapper for merged domain model (used in PR 2 when repository merges flows)
+// Mapper for merged domain model (definition + config) (used in PR 2 when repository merges flows)
 internal fun mergeToDomain(
     definition: ActivityDefinitionEntity,
     config: UserActivityConfigEntity,

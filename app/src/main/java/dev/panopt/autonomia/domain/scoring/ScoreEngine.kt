@@ -72,8 +72,8 @@ data class ScoreGate(
 )
 
 enum class ScoreFeature {
-    PrimaryChecklist,
-    SecondaryChecklist,
+    Anchor,
+    Support,
     Task,
     Sleep,
     Sobriety,
@@ -150,8 +150,8 @@ object ScoreEngine {
                     val secondary = secondaryRatio * 0.10f
                     val tasks = taskRatio * 0.05f
                     val sleep = (sleepScore ?: 0f) * 0.45f
-                    addContribution(contributions, ScoreFeature.PrimaryChecklist, layer, "Checklist principal", primary, 0.40f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.SecondaryChecklist, layer, "Checklist secundaria", secondary, 0.10f, hasSecondary)
+                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.40f, hasPrimary)
+                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.10f, hasSecondary)
                     addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.05f, hasTasks)
                     addContribution(contributions, ScoreFeature.Sleep, layer, "Sueno", sleep, 0.45f, hasSleep)
                     primary + secondary + tasks + sleep
@@ -165,8 +165,8 @@ object ScoreEngine {
                     } else {
                         (sobrietyScore ?: 0f) * 0.42f
                     }
-                    addContribution(contributions, ScoreFeature.PrimaryChecklist, layer, "Checklist principal", primary, 0.40f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.SecondaryChecklist, layer, "Checklist secundaria", secondary, 0.10f, hasSecondary)
+                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.40f, hasPrimary)
+                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.10f, hasSecondary)
                     addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.08f, hasTasks)
                     addContribution(contributions, ScoreFeature.Sobriety, layer, "Sobriedad", sobriety, 0.42f, hasSobriety)
                     primary + secondary + tasks + sobriety
@@ -175,8 +175,8 @@ object ScoreEngine {
                     val primary = primaryRatio * 0.78f
                     val secondary = secondaryRatio * 0.14f
                     val tasks = taskRatio * 0.08f
-                    addContribution(contributions, ScoreFeature.PrimaryChecklist, layer, "Checklist principal", primary, 0.78f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.SecondaryChecklist, layer, "Checklist secundaria", secondary, 0.14f, hasSecondary)
+                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.78f, hasPrimary)
+                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.14f, hasSecondary)
                     addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.08f, hasTasks)
                     primary + secondary + tasks
                 }

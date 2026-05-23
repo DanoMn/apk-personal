@@ -12,7 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
-import dev.panopt.autonomia.ui.checklist.ChecklistConfigScreen
+import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
@@ -51,18 +51,18 @@ class MainActivity : ComponentActivity() {
                     onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
                     onCreateTask = dashboardViewModel::createTask,
                     onCompleteTask = dashboardViewModel::completeTask,
-                    onAddToChecklist = dashboardViewModel::addActivityToChecklist,
-                    onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
-                    onNavigateToChecklistConfig = { currentScreen = AppScreen.ChecklistConfig },
+                    onAddAnchor = dashboardViewModel::addActivityAsAnchor,
+                    onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                    onNavigateToAnchorConfig = { currentScreen = AppScreen.AnchorConfig },
                     onToggleSupport = dashboardViewModel::onToggleSupport,
                     onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
                 )
-                AppScreen.ChecklistConfig -> ChecklistConfigScreen(
+                AppScreen.AnchorConfig -> AnchorConfigScreen(
                     layers = dashboardState.layers,
                     activityOptions = dashboardState.activityOptions,
                     palette = palette,
-                    onAddToChecklist = dashboardViewModel::addActivityToChecklist,
-                    onRemoveFromChecklist = dashboardViewModel::removeActivityFromChecklist,
+                    onAddAnchor = dashboardViewModel::addActivityAsAnchor,
+                    onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
                     onCreateActivity = dashboardViewModel::createActivity,
                     onDeleteActivity = dashboardViewModel::deleteActivity,
                     onBack = { currentScreen = AppScreen.Dashboard },
@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class AppScreen {
     Dashboard,
-    ChecklistConfig,
+    AnchorConfig,
     Supports,
     Tasks,
 }

@@ -5,7 +5,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -39,100 +36,18 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.panopt.autonomia.domain.dashboard.DashboardChecklistItemState
+import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
+import dev.panopt.autonomia.ui.dashboard.DashboardIconKind
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
-import dev.panopt.autonomia.ui.dashboard.InteriorLayerIcon
-import dev.panopt.autonomia.ui.dashboard.NoPhoneBedIcon
-import dev.panopt.autonomia.ui.dashboard.ProjectTriangleIcon
-
-import dev.panopt.autonomia.ui.dashboard.WavesIcon
-
-@Composable
-internal fun ChecklistPreviewSection(
-    palette: DashboardPalette,
-    items: List<DashboardChecklistItemState>,
-    onToggle: (String, Boolean) -> Unit,
-) {
-    val pendingItems = items.filterNot { it.completed }
-    val completedItems = items.filter { it.completed }
-
-    SectionHeader(
-        palette = palette,
-        title = "Anclas pendientes",
-        note = if (pendingItems.size == 1) "1 pendiente" else "${pendingItems.size} pendientes",
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 220))
-            .clip(RoundedCornerShape(20.dp))
-            .background(palette.bgSurface)
-            .padding(5.6.dp),
-    ) {
-        pendingItems.forEach { item ->
-            key(item.id) {
-                CheckItem(
-                    palette = palette,
-                    item = item,
-                    checked = false,
-                    onToggle = {
-                        onToggle(item.id, true)
-                    },
-                )
-            }
-        }
-        if (completedItems.isNotEmpty()) {
-            CompletedDivider(palette = palette)
-        }
-        completedItems.forEach { item ->
-            key(item.id) {
-                CheckItem(
-                    palette = palette,
-                    item = item,
-                    checked = true,
-                    onToggle = {
-                        onToggle(item.id, false)
-                    },
-                )
-            }
-        }
-    }
-}
-
-internal enum class DashboardIconKind {
-    Interior,
-    Body,
-    Project,
-    Conduct,
-}
-
-internal fun DashboardIconKind.color(palette: DashboardPalette): Color =
-    when (this) {
-        DashboardIconKind.Interior -> palette.layerInterior
-        DashboardIconKind.Body -> palette.layerBody
-        DashboardIconKind.Project -> palette.layerProject
-        DashboardIconKind.Conduct -> palette.layerConduct
-    }
-
-@Composable
-internal fun DashboardIconKind.Icon(
-    color: Color,
-    modifier: Modifier,
-) {
-    when (this) {
-        DashboardIconKind.Interior -> InteriorLayerIcon(color = color, modifier = modifier)
-        DashboardIconKind.Body -> WavesIcon(color = color, modifier = modifier)
-        DashboardIconKind.Project -> ProjectTriangleIcon(color = color, modifier = modifier)
-        DashboardIconKind.Conduct -> NoPhoneBedIcon(color = color, modifier = modifier)
-    }
-}
+import dev.panopt.autonomia.ui.dashboard.Icon
+import dev.panopt.autonomia.ui.dashboard.color
+import dev.panopt.autonomia.ui.dashboard.iconKind
 
 @Composable
 internal fun CheckItem(
     palette: DashboardPalette,
-    item: DashboardChecklistItemState,
+    item: DashboardCheckItemState,
     checked: Boolean,
     onToggle: () -> Unit,
     isInverted: Boolean = false,
@@ -212,15 +127,6 @@ internal fun CheckItem(
         )
     }
 }
-
-internal fun DashboardChecklistItemState.iconKind(): DashboardIconKind =
-    when (layerId) {
-        "layer_interior" -> DashboardIconKind.Interior
-        "layer_cuerpo" -> DashboardIconKind.Body
-        "layer_proyecto" -> DashboardIconKind.Project
-        "layer_conducta" -> DashboardIconKind.Conduct
-        else -> DashboardIconKind.Conduct
-    }
 
 @Composable
 internal fun CheckBoxMark(

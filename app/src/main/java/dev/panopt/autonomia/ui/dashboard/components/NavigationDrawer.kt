@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -31,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
 import dev.panopt.autonomia.ui.dashboard.BarChartIcon
-import dev.panopt.autonomia.ui.dashboard.ChecklistIcon
+import dev.panopt.autonomia.ui.dashboard.AnchorIcon
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
 import dev.panopt.autonomia.ui.dashboard.DashboardSerif
@@ -65,7 +67,7 @@ internal fun NavigationDrawer(
     modifier: Modifier,
     onClose: () -> Unit,
     onThemeChange: (Boolean) -> Unit,
-    onOpenChecklist: () -> Unit,
+    onOpenAnchors: () -> Unit,
     onOpenSupports: () -> Unit = {},
     onOpenTasks: () -> Unit,
     onOpenRelapse: () -> Unit,
@@ -76,6 +78,8 @@ internal fun NavigationDrawer(
             .width(width)
             .fillMaxHeight()
             .background(palette.drawer)
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(17.6.dp),
     ) {
         Row(
@@ -137,10 +141,10 @@ internal fun NavigationDrawer(
                 text = "Mis anclas",
                 onClick = {
                     onClose()
-                    onOpenChecklist()
+                    onOpenAnchors()
                 },
             ) {
-                ChecklistIcon(color = it)
+                AnchorIcon(color = it)
             }
             DrawerLink(
                 palette = palette,
@@ -151,7 +155,7 @@ internal fun NavigationDrawer(
                 },
             ) {
                 // Heart-hand icon for support theme
-                ChecklistIcon(color = it)
+                AnchorIcon(color = it)
             }
             DrawerLink(
                 palette = palette,

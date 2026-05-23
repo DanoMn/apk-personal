@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
+import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import kotlin.math.min
 
 // ── Layer icons ──────────────────────────────────────────────────────────────
@@ -415,7 +416,7 @@ internal fun MoonIcon(
 }
 
 @Composable
-internal fun ChecklistIcon(
+internal fun AnchorIcon(
     color: Color,
     modifier: Modifier = Modifier.size(22.dp),
 ) {
@@ -670,3 +671,42 @@ internal fun DrawScope.drawCheckmark(
         style = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
 }
+
+// -- Layer icon kind mapping --
+
+internal enum class DashboardIconKind {
+    Interior,
+    Body,
+    Project,
+    Conduct,
+}
+
+internal fun DashboardIconKind.color(palette: DashboardPalette): Color =
+    when (this) {
+        DashboardIconKind.Interior -> palette.layerInterior
+        DashboardIconKind.Body -> palette.layerBody
+        DashboardIconKind.Project -> palette.layerProject
+        DashboardIconKind.Conduct -> palette.layerConduct
+    }
+
+@Composable
+internal fun DashboardIconKind.Icon(
+    color: Color,
+    modifier: Modifier,
+) {
+    when (this) {
+        DashboardIconKind.Interior -> InteriorLayerIcon(color = color, modifier = modifier)
+        DashboardIconKind.Body -> WavesIcon(color = color, modifier = modifier)
+        DashboardIconKind.Project -> ProjectTriangleIcon(color = color, modifier = modifier)
+        DashboardIconKind.Conduct -> NoPhoneBedIcon(color = color, modifier = modifier)
+    }
+}
+
+internal fun DashboardCheckItemState.iconKind(): DashboardIconKind =
+    when (layerId) {
+        "layer_interior" -> DashboardIconKind.Interior
+        "layer_cuerpo" -> DashboardIconKind.Body
+        "layer_proyecto" -> DashboardIconKind.Project
+        "layer_conducta" -> DashboardIconKind.Conduct
+        else -> DashboardIconKind.Conduct
+    }

@@ -64,7 +64,8 @@ internal fun SupportsConfigScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.bgBase)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
     ) {
         // Background gradient
         Canvas(modifier = Modifier.fillMaxSize()) {

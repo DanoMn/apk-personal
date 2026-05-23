@@ -25,7 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.ui.dashboard.CheckIcon
-import dev.panopt.autonomia.ui.dashboard.ChecklistIcon
+import dev.panopt.autonomia.ui.dashboard.AnchorIcon
 import dev.panopt.autonomia.ui.dashboard.CircleIcon
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.domain.dashboard.DashboardSupportKind
@@ -38,7 +38,7 @@ private val DashboardSans = FontFamily.SansSerif
 internal fun SupportsSection(
     palette: DashboardPalette,
     supports: List<DashboardSupportState>,
-    onOpenSecondaryChecklist: () -> Unit,
+    onOpenSupports: () -> Unit,
     onOpenTasks: () -> Unit,
 ) {
     SectionHeader(
@@ -59,7 +59,7 @@ internal fun SupportsSection(
                 support = support,
                 modifier = Modifier.weight(1f),
                 onClick = when (support.kind) {
-                    DashboardSupportKind.SecondaryChecklist -> onOpenSecondaryChecklist
+                    DashboardSupportKind.Support -> onOpenSupports
                     DashboardSupportKind.Tasks -> onOpenTasks
                 },
             )
@@ -173,7 +173,7 @@ private fun SupportIcon(
     color: Color,
 ) {
     when (kind) {
-        DashboardSupportKind.SecondaryChecklist -> ChecklistIcon(color = color, modifier = Modifier.size(24.dp))
+        DashboardSupportKind.Support -> AnchorIcon(color = color, modifier = Modifier.size(24.dp))
         DashboardSupportKind.Tasks -> ListTodoIcon(color = color, modifier = Modifier.size(24.dp))
     }
 }

@@ -1,4 +1,4 @@
-package dev.panopt.autonomia.ui.checklist
+package dev.panopt.autonomia.ui.anchors
 
 import androidx.compose.ui.graphics.Color
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette

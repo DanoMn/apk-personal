@@ -48,23 +48,23 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
-import dev.panopt.autonomia.domain.dashboard.DashboardChecklistItemState
+import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
 import dev.panopt.autonomia.domain.dashboard.DashboardSleepState
 import dev.panopt.autonomia.domain.dashboard.DashboardSobrietyTrackState
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.DashboardTaskState
 import dev.panopt.autonomia.ui.dashboard.components.CheckItem
-import dev.panopt.autonomia.ui.dashboard.components.ChecklistConfigPanel
+import dev.panopt.autonomia.ui.dashboard.components.AnchorConfigPanel
 
 internal enum class DashboardSheet {
     EntryMenu,
-    Checklist,
-    SecondaryChecklist,
+    Anchor,
+    Support,
     Sleep,
     Tasks,
     Activities,
-    ChecklistConfig,
+    AnchorConfig,
     SupportsConfig,
     Relapse,
 }
@@ -82,11 +82,11 @@ internal fun DashboardSheetHost(
     onToggleRelapse: (String, Boolean) -> Unit,
     onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
     onSetFocusSignal: (String) -> Unit,
-    onAddToChecklist: (String, Int?, Int?, TargetPeriod?) -> Unit,
-    onRemoveFromChecklist: (String) -> Unit,
+    onAddAnchor: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onRemoveAnchor: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
-    onNavigateToChecklistConfig: () -> Unit,
+    onNavigateToAnchorConfig: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -128,15 +128,15 @@ internal fun DashboardSheetHost(
             when (sheet) {
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
                     palette = palette,
-                    onOpenChecklist = { onSwitchSheet(DashboardSheet.Checklist) },
-                    onOpenSecondaryChecklist = { onSwitchSheet(DashboardSheet.SecondaryChecklist) },
+                    onOpenAnchors = { onSwitchSheet(DashboardSheet.Anchor) },
+                    onOpenSupports = { onSwitchSheet(DashboardSheet.Support) },
                     onOpenTasks = { onSwitchSheet(DashboardSheet.Tasks) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
                     onOpenRelapse = { onSwitchSheet(DashboardSheet.Relapse) },
                 )
-                DashboardSheet.Checklist -> ChecklistPanel(
+                DashboardSheet.Anchor -> AnchorPanel(
                     title = "Registrar ancla",
-                    items = state.checklistItems,
+                    items = state.anchorItems,
                     activityOptions = state.activityOptions.filter {
                         !it.isGoal && it.activityType == "Anchor"
                     },
@@ -145,12 +145,12 @@ internal fun DashboardSheetHost(
                     onSaveActivityValue = onSaveActivityValue,
                     onOpenActivities = {
                         onDismiss()
-                        onNavigateToChecklistConfig()
+                        onNavigateToAnchorConfig()
                     },
                 )
-                DashboardSheet.SecondaryChecklist -> ChecklistPanel(
+                DashboardSheet.Support -> AnchorPanel(
                     title = "Cuidado base",
-                    items = state.secondaryChecklistItems,
+                    items = state.supportItems,
                     activityOptions = state.activityOptions.filter {
                         !it.isGoal && it.activityType == "Support"
                     },
@@ -182,12 +182,12 @@ internal fun DashboardSheetHost(
                     onCreateActivity = onCreateActivity,
                     onSetFocusSignal = onSetFocusSignal,
                 )
-                DashboardSheet.ChecklistConfig -> ChecklistConfigPanel(
+                DashboardSheet.AnchorConfig -> AnchorConfigPanel(
                     layers = state.layers,
                     activityOptions = state.activityOptions,
                     palette = palette,
-                    onAddToChecklist = onAddToChecklist,
-                    onRemoveFromChecklist = onRemoveFromChecklist,
+                    onAddAnchor = onAddAnchor,
+                    onRemoveAnchor = onRemoveAnchor,
                 )
                 DashboardSheet.SupportsConfig -> SupportsConfigPanel(
                     activityOptions = state.activityOptions,
@@ -204,9 +204,9 @@ internal fun DashboardSheetHost(
 }
 
 @Composable
-private fun ChecklistPanel(
+private fun AnchorPanel(
     title: String,
-    items: List<DashboardChecklistItemState>,
+    items: List<DashboardCheckItemState>,
     activityOptions: List<DashboardActivityOptionState>,
     palette: DashboardPalette,
     onToggleActivity: (String, Boolean) -> Unit,
@@ -251,8 +251,8 @@ private fun ChecklistPanel(
 @Composable
 private fun EntryMenuPanel(
     palette: DashboardPalette,
-    onOpenChecklist: () -> Unit,
-    onOpenSecondaryChecklist: () -> Unit,
+    onOpenAnchors: () -> Unit,
+    onOpenSupports: () -> Unit,
     onOpenTasks: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenRelapse: () -> Unit,
@@ -269,10 +269,10 @@ private fun EntryMenuPanel(
         ) {
             EntryGridCard(
                 palette = palette,
-                icon = { ChecklistIcon(color = it, modifier = Modifier.size(28.dp)) },
+                icon = { AnchorIcon(color = it, modifier = Modifier.size(28.dp)) },
                 label = "Anclas",
                 description = "Registrar ancla",
-                onClick = onOpenChecklist,
+                onClick = onOpenAnchors,
                 modifier = Modifier.weight(1f),
             )
             EntryGridCard(
@@ -280,7 +280,7 @@ private fun EntryMenuPanel(
                 icon = { GlassWaterIcon(color = it, modifier = Modifier.size(28.dp)) },
                 label = "Cuidado",
                 description = "Cuidado base",
-                onClick = onOpenSecondaryChecklist,
+                onClick = onOpenSupports,
                 modifier = Modifier.weight(1f),
             )
         }
