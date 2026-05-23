@@ -65,6 +65,7 @@ internal enum class DashboardSheet {
     Tasks,
     Activities,
     ChecklistConfig,
+    SupportsConfig,
     Relapse,
 }
 
@@ -187,6 +188,10 @@ internal fun DashboardSheetHost(
                     palette = palette,
                     onAddToChecklist = onAddToChecklist,
                     onRemoveFromChecklist = onRemoveFromChecklist,
+                )
+                DashboardSheet.SupportsConfig -> SupportsConfigPanel(
+                    activityOptions = state.activityOptions,
+                    palette = palette,
                 )
                 DashboardSheet.Relapse -> RelapsePanel(
                     tracks = state.sobrietyTracks,
@@ -986,5 +991,62 @@ private fun SheetMiniButton(
             fontSize = 12.5.sp,
             maxLines = 1,
         )
+    }
+}
+
+// -- Supports config panel (bottom sheet) --
+
+@Composable
+private fun SupportsConfigPanel(
+    activityOptions: List<DashboardActivityOptionState>,
+    palette: DashboardPalette,
+) {
+    val currentSupports = activityOptions.filter { it.activityType == "Support" }
+
+    SheetTitle(title = "Soportes", note = "${currentSupports.size} activos", palette = palette)
+
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (currentSupports.isEmpty()) {
+            Text(
+                text = "Sin soportes configurados.\nUsa la pantalla de configuración para agregar.",
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+        } else {
+            currentSupports.forEach { support ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(palette.bgSurface)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = support.title,
+                            color = palette.textMain,
+                            fontFamily = DashboardSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = support.layerName,
+                            color = palette.textMuted,
+                            fontFamily = DashboardSans,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        }
     }
 }

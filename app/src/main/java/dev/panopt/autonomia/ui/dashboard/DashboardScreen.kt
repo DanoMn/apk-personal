@@ -38,6 +38,7 @@ import dev.panopt.autonomia.ui.dashboard.components.NavigationDrawer
 import dev.panopt.autonomia.ui.dashboard.components.SignalsSection
 import dev.panopt.autonomia.ui.dashboard.components.SobrietySection
 import dev.panopt.autonomia.ui.dashboard.components.StatusCard
+import dev.panopt.autonomia.ui.dashboard.components.SupportsPreviewSection
 import dev.panopt.autonomia.ui.dashboard.components.SupportsSection
 import dev.panopt.autonomia.ui.dashboard.components.TopBar
 import dev.panopt.autonomia.ui.dashboard.components.WeekSection
@@ -60,6 +61,8 @@ internal fun DashboardScreen(
     onAddToChecklist: (String, Int?, Int?, TargetPeriod?) -> Unit,
     onRemoveFromChecklist: (String) -> Unit,
     onNavigateToChecklistConfig: () -> Unit,
+    onToggleSupport: (String) -> Unit = {},
+    onNavigateToSupportsConfig: () -> Unit = {},
 ) {
     val palette = dashboardPalette(isDarkMode)
     var isDrawerOpen by remember { mutableStateOf(false) }
@@ -112,6 +115,12 @@ internal fun DashboardScreen(
                 items = state.checklistItems,
                 onToggle = onToggleActivity,
             )
+            SupportsPreviewSection(
+                palette = palette,
+                items = state.secondaryChecklistItems,
+                onToggle = onToggleSupport,
+                onOpenConfig = onNavigateToSupportsConfig,
+            )
             SupportsSection(
                 palette = palette,
                 supports = state.supports,
@@ -149,6 +158,7 @@ internal fun DashboardScreen(
             onClose = { isDrawerOpen = false },
             onThemeChange = onThemeChange,
             onOpenChecklist = onNavigateToChecklistConfig,
+            onOpenSupports = onNavigateToSupportsConfig,
             onOpenTasks = { activeSheet = DashboardSheet.Tasks },
             onOpenRelapse = { activeSheet = DashboardSheet.Relapse },
             onOpenActivitySettings = { activeSheet = DashboardSheet.Activities },

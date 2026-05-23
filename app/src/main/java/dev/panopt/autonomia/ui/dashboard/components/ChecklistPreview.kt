@@ -135,6 +135,7 @@ internal fun CheckItem(
     item: DashboardChecklistItemState,
     checked: Boolean,
     onToggle: () -> Unit,
+    isInverted: Boolean = false,
 ) {
     val iconKind = item.iconKind()
     val layerColor = iconKind.color(palette)
