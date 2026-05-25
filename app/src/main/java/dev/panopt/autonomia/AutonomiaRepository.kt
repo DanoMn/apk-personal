@@ -10,6 +10,8 @@ import dev.panopt.autonomia.data.SleepLogEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.data.local.mapper.toDomain
+import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
+import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
@@ -265,23 +267,22 @@ class AutonomiaRepository(context: Context) {
 
     suspend fun addActivityAsAnchor(
         activityId: String,
-        targetValue: Int? = null,
-        targetCount: Int? = null,
-        targetPeriod: TargetPeriod? = null,
+        sessionTargetMinutes: Int,
+        weeklyFrequencyTarget: Int,
+        commitmentDurationMonths: Int? = null,
     ) {
-        val cadence = when (targetPeriod) {
-            TargetPeriod.Week -> ActivityCadence.Weekly
-            TargetPeriod.Month -> ActivityCadence.Monthly
-            TargetPeriod.Day -> ActivityCadence.Daily
-            else -> ActivityCadence.Daily
-        }
+        val normalizedSessionTarget = normalizeAnchorSessionTargetMinutes(sessionTargetMinutes)
+        val normalizedWeeklyTarget = normalizeAnchorWeeklyFrequencyTarget(weeklyFrequencyTarget)
         configureActivity(
             activityId = activityId,
             activityType = ActivitySurface.Anchor,
-            cadence = cadence,
-            targetValue = targetValue,
-            targetCount = targetCount,
-            targetPeriod = targetPeriod,
+            cadence = ActivityCadence.Weekly,
+            targetValue = normalizedSessionTarget,
+            targetCount = normalizedWeeklyTarget,
+            targetPeriod = TargetPeriod.Week,
+            weeklyFrequencyTarget = normalizedWeeklyTarget,
+            sessionTargetMinutes = normalizedSessionTarget,
+            commitmentDurationMonths = commitmentDurationMonths,
         )
     }
 
@@ -320,6 +321,9 @@ class AutonomiaRepository(context: Context) {
         minimumValue: Int? = null,
         targetCount: Int? = null,
         targetPeriod: TargetPeriod? = null,
+        weeklyFrequencyTarget: Int? = null,
+        sessionTargetMinutes: Int? = null,
+        commitmentDurationMonths: Int? = null,
         customName: String? = null,
         customDescription: String? = null,
     ) {
@@ -333,6 +337,9 @@ class AutonomiaRepository(context: Context) {
                 minimumValue = minimumValue,
                 targetCount = targetCount,
                 targetPeriod = targetPeriod?.name,
+                weeklyFrequencyTarget = weeklyFrequencyTarget,
+                sessionTargetMinutes = sessionTargetMinutes,
+                commitmentDurationMonths = commitmentDurationMonths,
                 customName = customName?.trim()?.takeIf { it.isNotBlank() },
                 customDescription = customDescription?.trim()?.takeIf { it.isNotBlank() },
                 sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
@@ -355,6 +362,13 @@ class AutonomiaRepository(context: Context) {
         dao.deleteUserActivityConfig(activityId)
     }
 
+    suspend fun deleteCustomActivity(activityId: String) {
+        if (!isCustomActivityId(activityId)) return
+
+        dao.deleteActivityLogsForActivity(activityId)
+        dao.deleteActivityDefinition(activityId)
+    }
+
     suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity) {
         dao.upsertActivityDefinition(definition)
     }
@@ -363,3 +377,6 @@ class AutonomiaRepository(context: Context) {
         dao.upsertUserActivityConfig(config)
     }
 }
+
+private fun isCustomActivityId(activityId: String): Boolean =
+    activityId.startsWith("act_custom_") || !activityId.startsWith("act_")

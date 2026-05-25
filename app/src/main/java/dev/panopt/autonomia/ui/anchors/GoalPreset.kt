@@ -1,58 +1,56 @@
 package dev.panopt.autonomia.ui.anchors
 
-import dev.panopt.autonomia.TargetPeriod
+import dev.panopt.autonomia.domain.activity.MAX_ANCHOR_WEEKLY_FREQUENCY
+import dev.panopt.autonomia.domain.activity.MIN_ANCHOR_WEEKLY_FREQUENCY
+import dev.panopt.autonomia.domain.activity.hasRequiredAnchorTargets
+import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 
-/**
- * Shared goal preset enumeration used across the app for configuring
- * activity goal targets in "Mis anclas".
- */
-enum class GoalPreset(val label: String) {
-    None("Sin meta"),
-
-    // Weekly presets
-    TwoPerWeek("2×/sem"),
-    ThreePerWeek("3×/sem"),
-    FourPerWeek("4×/sem"),
-    FivePerWeek("5×/sem"),
-    SixPerWeek("6×/sem"),
-    SevenPerWeek("7×/sem"),
-
-    // Monthly presets
-    TwoPerMonth("2×/mes"),
-    ThreePerMonth("3×/mes"),
-    FourPerMonth("4×/mes"),
-    SixPerMonth("6×/mes"),
-    EightPerMonth("8×/mes"),
-    TenPerMonth("10×/mes"),
-
-    Custom("Personalizada");
-
-    /**
-     * Returns [count, period] for non-custom presets.
-     * - [None] → (null, null)
-     * - Weekly presets → (n, [TargetPeriod.Week])
-     * - Monthly presets → (n, [TargetPeriod.Month])
-     * - [Custom] → (null, null) — handled via customCount/customPeriod fields
-     */
-    fun toCountAndPeriod(): Pair<Int?, TargetPeriod?> = when (this) {
-        None -> null to null
-
-        // Weekly
-        TwoPerWeek -> 2 to TargetPeriod.Week
-        ThreePerWeek -> 3 to TargetPeriod.Week
-        FourPerWeek -> 4 to TargetPeriod.Week
-        FivePerWeek -> 5 to TargetPeriod.Week
-        SixPerWeek -> 6 to TargetPeriod.Week
-        SevenPerWeek -> 7 to TargetPeriod.Week
-
-        // Monthly
-        TwoPerMonth -> 2 to TargetPeriod.Month
-        ThreePerMonth -> 3 to TargetPeriod.Month
-        FourPerMonth -> 4 to TargetPeriod.Month
-        SixPerMonth -> 6 to TargetPeriod.Month
-        EightPerMonth -> 8 to TargetPeriod.Month
-        TenPerMonth -> 10 to TargetPeriod.Month
-
-        Custom -> null to null
-    }
+internal enum class WeeklyFrequencyPreset(
+    val count: Int,
+    val label: String,
+) {
+    TwoPerWeek(2, "2 veces/semana"),
+    ThreePerWeek(3, "3 veces/semana"),
+    FourPerWeek(4, "4 veces/semana"),
+    FivePerWeek(5, "5 veces/semana"),
+    SixPerWeek(6, "6 veces/semana"),
+    SevenPerWeek(7, "7 veces/semana");
 }
+
+internal val weeklyFrequencyPresets: List<WeeklyFrequencyPreset> =
+    WeeklyFrequencyPreset.entries.toList()
+
+internal enum class CommitmentDurationPreset(
+    val months: Int?,
+    val label: String,
+) {
+    Indefinite(null, "Indefinido"),
+    ThreeMonths(3, "3 meses"),
+    FiveMonths(5, "5 meses"),
+    SevenMonths(7, "7 meses"),
+    NineMonths(9, "9 meses"),
+    ElevenMonths(11, "11 meses"),
+    ThirteenMonths(13, "13 meses"),
+    Custom(null, "Personalizado");
+}
+
+internal val commitmentDurationPresets: List<CommitmentDurationPreset> =
+    CommitmentDurationPreset.entries.toList()
+
+internal fun weeklyFrequencyTargetFromPreset(preset: WeeklyFrequencyPreset): Int =
+    preset.count.coerceIn(MIN_ANCHOR_WEEKLY_FREQUENCY, MAX_ANCHOR_WEEKLY_FREQUENCY)
+
+internal fun normalizeWeeklyFrequencyTarget(value: Int?): Int =
+    normalizeAnchorWeeklyFrequencyTarget(value)
+
+internal fun isValidAnchorTargetContract(
+    sessionTargetMinutes: Int?,
+    weeklyFrequencyTarget: Int?,
+): Boolean =
+    hasRequiredAnchorTargets(sessionTargetMinutes, weeklyFrequencyTarget)
+
+internal fun commitmentDurationLabel(months: Int?): String =
+    months?.let { "$it meses" } ?: "Indefinido"
+
+internal fun normalizeCustomCommitmentMonths(input: String): Int? =
+    input.toIntOrNull()?.coerceIn(1, 120)

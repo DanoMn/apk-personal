@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,11 +43,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.panopt.autonomia.TargetPeriod
+import dev.panopt.autonomia.domain.activity.MAX_ANCHOR_SESSION_MINUTES
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
@@ -57,6 +56,7 @@ import dev.panopt.autonomia.ui.dashboard.SearchIcon
 import dev.panopt.autonomia.ui.dashboard.XIcon
 import dev.panopt.autonomia.ui.dashboard.mix
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Full-screen page for configuring anchors ("Mis anclas").
@@ -67,10 +67,10 @@ internal fun AnchorConfigScreen(
     layers: List<DashboardLayerState>,
     activityOptions: List<DashboardActivityOptionState>,
     palette: DashboardPalette,
-    onAddAnchor: (activityId: String, targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    onAddAnchor: (activityId: String, sessionTargetMinutes: Int, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit,
     onRemoveAnchor: (activityId: String) -> Unit,
     onDeleteActivity: (activityId: String) -> Unit,
-    onCreateActivity: (name: String, layerId: String, targetMinutes: Int, isSecondary: Boolean, isGoal: Boolean, isMonthlyGoal: Boolean, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    onCreateActivity: (name: String, layerId: String, sessionTargetMinutes: Int, isSecondary: Boolean, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit,
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
@@ -79,10 +79,34 @@ internal fun AnchorConfigScreen(
     var selectedLayerFilter by remember { mutableStateOf<String?>(null) }
     var isAnchorsExpanded by remember { mutableStateOf(true) }
     var configuringActivity by remember { mutableStateOf<DashboardActivityOptionState?>(null) }
+    var configurationMode by remember { mutableStateOf(AnchorEditorMode.Add) }
     var isCreatingCustom by remember { mutableStateOf(false) }
-
-    // Auto-collapse anchors when filtering
+    var highlightedAnchorId by remember { mutableStateOf<String?>(null) }
+    var pendingCustomAnchorBaseline by remember { mutableStateOf<Set<String>?>(null) }
+    var activityPendingDeletion by remember { mutableStateOf<DashboardActivityOptionState?>(null) }
     var wasAutoCollapsed by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val currentAnchors = activityOptions.filter { it.isConfigured && it.activityType == "Anchor" }
+    val currentAnchorIds = currentAnchors.map { it.id }
+    val availableActivities = activityOptions.filter { !it.isConfigured && it.activityType == "Anchor" }
+    val filteredActivities = availableActivities.filter { activity ->
+        val matchesSearch = searchQuery.isBlank() ||
+            activity.title.contains(searchQuery, ignoreCase = true)
+        val matchesLayer = selectedLayerFilter == null ||
+            activity.layerId == selectedLayerFilter
+        matchesSearch && matchesLayer
+    }
+
+    fun revealAnchor(activityId: String?) {
+        highlightedAnchorId = activityId
+        isAnchorsExpanded = true
+        wasAutoCollapsed = false
+        searchQuery = ""
+        selectedLayerFilter = null
+    }
+
     LaunchedEffect(selectedLayerFilter, searchQuery) {
         val isFiltering = selectedLayerFilter != null || searchQuery.isNotBlank()
         if (isFiltering) {
@@ -93,7 +117,6 @@ internal fun AnchorConfigScreen(
         }
     }
 
-    // Flash color when header was auto-collapsed
     val headerFlashColor by animateColorAsState(
         targetValue = if (wasAutoCollapsed) palette.colorCoral else palette.textMuted,
         animationSpec = tween(durationMillis = 800),
@@ -106,14 +129,20 @@ internal fun AnchorConfigScreen(
         }
     }
 
-    val currentAnchors = activityOptions.filter { it.isConfigured && it.activityType == "Anchor" }
-    val availableActivities = activityOptions.filter { !it.isConfigured && it.activityType == "Anchor" }
-    val filteredActivities = availableActivities.filter { activity ->
-        val matchesSearch = searchQuery.isBlank() ||
-            activity.title.contains(searchQuery, ignoreCase = true)
-        val matchesLayer = selectedLayerFilter == null ||
-            activity.layerId == selectedLayerFilter
-        matchesSearch && matchesLayer
+    LaunchedEffect(currentAnchorIds, pendingCustomAnchorBaseline) {
+        val baseline = pendingCustomAnchorBaseline ?: return@LaunchedEffect
+        val newAnchorId = currentAnchorIds.firstOrNull { it !in baseline }
+        if (newAnchorId != null) {
+            pendingCustomAnchorBaseline = null
+            revealAnchor(newAnchorId)
+        }
+    }
+
+    LaunchedEffect(highlightedAnchorId) {
+        if (highlightedAnchorId != null) {
+            delay(1500)
+            highlightedAnchorId = null
+        }
     }
 
     Box(
@@ -197,22 +226,48 @@ internal fun AnchorConfigScreen(
 
             // Check if configuring
             if (configuringActivity != null) {
-                ActivityConfigSection(
+                BackHandler(onBack = {
+                    configuringActivity = null
+                    configurationMode = AnchorEditorMode.Add
+                })
+                AnchorEditorForm(
                     activity = configuringActivity!!,
                     palette = palette,
-                    onConfirm = { targetValue, targetCount, targetPeriod ->
-                        onAddAnchor(configuringActivity!!.id, targetValue, targetCount, targetPeriod)
+                    mode = configurationMode,
+                    modifier = Modifier.fillMaxSize(),
+                    onConfirm = { sessionTargetMinutes, weeklyFrequencyTarget, commitmentDurationMonths ->
+                        val activityId = configuringActivity!!.id
+                        onAddAnchor(
+                            activityId,
+                            sessionTargetMinutes,
+                            weeklyFrequencyTarget,
+                            commitmentDurationMonths,
+                        )
                         configuringActivity = null
+                        configurationMode = AnchorEditorMode.Add
+                        revealAnchor(activityId)
                     },
-                    onDismiss = { configuringActivity = null },
+                    onDismiss = {
+                        configuringActivity = null
+                        configurationMode = AnchorEditorMode.Add
+                    },
                 )
             } else if (isCreatingCustom) {
                 CreateCustomActivitySection(
                     layers = layers,
                     palette = palette,
-                    onConfirm = { name, layerId, minutes, isGoal, isMonthlyGoal, goalCount, goalPeriod ->
-                        onCreateActivity(name, layerId, minutes, false, isGoal, isMonthlyGoal, goalCount, goalPeriod)
+                    onConfirm = { name, layerId, sessionTargetMinutes, weeklyFrequencyTarget, commitmentDurationMonths ->
+                        pendingCustomAnchorBaseline = currentAnchorIds.toSet()
+                        onCreateActivity(
+                            name,
+                            layerId,
+                            sessionTargetMinutes,
+                            false,
+                            weeklyFrequencyTarget,
+                            commitmentDurationMonths,
+                        )
                         isCreatingCustom = false
+                        revealAnchor(null)
                     },
                     onDismiss = { isCreatingCustom = false },
                 )
@@ -220,7 +275,7 @@ internal fun AnchorConfigScreen(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(scrollState),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // Current anchors collapsible
@@ -269,8 +324,13 @@ internal fun AnchorConfigScreen(
                                     AnchorCard(
                                         activity = anchor,
                                         palette = palette,
+                                        isHighlighted = highlightedAnchorId == anchor.id,
+                                        onEdit = {
+                                            configurationMode = AnchorEditorMode.Edit
+                                            configuringActivity = anchor
+                                        },
                                         onRemove = { onRemoveAnchor(anchor.id) },
-                                        onDelete = { onDeleteActivity(anchor.id) },
+                                        onDelete = { activityPendingDeletion = anchor },
                                     )
                                 }
                             }
@@ -332,15 +392,56 @@ internal fun AnchorConfigScreen(
                             AvailableActivityCard(
                                 activity = activity,
                                 palette = palette,
-                                onClick = { configuringActivity = activity },
-                                onDelete = { onDeleteActivity(activity.id) },
+                                onClick = {
+                                    configurationMode = AnchorEditorMode.Add
+                                    configuringActivity = activity
+                                },
+                                onDelete = { activityPendingDeletion = activity },
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                
+
+                // Quick-access chip to expand current anchors (visible only when collapsed)
+                if (!isAnchorsExpanded && currentAnchors.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(mix(palette.colorCardboard, 0.12f, palette.bgSurface))
+                            .clickable(role = Role.Button) {
+                                isAnchorsExpanded = true
+                                wasAutoCollapsed = false
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo(0)
+                                }
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = "\u25b2",
+                                color = palette.colorCardboard,
+                                fontSize = 14.sp,
+                            )
+                            Text(
+                                text = "Mis anclas (${currentAnchors.size})",
+                                color = palette.colorCardboard,
+                                fontFamily = DashboardSans,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.5.sp,
+                            )
+                        }
+                    }
+                }
+
                 // Bottom pinned search and layer filters
                 Column(
                     modifier = Modifier
@@ -433,6 +534,20 @@ internal fun AnchorConfigScreen(
                 }
             }
         }
+
+        activityPendingDeletion?.let { activity ->
+            ConfirmDeleteActivityDialog(
+                activityTitle = activity.title,
+                surfaceName = "anclas",
+                palette = palette,
+                onDismiss = { activityPendingDeletion = null },
+                onConfirm = {
+                    onDeleteActivity(activity.id)
+                    if (highlightedAnchorId == activity.id) highlightedAnchorId = null
+                    activityPendingDeletion = null
+                },
+            )
+        }
     }
 }
 
@@ -442,15 +557,23 @@ internal fun AnchorConfigScreen(
 private fun AnchorCard(
     activity: DashboardActivityOptionState,
     palette: DashboardPalette,
+    isHighlighted: Boolean,
+    onEdit: () -> Unit,
     onRemove: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val color = layerColor(activity.layerId, palette)
+    val baseColor = mix(color, 0.08f, palette.bgSurface)
+    val cardColor by animateColorAsState(
+        targetValue = if (isHighlighted) mix(palette.colorCoral, 0.22f, baseColor) else baseColor,
+        animationSpec = tween(durationMillis = 420),
+        label = "anchorCardFlash",
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(mix(color, 0.08f, palette.bgSurface))
+            .background(cardColor)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -480,6 +603,23 @@ private fun AnchorCard(
             modifier = Modifier
                 .height(36.dp)
                 .clip(RoundedCornerShape(8.dp))
+                .background(mix(palette.colorCardboard, 0.22f, palette.bgSurface))
+                .clickable(role = Role.Button, onClick = onEdit)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Editar",
+                color = palette.colorCardboard,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.5.sp,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .height(36.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(mix(palette.risk, 0.18f, palette.bgSurface))
                 .clickable(role = Role.Button, onClick = onRemove)
                 .padding(horizontal = 12.dp),
@@ -493,7 +633,7 @@ private fun AnchorCard(
                 fontSize = 12.5.sp,
             )
         }
-        if (activity.id.startsWith("act_custom_") || !activity.id.startsWith("act_")) {
+        if (isCustomActivityId(activity.id)) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -567,7 +707,7 @@ private fun AvailableActivityCard(
                 fontSize = 12.5.sp,
             )
         }
-        if (activity.id.startsWith("act_custom_") || !activity.id.startsWith("act_")) {
+        if (isCustomActivityId(activity.id)) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -594,20 +734,24 @@ private fun AvailableActivityCard(
 private fun ActivityConfigSection(
     activity: DashboardActivityOptionState,
     palette: DashboardPalette,
-    onConfirm: (targetValue: Int?, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    mode: AnchorEditorMode,
+    onConfirm: (sessionTargetMinutes: Int, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val hasTime = activity.targetValue > 0
-    val initialTotalMinutes = activity.targetValue.coerceAtMost(480)
+    val initialTotalMinutes = (activity.sessionTargetMinutes ?: activity.targetValue)
+        .coerceIn(5, MAX_ANCHOR_SESSION_MINUTES)
     var wheelHours by remember { mutableStateOf(initialTotalMinutes / 60) }
-    var wheelMinutes by remember { mutableStateOf((initialTotalMinutes % 60) / 5 * 5) }
-    val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, 480)
+    var wheelMinutes by remember { mutableStateOf(initialTotalMinutes % 60) }
+    val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, MAX_ANCHOR_SESSION_MINUTES)
 
     BackHandler(onBack = onDismiss)
 
-    var selectedGoal by remember { mutableStateOf(GoalPreset.None) }
-    var customCount by remember { mutableStateOf("5") }
-    var customPeriod by remember { mutableStateOf(TargetPeriod.Week) }
+    var weeklyFrequencyTarget by remember {
+        mutableStateOf(normalizeWeeklyFrequencyTarget(activity.weeklyFrequencyTarget))
+    }
+    var commitmentDurationMonths by remember { mutableStateOf(activity.commitmentDurationMonths) }
+    var showCommitmentDurationDialog by remember { mutableStateOf(false) }
+    var showTargetError by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Scrollable content ─────────────────────────────────────────────
@@ -631,40 +775,64 @@ private fun ActivityConfigSection(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Goal preset grid
+            // Weekly frequency
             Text(
-                text = "Meta (opcional)",
+                text = "Meta semanal",
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
             )
-            GoalPresetGrid(
-                selectedGoal = selectedGoal,
+            WeeklyFrequencySelector(
+                selectedFrequency = weeklyFrequencyTarget,
                 palette = palette,
-                customCount = customCount,
-                customPeriod = customPeriod,
-                onGoalSelected = { selectedGoal = it },
-                onCustomCountChanged = { customCount = it },
-                onCustomPeriodChanged = { customPeriod = it },
+                onFrequencySelected = {
+                    weeklyFrequencyTarget = it
+                    showTargetError = false
+                },
             )
 
-            // Time wheel picker (optional)
-            if (hasTime) {
-                Spacer(modifier = Modifier.height(4.dp))
+            if (showTargetError) {
                 Text(
-                    text = "Tiempo objetivo",
-                    color = palette.textMuted,
+                    text = "La meta semanal y el tiempo objetivo son obligatorios.",
+                    color = palette.risk,
                     fontFamily = DashboardSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp),
                 )
-                TimeWheelPicker(
-                    hours = wheelHours,
-                    minutes = wheelMinutes,
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Tiempo objetivo",
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+            )
+            TimeWheelPicker(
+                hours = wheelHours,
+                minutes = wheelMinutes,
+                palette = palette,
+                onHoursChanged = {
+                    wheelHours = it.coerceIn(0, MAX_ANCHOR_SESSION_MINUTES / 60)
+                    if (wheelHours == MAX_ANCHOR_SESSION_MINUTES / 60) wheelMinutes = 0
+                },
+                onMinutesChanged = {
+                    wheelMinutes = if (wheelHours == MAX_ANCHOR_SESSION_MINUTES / 60) 0 else it
+                },
+            )
+
+            if (showCommitmentDurationDialog) {
+                CommitmentDurationDialog(
+                    selectedDurationMonths = commitmentDurationMonths,
                     palette = palette,
-                    onHoursChanged = { wheelHours = it.coerceIn(0, 8) },
-                    onMinutesChanged = { wheelMinutes = it },
+                    onDismiss = { showCommitmentDurationDialog = false },
+                    onConfirm = {
+                        commitmentDurationMonths = it
+                        showCommitmentDurationDialog = false
+                    },
                 )
             }
 
@@ -706,13 +874,16 @@ private fun ActivityConfigSection(
                     .clip(RoundedCornerShape(14.dp))
                     .background(palette.colorCardboard)
                     .clickable(role = Role.Button) {
-                        val targetValue = if (hasTime && totalMinutes > 0) totalMinutes else null
-                        val (count, period) = if (selectedGoal == GoalPreset.Custom) {
-                            (customCount.toIntOrNull() ?: 1) to customPeriod
-                        } else {
-                            selectedGoal.toCountAndPeriod()
+                        val sessionTargetMinutes = totalMinutes.takeIf { it > 0 }
+                        if (!isValidAnchorTargetContract(sessionTargetMinutes, weeklyFrequencyTarget)) {
+                            showTargetError = true
+                            return@clickable
                         }
-                        onConfirm(targetValue, count, period)
+                        onConfirm(
+                            sessionTargetMinutes!!,
+                            weeklyFrequencyTarget,
+                            commitmentDurationMonths,
+                        )
                     },
                 contentAlignment = Alignment.Center,
             ) {
@@ -768,18 +939,19 @@ private fun ActivityInfoCard(
 private fun CreateCustomActivitySection(
     layers: List<DashboardLayerState>,
     palette: DashboardPalette,
-    onConfirm: (name: String, layerId: String, targetMinutes: Int, isGoal: Boolean, isMonthlyGoal: Boolean, targetCount: Int?, targetPeriod: TargetPeriod?) -> Unit,
+    onConfirm: (name: String, layerId: String, sessionTargetMinutes: Int, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var wheelHours by remember { mutableStateOf(0) }
     var wheelMinutes by remember { mutableStateOf(0) }
-    val totalMinutes = wheelHours * 60 + wheelMinutes
-    var selectedLayerId by remember { mutableStateOf(layers.firstOrNull()?.id.orEmpty()) }
+    val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, MAX_ANCHOR_SESSION_MINUTES)
+    var selectedLayerId by remember(layers) { mutableStateOf(layers.firstOrNull()?.id.orEmpty()) }
 
-    var selectedGoal by remember { mutableStateOf(GoalPreset.None) }
-    var customCount by remember { mutableStateOf("5") }
-    var customPeriod by remember { mutableStateOf(TargetPeriod.Week) }
+    var weeklyFrequencyTarget by remember { mutableStateOf(normalizeWeeklyFrequencyTarget(null)) }
+    var commitmentDurationMonths by remember { mutableStateOf<Int?>(null) }
+    var showCommitmentDurationDialog by remember { mutableStateOf(false) }
+    var showTargetError by remember { mutableStateOf(false) }
 
     BackHandler(onBack = onDismiss)
 
@@ -840,25 +1012,6 @@ private fun CreateCustomActivitySection(
                 },
             )
 
-            // ── Meta (opcional) ─────────────────────────────────────────
-            Text(
-                text = "Meta (opcional)",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-            )
-            GoalPresetGrid(
-                selectedGoal = selectedGoal,
-                palette = palette,
-                customCount = customCount,
-                customPeriod = customPeriod,
-                onGoalSelected = { selectedGoal = it },
-                onCustomCountChanged = { customCount = it },
-                onCustomPeriodChanged = { customPeriod = it },
-            )
-
-            // ── Tiempo objetivo ─────────────────────────────────────────
             Text(
                 text = "Tiempo objetivo",
                 color = palette.textMuted,
@@ -870,125 +1023,204 @@ private fun CreateCustomActivitySection(
                 hours = wheelHours,
                 minutes = wheelMinutes,
                 palette = palette,
-                onHoursChanged = { wheelHours = it.coerceIn(0, 8) },
-                onMinutesChanged = { wheelMinutes = it },
+                onHoursChanged = {
+                    wheelHours = it.coerceIn(0, MAX_ANCHOR_SESSION_MINUTES / 60)
+                    if (wheelHours == MAX_ANCHOR_SESSION_MINUTES / 60) wheelMinutes = 0
+                },
+                onMinutesChanged = {
+                    wheelMinutes = if (wheelHours == MAX_ANCHOR_SESSION_MINUTES / 60) 0 else it
+                },
             )
 
-            // ── Capas ───────────────────────────────────────────────────
+            // ── Meta (obligatoria) ─────────────────────────────────────────
             Text(
-                text = "Capa",
+                text = "Meta semanal",
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                layers.forEach { layer ->
-                    val isSelected = layer.id == selectedLayerId
-                    val color = layerColor(layer.id, palette)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) mix(color, 0.22f, palette.bgSurface)
-                                else palette.bgSurface,
-                            )
-                            .clickable { selectedLayerId = layer.id },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            LayerStamp(
-                                layerId = layer.id,
-                                color = if (isSelected) color else palette.textMuted,
-                                size = 22,
-                            )
-                            Text(
-                                text = layer.name.take(5),
-                                color = if (isSelected) color else palette.textMuted,
-                                fontFamily = DashboardSans,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 10.5.sp,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
+            WeeklyFrequencySelector(
+                selectedFrequency = weeklyFrequencyTarget,
+                palette = palette,
+                onFrequencySelected = {
+                    weeklyFrequencyTarget = it
+                    showTargetError = false
+                },
+            )
+
+            Text(
+                text = "Duración del compromiso",
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+            )
+            CommitmentDurationSetting(
+                durationMonths = commitmentDurationMonths,
+                palette = palette,
+                onClick = { showCommitmentDurationDialog = true },
+            )
+            if (showTargetError) {
+                Text(
+                    text = "La meta semanal y el tiempo objetivo son obligatorios.",
+                    color = palette.risk,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+
+            if (showCommitmentDurationDialog) {
+                CommitmentDurationDialog(
+                    selectedDurationMonths = commitmentDurationMonths,
+                    palette = palette,
+                    onDismiss = { showCommitmentDurationDialog = false },
+                    onConfirm = {
+                        commitmentDurationMonths = it
+                        showCommitmentDurationDialog = false
+                    },
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
         }
 
         // ── Fixed footer ────────────────────────────────────────────────
-        Row(
+        Column(
             modifier = Modifier
-                .padding(top = 12.dp, bottom = 16.dp)
+                .fillMaxWidth()
+                .padding(top = 10.dp, bottom = 16.dp)
                 .navigationBarsPadding(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(palette.bgSurface)
-                    .clickable(role = Role.Button, onClick = onDismiss),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Cancelar",
-                    color = palette.textMain,
-                    fontFamily = DashboardSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                )
-            }
+            CustomAnchorLayerSelector(
+                layers = layers,
+                selectedLayerId = selectedLayerId,
+                palette = palette,
+                onSelectLayer = { selectedLayerId = it },
+            )
 
-            val isGoal = selectedGoal != GoalPreset.None
-            val isMonthlyGoal = selectedGoal.name.endsWith("Month")
-            val goalCount: Int?
-            val goalPeriod: TargetPeriod?
-            if (isGoal && selectedGoal != GoalPreset.Custom) {
-                val (c, p) = selectedGoal.toCountAndPeriod()
-                goalCount = c
-                goalPeriod = p
-            } else if (isGoal && selectedGoal == GoalPreset.Custom) {
-                goalCount = customCount.toIntOrNull() ?: 1
-                goalPeriod = customPeriod
-            } else {
-                goalCount = null
-                goalPeriod = null
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (name.isNotBlank()) palette.colorCardboard
-                        else palette.bgSurface2,
-                    )
-                    .clickable(role = Role.Button, enabled = name.isNotBlank()) {
-                        if (name.isNotBlank()) {
-                            onConfirm(name, selectedLayerId, totalMinutes, isGoal, isMonthlyGoal, goalCount, goalPeriod)
-                        }
-                    },
-                contentAlignment = Alignment.Center,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = "Crear ancla",
-                    color = if (name.isNotBlank()) palette.bgBase else palette.textFaint,
-                    fontFamily = DashboardSans,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(palette.bgSurface)
+                        .clickable(role = Role.Button, onClick = onDismiss),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        color = palette.textMain,
+                        fontFamily = DashboardSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (name.isNotBlank()) palette.colorCardboard
+                            else palette.bgSurface2,
+                        )
+                        .clickable(role = Role.Button, enabled = name.isNotBlank()) {
+                            val sessionTargetMinutes = totalMinutes.takeIf { it > 0 }
+                            if (!isValidAnchorTargetContract(sessionTargetMinutes, weeklyFrequencyTarget)) {
+                                showTargetError = true
+                                return@clickable
+                            }
+                            if (name.isNotBlank()) {
+                                onConfirm(
+                                    name,
+                                    selectedLayerId,
+                                    sessionTargetMinutes!!,
+                                    weeklyFrequencyTarget,
+                                    commitmentDurationMonths,
+                                )
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Crear ancla",
+                        color = if (name.isNotBlank()) palette.bgBase else palette.textFaint,
+                        fontFamily = DashboardSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomAnchorLayerSelector(
+    layers: List<DashboardLayerState>,
+    selectedLayerId: String,
+    palette: DashboardPalette,
+    onSelectLayer: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Text(
+            text = "Capa",
+            color = palette.textMuted,
+            fontFamily = DashboardSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.5.sp,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            layers.forEach { layer ->
+                val isSelected = layer.id == selectedLayerId
+                val color = layerColor(layer.id, palette)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isSelected) mix(color, 0.22f, palette.bgSurface)
+                            else palette.bgSurface,
+                        )
+                        .clickable(role = Role.Button) { onSelectLayer(layer.id) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        LayerStamp(
+                            layerId = layer.id,
+                            color = if (isSelected) color else palette.textMuted,
+                            size = 21,
+                        )
+                        Text(
+                            text = layer.name.take(5),
+                            color = if (isSelected) color else palette.textMuted,
+                            fontFamily = DashboardSans,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 10.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }

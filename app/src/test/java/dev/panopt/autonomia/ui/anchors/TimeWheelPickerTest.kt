@@ -6,16 +6,15 @@ import org.junit.Test
 class TimeWheelPickerTest {
 
     @Test
-    fun `wheelHours contains 0 through 8`() {
-        assertEquals(listOf(0, 1, 2, 3, 4, 5, 6, 7, 8), wheelHours)
-        assertEquals(9, wheelHours.size)
+    fun `wheelHours contains 0 through 15`() {
+        assertEquals((0..15).toList(), wheelHours)
+        assertEquals(16, wheelHours.size)
     }
 
     @Test
-    fun `wheelMinutes contains 0 5 10 up to 55`() {
-        val expected = listOf(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55)
-        assertEquals(expected, wheelMinutes)
-        assertEquals(12, wheelMinutes.size)
+    fun `wheelMinutes contains 0 through 59`() {
+        assertEquals((0..59).toList(), wheelMinutes)
+        assertEquals(60, wheelMinutes.size)
     }
 
     @Test

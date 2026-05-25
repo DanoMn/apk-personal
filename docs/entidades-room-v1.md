@@ -4,6 +4,12 @@ Fecha: 2026-05-22
 Proyecto: Vocal / Autonomía sin límites
 Archivo: `app/src/main/java/dev/panopt/autonomia/data/Entities.kt`
 
+> Nota 2026-05-24: este documento queda como referencia historica amplia. Para
+> reglas vigentes de `user_activity_configs` y anclas usar
+> `docs/definicion-tablas-room-v1.md`. El esquema actual separa
+> `weeklyFrequencyTarget`, `sessionTargetMinutes` y `commitmentDurationMonths`;
+> `commitmentDurationMonths = null` significa **Indefinido**.
+
 ---
 
 ## 1. LayerEntity — Capas

@@ -23,14 +23,14 @@ class ActivityPolicyTest {
     }
 
     @Test
-    fun weeklyGoalIsNotAnchorEvenWhenVisible() {
+    fun `anchor with weekly goal is still an anchor`() {
         val definition = activity(displaySurface = DisplaySurface.PrimaryChecklist).copy(
             cadence = ActivityCadence.Weekly,
             targetPeriod = TargetPeriod.Week,
         )
 
         assertTrue(definition.isGoal())
-        assertFalse(definition.isAnchor())
+        assertTrue(definition.isAnchor()) // anchor with goal IS still an anchor
     }
 
     @Test

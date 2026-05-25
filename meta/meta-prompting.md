@@ -98,3 +98,17 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Bug 5 — Sueno en panel rapido**: El boton de sueno esta en `ActionButtons` y `EntryMenuPanel`. Debe removerse de ambos. Sueno se accede desde la senal de sueno en `SignalsSection` (ya funciona).
 * **Funcion `isGoal()`**: Definida en `ActivityPolicy.kt:16-20`. Retorna true si `cadence` es Weekly/Monthly o `targetPeriod` es Week/Month. Se usa en `buildDashboardState` para excluir goals del pipeline diario.
 * **EntryMenuPanel**: Ya existe en `DashboardSheet.kt:244-264` con opciones: Mis anclas, Cuidado base, Pendientes, Actividades/proyectos/goals, Recaidas. No se usa actualmente porque `ActionButtons` dispara sheets individuales en vez de abrir EntryMenu.
+
+### UX de Configuracion de Mis Anclas (23/05/2026)
+
+* **Eliminar vs Quitar**: `Quitar` en Mis anclas debe borrar solo `UserActivityConfigEntity`; `Eliminar` en actividades custom debe borrar la `ActivityDefinitionEntity` custom completa. Si `Eliminar` solo borra config, la actividad custom queda en el catalogo y la UI parece bugueada.
+* **Custom sin categoria**: Si una actividad custom queda sin config, `ActivityDefinitionEntity.presetCategory = null` no permite saber su superficie original. Para recuperar custom anchors antiguas, el mapper trata IDs custom sin categoria como `ActivitySurface.Anchor`; para nuevas custom, `DashboardViewModel.createActivity()` guarda `presetCategory = "anchor"` o `"support"`.
+* **Feedback al agregar/crear ancla**: Despues de guardar una ancla, la seccion `Anclas actuales` debe expandirse y la tarjeta recien creada debe destellar sutilmente para confirmar la accion.
+* **Presets de metas**: Semanal debe mostrar 1 a 6. Mensual queda definido como 1, 2, 4, 6, 8, 12 para cubrir frecuencia baja, media y alta sin saturar la matriz.
+
+### Configuración de Anclas: Frecuencia Semanal, Duración de Compromiso y Límite de Tiempo (23/05/2026)
+
+* **Meta Semanal y Cadencia**: Las anclas son obligatoriamente semanales. Se elimina la frecuencia mensual o de 1 vez por semana. Los botones rápidos para metas semanales van de 2 a 7 veces/semana. Esto se guarda en `targetCount` en `user_activity_configs` y `targetPeriod` se fija a `"Week"`.
+* **Duración del Compromiso (`commitmentDurationMonths`)**: Nueva columna nullable (`Int?`) en `user_activity_configs` que indica cuántos meses se sostendrá el compromiso. Si es null, representa "indefinido" (opción preseleccionada por defecto).
+* **Tiempo Objetivo por Sesión (`sessionTargetMinutes`)**: Máximo permitido de 15 horas por día (900 minutos) para evitar desbalances en otras áreas/capas (sueño, cuerpo, vínculos, etc.). Se guarda en `targetValue` en `user_activity_configs`.
+* **Flujo UX de Duración del Compromiso**: Al seleccionar la meta semanal no se abre ningún modal. La recomendación de dejar la duración como `Indefinido` se muestra debajo del botón "Duración del compromiso", y el diálogo de meses solo se abre cuando el usuario presiona ese botón de configuración.

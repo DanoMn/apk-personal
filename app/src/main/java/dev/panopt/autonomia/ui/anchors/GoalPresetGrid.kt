@@ -1,9 +1,7 @@
 package dev.panopt.autonomia.ui.anchors
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,9 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,218 +25,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
+import dev.panopt.autonomia.ui.dashboard.DashboardSerif
 import dev.panopt.autonomia.ui.dashboard.mix
 
-/** Weekly goal presets displayed in the grid. */
-internal val weeklyPresets = listOf(
-    GoalPreset.TwoPerWeek,
-    GoalPreset.ThreePerWeek,
-    GoalPreset.FourPerWeek,
-    GoalPreset.FivePerWeek,
-    GoalPreset.SixPerWeek,
-    GoalPreset.SevenPerWeek,
-)
-
-/** Monthly goal presets displayed in the grid. */
-internal val monthlyPresets = listOf(
-    GoalPreset.TwoPerMonth,
-    GoalPreset.ThreePerMonth,
-    GoalPreset.FourPerMonth,
-    GoalPreset.SixPerMonth,
-    GoalPreset.EightPerMonth,
-    GoalPreset.TenPerMonth,
-)
-
-private enum class GoalTab { Weekly, Monthly }
-
-/**
- * Grid-based goal preset selector with Semanal/Mensual toggle.
- *
- * Layout:
- * - "Sin meta" — full-width button
- * - "Semanal" | "Mensual" — toggle row
- * - Animated grid for the active tab (2×3)
- * - "Personalizada" — full-width button
- * - When Custom is selected: inline count + Week/Month toggle
- */
 @Composable
-internal fun GoalPresetGrid(
-    selectedGoal: GoalPreset,
+internal fun WeeklyFrequencySelector(
+    selectedFrequency: Int,
     palette: DashboardPalette,
-    customCount: String,
-    customPeriod: TargetPeriod,
-    onGoalSelected: (GoalPreset) -> Unit,
-    onCustomCountChanged: (String) -> Unit,
-    onCustomPeriodChanged: (TargetPeriod) -> Unit,
+    onFrequencySelected: (Int) -> Unit,
 ) {
-    val isWeekly = selectedGoal.name.endsWith("Week")
-    val isMonthly = selectedGoal.name.endsWith("Month")
-    val isPreset = isWeekly || isMonthly
-    var activeTab by remember {
-        mutableStateOf(if (isMonthly) GoalTab.Monthly else GoalTab.Weekly)
-    }
-
-    // Sync tab only when selectedGoal changes from outside (not from user toggle)
-    LaunchedEffect(selectedGoal) {
-        if (isMonthly) activeTab = GoalTab.Monthly
-        else if (isWeekly) activeTab = GoalTab.Weekly
-        // None and Custom: don't change the tab
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // "Sin meta" — full width
-        PresetFullWidthButton(
-            label = "Sin meta",
-            isSelected = selectedGoal == GoalPreset.None,
-            palette = palette,
-            onClick = { onGoalSelected(GoalPreset.None) },
-        )
-
-        // Semanal / Mensual toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            ToggleTab(
-                label = "Semanal",
-                isActive = activeTab == GoalTab.Weekly,
-                palette = palette,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    activeTab = GoalTab.Weekly
-                    // Clear selection if current goal is a monthly preset
-                    if (isMonthly) onGoalSelected(GoalPreset.None)
-                },
-            )
-            ToggleTab(
-                label = "Mensual",
-                isActive = activeTab == GoalTab.Monthly,
-                palette = palette,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    activeTab = GoalTab.Monthly
-                    // Clear selection if current goal is a weekly preset
-                    if (isWeekly) onGoalSelected(GoalPreset.None)
-                },
-            )
-        }
-
-        // Grid (animated)
-        AnimatedVisibility(
-            visible = true,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
-        ) {
-            val presets = if (activeTab == GoalTab.Weekly) weeklyPresets else monthlyPresets
-            PresetGrid(
-                presets = presets,
-                selectedGoal = selectedGoal,
-                palette = palette,
-                columns = 3,
-                onGoalSelected = onGoalSelected,
-            )
-        }
-
-        // "Personalizada" — full width
-        PresetFullWidthButton(
-            label = "Personalizada",
-            isSelected = selectedGoal == GoalPreset.Custom,
-            palette = palette,
-            onClick = { onGoalSelected(GoalPreset.Custom) },
-        )
-
-        // Inline custom count + period
-        if (selectedGoal == GoalPreset.Custom) {
-            CustomCountRow(
-                count = customCount,
-                period = customPeriod,
-                palette = palette,
-                onCountChanged = onCustomCountChanged,
-                onPeriodChanged = onCustomPeriodChanged,
-            )
-        }
-    }
-}
-
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-@Composable
-private fun ToggleTab(
-    label: String,
-    isActive: Boolean,
-    palette: DashboardPalette,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = modifier
-            .height(42.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(
-                if (isActive) mix(palette.colorCoral, 0.18f, palette.bgSurface)
-                else palette.bgSurface,
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = if (isActive) Color(0xFFEFAA9C) else palette.textMuted,
-            fontFamily = DashboardSans,
-            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 14.sp,
-        )
-    }
-}
-
-@Composable
-private fun PresetFullWidthButton(
-    label: String,
-    isSelected: Boolean,
-    palette: DashboardPalette,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isSelected) mix(palette.colorCoral, 0.18f, palette.bgSurface)
-                else palette.bgSurface,
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            text = label,
-            color = if (isSelected) Color(0xFFEFAA9C) else palette.textMain,
-            fontFamily = DashboardSans,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 15.sp,
-        )
-    }
-}
-
-@Composable
-private fun PresetGrid(
-    presets: List<GoalPreset>,
-    selectedGoal: GoalPreset,
-    palette: DashboardPalette,
-    columns: Int,
-    onGoalSelected: (GoalPreset) -> Unit,
-) {
-    val rows = presets.chunked(columns)
+    val rows = weeklyFrequencyPresets.chunked(3)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         rows.forEach { rowPresets ->
             Row(
@@ -246,40 +51,17 @@ private fun PresetGrid(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 rowPresets.forEach { preset ->
-                    val isSelected = selectedGoal == preset
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isSelected) mix(palette.colorCoral, 0.18f, palette.bgSurface)
-                                else palette.bgSurface,
-                            )
-                            .clickable { onGoalSelected(preset) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = countFromPreset(preset),
-                                color = if (isSelected) Color(0xFFEFAA9C) else palette.textMain,
-                                fontFamily = DashboardSans,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                textAlign = TextAlign.Center,
-                            )
-                            Text(
-                                text = frequencyLabel(preset),
-                                color = if (isSelected) Color(0xFFEFAA9C) else palette.textMuted,
-                                fontFamily = DashboardSans,
-                                fontSize = 12.sp,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
+                    val frequency = weeklyFrequencyTargetFromPreset(preset)
+                    val isSelected = selectedFrequency == frequency
+                    FrequencyButton(
+                        frequency = frequency,
+                        isSelected = isSelected,
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onFrequencySelected(frequency) },
+                    )
                 }
-                // Fill remaining space if last row has fewer items
-                repeat(columns - rowPresets.size) {
+                repeat(3 - rowPresets.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -288,95 +70,340 @@ private fun PresetGrid(
 }
 
 @Composable
-private fun CustomCountRow(
-    count: String,
-    period: TargetPeriod,
+private fun FrequencyButton(
+    frequency: Int,
+    isSelected: Boolean,
     palette: DashboardPalette,
-    onCountChanged: (String) -> Unit,
-    onPeriodChanged: (TargetPeriod) -> Unit,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BasicTextField(
-            value = count,
-            onValueChange = { onCountChanged(it.filter { c -> c.isDigit() }.take(3)) },
-            textStyle = TextStyle(
-                color = palette.textMain,
-                fontFamily = DashboardSans,
-                fontSize = 16.sp,
-            ),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier
-                .weight(1f)
-                .height(46.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(palette.bgSurface2)
-                .padding(12.dp),
-        )
-
-        Row(
-            modifier = Modifier
-                .height(46.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(palette.bgSurface2),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            PeriodToggleButton(
-                label = "Semana",
-                isSelected = period == TargetPeriod.Week,
-                palette = palette,
-                onClick = { onPeriodChanged(TargetPeriod.Week) },
+    Box(
+        modifier = modifier
+            .height(60.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) mix(palette.colorCoral, 0.18f, palette.bgSurface)
+                else palette.bgSurface,
             )
-            PeriodToggleButton(
-                label = "Mes",
-                isSelected = period == TargetPeriod.Month,
-                palette = palette,
-                onClick = { onPeriodChanged(TargetPeriod.Month) },
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = frequency.toString(),
+                color = if (isSelected) Color(0xFFEFAA9C) else palette.textMain,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "/sem",
+                color = if (isSelected) Color(0xFFEFAA9C) else palette.textMuted,
+                fontFamily = DashboardSans,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
             )
         }
     }
 }
 
 @Composable
-private fun PeriodToggleButton(
-    label: String,
-    isSelected: Boolean,
+internal fun CommitmentDurationSummaryButton(
+    durationMonths: Int?,
     palette: DashboardPalette,
     onClick: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(12.dp)
     Box(
         modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .clip(shape)
+            .background(mix(palette.colorCardboard, 0.12f, palette.bgSurface))
+            .border(1.dp, mix(palette.colorCardboard, 0.34f, palette.bgSurface), shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = commitmentDurationLabel(durationMonths),
+                color = palette.colorCardboard,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.5.sp,
+            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(palette.colorCardboard)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Configurar",
+                    color = palette.bgBase,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun CommitmentDurationSetting(
+    durationMonths: Int?,
+    palette: DashboardPalette,
+    onClick: () -> Unit,
+) {
+    CommitmentDurationSummaryButton(
+        durationMonths = durationMonths,
+        palette = palette,
+        onClick = onClick,
+    )
+}
+
+@Composable
+internal fun CommitmentDurationGuidance(
+    palette: DashboardPalette,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = "Te recomendamos dejarlo como indefinido si esta ancla representa una base que aporta estabilidad a tu vida general.",
+        color = palette.textMuted,
+        fontFamily = DashboardSans,
+        fontSize = 12.5.sp,
+        lineHeight = 18.sp,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun CommitmentDurationDialog(
+    selectedDurationMonths: Int?,
+    palette: DashboardPalette,
+    onDismiss: () -> Unit,
+    onConfirm: (Int?) -> Unit,
+) {
+    val quickMonths = commitmentDurationPresets
+        .filter { it != CommitmentDurationPreset.Custom }
+        .mapNotNull { it.months }
+        .toSet()
+    var draftPreset by remember(selectedDurationMonths) {
+        mutableStateOf(
+            commitmentDurationPresets.firstOrNull { preset ->
+                preset != CommitmentDurationPreset.Custom && preset.months == selectedDurationMonths
+            } ?: CommitmentDurationPreset.Custom,
+        )
+    }
+    var draftCustomMonths by remember(selectedDurationMonths) {
+        mutableStateOf(
+            selectedDurationMonths
+                ?.takeIf { it !in quickMonths }
+                ?.toString()
+                .orEmpty(),
+        )
+    }
+    var showError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.bgElevated,
+        titleContentColor = palette.colorCardboard,
+        textContentColor = palette.textMain,
+        title = {
+            Text(
+                text = "¿Cuántos meses quieres sostener esta ancla?",
+                fontFamily = DashboardSerif,
+                fontWeight = FontWeight.Medium,
+                fontSize = 20.sp,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CommitmentDurationGuidance(palette = palette)
+
+                DurationPresetGrid(
+                    selectedPreset = draftPreset,
+                    palette = palette,
+                    onPresetSelected = {
+                        draftPreset = it
+                        showError = false
+                    },
+                )
+
+                if (draftPreset == CommitmentDurationPreset.Custom) {
+                    BasicTextField(
+                        value = draftCustomMonths,
+                        onValueChange = {
+                            draftCustomMonths = it.filter { char -> char.isDigit() }.take(3)
+                            showError = false
+                        },
+                        textStyle = TextStyle(
+                            color = palette.textMain,
+                            fontFamily = DashboardSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp,
+                            textAlign = TextAlign.Center,
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(palette.bgSurface2)
+                            .padding(horizontal = 16.dp, vertical = 11.dp),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (draftCustomMonths.isBlank()) {
+                                    Text(
+                                        text = "Meses",
+                                        color = palette.textFaint,
+                                        fontFamily = DashboardSans,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 20.sp,
+                                        textAlign = TextAlign.Center,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+                    if (showError) {
+                        Text(
+                            text = "Elige una duración entre 1 y 120 meses.",
+                            color = palette.risk,
+                            fontFamily = DashboardSans,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            DurationDialogActionButton(
+                text = "Cancelar",
+                palette = palette,
+                filled = false,
+                onClick = onDismiss,
+            )
+        },
+        confirmButton = {
+            DurationDialogActionButton(
+                text = "Aceptar",
+                palette = palette,
+                filled = true,
+                onClick = {
+                    if (draftPreset == CommitmentDurationPreset.Custom) {
+                        val customMonths = normalizeCustomCommitmentMonths(draftCustomMonths)
+                        if (customMonths == null) {
+                            showError = true
+                            return@DurationDialogActionButton
+                        }
+                        onConfirm(customMonths)
+                    } else {
+                        onConfirm(draftPreset.months)
+                    }
+                },
+            )
+        },
+    )
+}
+
+@Composable
+private fun DurationPresetGrid(
+    selectedPreset: CommitmentDurationPreset,
+    palette: DashboardPalette,
+    onPresetSelected: (CommitmentDurationPreset) -> Unit,
+) {
+    val rows = commitmentDurationPresets.chunked(2)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        rows.forEach { rowPresets ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                rowPresets.forEach { preset ->
+                    DurationPresetButton(
+                        preset = preset,
+                        isSelected = selectedPreset == preset,
+                        palette = palette,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onPresetSelected(preset) },
+                    )
+                }
+                repeat(2 - rowPresets.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DurationPresetButton(
+    preset: CommitmentDurationPreset,
+    isSelected: Boolean,
+    palette: DashboardPalette,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .height(44.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isSelected) palette.colorCoral.copy(alpha = 0.2f)
-                else Color.Transparent,
+                if (isSelected) mix(palette.colorCoral, 0.18f, palette.bgSurface)
+                else palette.bgSurface,
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = label,
-            color = if (isSelected) palette.colorCoral else palette.textMuted,
+            text = preset.label,
+            color = if (isSelected) Color(0xFFEFAA9C) else palette.textMain,
             fontFamily = DashboardSans,
-            fontSize = 14.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 13.5.sp,
+            textAlign = TextAlign.Center,
         )
     }
 }
 
-// ── Pure helpers ─────────────────────────────────────────────────────────────
-
-internal fun countFromPreset(preset: GoalPreset): String =
-    preset.toCountAndPeriod().first?.toString() ?: "—"
-
-internal fun frequencyLabel(preset: GoalPreset): String = when (preset) {
-    GoalPreset.TwoPerWeek, GoalPreset.ThreePerWeek, GoalPreset.FourPerWeek,
-    GoalPreset.FivePerWeek, GoalPreset.SixPerWeek, GoalPreset.SevenPerWeek -> "/sem"
-    GoalPreset.TwoPerMonth, GoalPreset.ThreePerMonth, GoalPreset.FourPerMonth,
-    GoalPreset.SixPerMonth, GoalPreset.EightPerMonth, GoalPreset.TenPerMonth -> "/mes"
-    else -> ""
+@Composable
+private fun DurationDialogActionButton(
+    text: String,
+    palette: DashboardPalette,
+    filled: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .height(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (filled) palette.colorCardboard else palette.bgSurface)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = if (filled) palette.bgBase else palette.textMain,
+            fontFamily = DashboardSans,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.5.sp,
+        )
+    }
 }

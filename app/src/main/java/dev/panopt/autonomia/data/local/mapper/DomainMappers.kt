@@ -58,6 +58,10 @@ internal fun mergeToDomain(
     minimumValue = config.minimumValue,
     targetCount = config.targetCount,
     targetPeriod = config.targetPeriod?.let { runCatching { TargetPeriod.valueOf(it) }.getOrNull() },
+    weeklyFrequencyTarget = config.weeklyFrequencyTarget
+        ?: legacyWeeklyFrequencyTarget(config.targetCount, config.targetPeriod),
+    sessionTargetMinutes = config.sessionTargetMinutes ?: config.targetValue,
+    commitmentDurationMonths = config.commitmentDurationMonths,
     unit = runCatching { ActivityUnit.valueOf(definition.unit) }.getOrDefault(ActivityUnit.Boolean),
     active = config.active,
     archived = config.archived,
@@ -75,14 +79,31 @@ internal fun ActivityDefinitionEntity.toDomain(): ActivityDefinition = ActivityD
     activityType = when (presetCategory) {
         "anchor" -> ActivitySurface.Anchor
         "support" -> ActivitySurface.Support
+        null -> if (isCustomActivityId(id)) ActivitySurface.Anchor else ActivitySurface.Task
         else -> ActivitySurface.Task
     },
     contributionRole = runCatching { ContributionRole.valueOf(contributionRole) }.getOrDefault(ContributionRole.Core),
     importanceTier = runCatching { ImportanceTier.valueOf(importanceTier) }.getOrDefault(ImportanceTier.Medium),
     cadence = null, targetValue = null, minimumValue = null, targetCount = null, targetPeriod = null,
+    weeklyFrequencyTarget = null, sessionTargetMinutes = null, commitmentDurationMonths = null,
     unit = runCatching { ActivityUnit.valueOf(unit) }.getOrDefault(ActivityUnit.Boolean),
-    active = false, archived = false, sortOrder = sortOrder, createdAt = createdAt, updatedAt = updatedAt,
+    active = true, archived = false, sortOrder = sortOrder, createdAt = createdAt, updatedAt = updatedAt,
 )
+
+private fun legacyWeeklyFrequencyTarget(
+    targetCount: Int?,
+    targetPeriod: String?,
+): Int? {
+    val count = targetCount ?: return null
+    return when (targetPeriod) {
+        TargetPeriod.Week.name -> count.coerceIn(2, 7)
+        TargetPeriod.Month.name -> ((count + 3) / 4).coerceIn(2, 7)
+        else -> null
+    }
+}
+
+private fun isCustomActivityId(activityId: String): Boolean =
+    activityId.startsWith("act_custom_") || !activityId.startsWith("act_")
 
 internal fun ActivityLogEntity.toDomain(): ActivityLog =
     ActivityLog(
@@ -172,4 +193,3 @@ internal fun SleepLogEntity.toDomain(): SleepLog =
         note = note,
         updatedAt = updatedAt,
     )
-

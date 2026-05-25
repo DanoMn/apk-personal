@@ -117,7 +117,11 @@ Reglas:
 - alimentan las capas;
 - pesan mas que Soportes y Pendientes;
 - no deben convertirse en una lista infinita;
-- targets obligatorios (cadence, targetValue, targetCount, targetPeriod): UX normal, el usuario marca lo que SI hizo.
+- configuracion obligatoria para consistencia semanal:
+  - Frecuencia semanal (`weeklyFrequencyTarget`, valor de 2 a 7).
+  - Tiempo objetivo por sesion (`sessionTargetMinutes`, maximo de 15 horas/900 minutos).
+  - Duracion del compromiso (`commitmentDurationMonths`): puede ser `null` solo cuando el usuario elige **Indefinido**. Ese `null` no significa que falte configuracion.
+- UX normal: el usuario marca lo que SI hizo.
 
 Sin anclas no hay suficiente base diaria para leer estabilidad.
 
@@ -319,7 +323,7 @@ Ese perfil esta formado por:
 
 - anclas activas;
 - activities activas o archivadas;
-- objetivos semanales/mensuales;
+- metas de anclas semanales;
 - abstinencias activas;
 - preferencias locales;
 - registros diarios;
@@ -412,7 +416,7 @@ Flujo esperado:
 3. Pedir al usuario elegir al menos 3 activities para `Mis anclas`.
 4. Permitir filtrar o elegir activities por capa.
 5. Ofrecer un boton para aceptar una configuracion predeterminada.
-6. Preguntar si quiere fijar metas semanales para las anclas elegidas.
+6. Configurar para cada ancla su meta semanal, duracion del compromiso y tiempo por sesion.
 7. Preguntar si quiere activar abstinencias como alcohol, conducta sexual,
    marihuana u otra personalizada.
 8. Entrar al dashboard funcional.
@@ -443,7 +447,10 @@ Campos clave:
 
 - `activitySurface`: `Anchor`, `Support` o `Task`.
 - `isActive`: activo o archivado.
-- targets (`cadence`, `targetValue`, `targetCount`, `targetPeriod`): obligatorios para Anchor, ausentes en Support y Task.
+- targets (`weeklyFrequencyTarget`, `sessionTargetMinutes`, `commitmentDurationMonths`):
+  - Para `Anchor` (Mis anclas): `weeklyFrequencyTarget` = 2-7, `sessionTargetMinutes` = 1-900, `commitmentDurationMonths` = meses de compromiso o `null` para **Indefinido**.
+  - Mientras el scoring siga leyendo campos legacy, se mantienen espejos: `cadence = "Weekly"`, `targetPeriod = "Week"`, `targetCount = weeklyFrequencyTarget`, `targetValue = sessionTargetMinutes`.
+  - Para `Support` y `Task`: ausentes (nulos).
 - `isFocusSignal`: senal destacada en dashboard.
 
 Reglas de superficie:
@@ -568,8 +575,8 @@ Estado de base
 Reglas de score v1:
 
 - las capas producen una base visible de 700 a 900;
-- goals semanales/mensuales pueden aportar bonus de 0 a 100;
-- `Plenitude` e `Unbreakable` requieren base sostenida y goals consistentes;
+- metas de anclas semanales pueden aportar bonus de 0 a 100;
+- `Plenitude` e `Unbreakable` requieren base sostenida y metas consistentes;
 - Anclas pesan mas que Soportes;
 - tasks pesan menos y solo cuentan si aportan a una capa;
 - sueno bajo o ausente impide lecturas altas;
@@ -766,7 +773,7 @@ El documento debe sostener estos escenarios:
 - sueno no registrado o muy bajo: la base se considera incompleta para estados
   altos;
 - sin registros suficientes: `Sin datos`, tarjeta de score visible con `--`;
-- goals semanales/mensuales ayudan a `Plenitude`/`Unbreakable`, pero no
+- metas de anclas semanales ayudan a `Plenitude`/`Unbreakable`, pero no
   reemplazan la base diaria;
 - tasks neutrales no suman al score.
 - usuario usa Vocal sin iniciar sesion;

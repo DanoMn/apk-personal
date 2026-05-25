@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -84,6 +85,7 @@ internal fun CheckItem(
         CheckBoxMark(
             palette = palette,
             checked = checked,
+            isInverted = isInverted,
             modifier = Modifier.size(23.dp),
         )
         Column(
@@ -133,9 +135,11 @@ internal fun CheckBoxMark(
     palette: DashboardPalette,
     checked: Boolean,
     modifier: Modifier,
+    isInverted: Boolean = false,
 ) {
+    val checkedColor = if (isInverted) Color(0xFFB0A090) else palette.colorCoral
     val boxColor by animateColorAsState(
-        targetValue = if (checked) palette.colorCoral else palette.textMuted,
+        targetValue = if (checked) checkedColor else palette.textMuted,
         animationSpec = tween(durationMillis = 180),
         label = "checkBoxColor",
     )

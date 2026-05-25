@@ -3,7 +3,6 @@ package dev.panopt.autonomia.ui.dashboard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import dev.panopt.autonomia.TargetPeriod
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +40,7 @@ import dev.panopt.autonomia.ui.dashboard.components.SignalsSection
 import dev.panopt.autonomia.ui.dashboard.components.SobrietySection
 import dev.panopt.autonomia.ui.dashboard.components.StatusCard
 import dev.panopt.autonomia.ui.dashboard.components.SupportsPreviewSection
-import dev.panopt.autonomia.ui.dashboard.components.SupportsSection
+import dev.panopt.autonomia.ui.dashboard.components.TasksPreviewSection
 import dev.panopt.autonomia.ui.dashboard.components.TopBar
 import dev.panopt.autonomia.ui.dashboard.components.WeekSection
 import dev.panopt.autonomia.ui.dashboard.components.rememberDrawerWidth
@@ -56,14 +55,15 @@ internal fun DashboardScreen(
     onSaveActivityValue: (String, Int) -> Unit,
     onSaveSleep: (String, String, String, String, SleepQuality, String) -> Unit,
     onToggleAbstinenceRelapse: (String, Boolean) -> Unit,
-    onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
+    onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
-    onAddAnchor: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onAddAnchor: (String, Int, Int, Int?) -> Unit,
     onRemoveAnchor: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
     onToggleSupport: (String) -> Unit = {},
+    onResetSupportOmissions: () -> Unit = {},
     onNavigateToSupportsConfig: () -> Unit = {},
 ) {
     val palette = dashboardPalette(isDarkMode)
@@ -124,11 +124,11 @@ internal fun DashboardScreen(
                 items = state.supportItems,
                 onToggle = onToggleSupport,
                 onOpenConfig = onNavigateToSupportsConfig,
+                onResetAll = onResetSupportOmissions,
             )
-            SupportsSection(
+            TasksPreviewSection(
                 palette = palette,
-                supports = state.supports,
-                onOpenSupports = { activeSheet = DashboardSheet.Support },
+                tasks = state.pendingTasks,
                 onOpenTasks = { activeSheet = DashboardSheet.Tasks },
             )
             WeekSection(palette = palette, rows = state.weekRows)

@@ -187,11 +187,14 @@ data class UserActivityConfigEntity(
     val archived: Boolean = false,
     val customName: String? = null,
     val customDescription: String? = null,
-    val cadence: String?,        // Weekly | Monthly (REQUIRED for Anchor, null otherwise)
-    val targetValue: Int?,       // REQUIRED for Anchor
+    val cadence: String?,        // Weekly (REQUIRED for Anchor, null otherwise)
+    val targetValue: Int?,       // LEGACY mirror of sessionTargetMinutes for Anchor
     val minimumValue: Int?,
-    val targetCount: Int?,       // REQUIRED for Anchor
-    val targetPeriod: String?,   // Week | Month (REQUIRED for Anchor)
+    val targetCount: Int?,       // LEGACY mirror of weeklyFrequencyTarget for Anchor
+    val targetPeriod: String?,   // Week for new Anchor configs; Month is legacy only
+    val weeklyFrequencyTarget: Int?, // REQUIRED for Anchor: 2..7 times per week
+    val sessionTargetMinutes: Int?,  // REQUIRED for Anchor: 1..900 minutes per session
+    val commitmentDurationMonths: Int?, // null = indefinite
     val sortOrder: Int,
     val createdAt: Long,
     val updatedAt: Long,

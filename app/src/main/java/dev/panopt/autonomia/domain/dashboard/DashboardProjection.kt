@@ -49,8 +49,7 @@ internal fun buildDashboardState(
     val visibleActivities = activities
         .filter { it.active && !it.archived && it.activityType != ActivitySurface.Task }
         .sortedBy { it.sortOrder }
-    val goalActivities = visibleActivities.filter { it.isGoal() }
-    val dashboardActivities = visibleActivities.filterNot { it.isGoal() }
+    val dashboardActivities = visibleActivities
     val todayLogsByActivity = todayActivityLogs.associateBy { it.activityId }
     val completedActivities = dashboardActivities.filter { activity ->
         activity.isCompletedBy(todayLogsByActivity[activity.id])
@@ -61,7 +60,6 @@ internal fun buildDashboardState(
     val selfCareActivities = dashboardActivities.filter {
         it.activityType == ActivitySurface.Support
     }
-    val secondaryActivities = selfCareActivities
     val coreActivities = dashboardActivities.filter { it.contributionRole == ContributionRole.Core }
     val timeActivities = dashboardActivities.filter { it.unit == ActivityUnit.Minutes }
 
@@ -171,12 +169,6 @@ internal fun buildDashboardState(
                 activityType = activity.activityType.name,
             )
         },
-        supports = buildSupports(
-            secondaryActivities = secondaryActivities,
-            completedActivities = completedActivities,
-            layerById = layerById,
-            tasks = tasks,
-        ),
         weekRows = weekRows,
         dimensions = dimensions,
         sleep = sleepLog.toSleepState(),
@@ -189,8 +181,22 @@ internal fun buildDashboardState(
                 title = effective.name,
                 layerId = activity.layerId,
                 layerName = layerById[activity.layerId]?.name.orEmpty(),
-                targetValue = configured?.targetValue ?: activity.targetValue ?: activity.minimumValue ?: 1,
-                actualValue = log?.actualValue ?: configured?.targetValue ?: activity.targetValue ?: activity.minimumValue ?: 0,
+                targetValue = configured?.sessionTargetMinutes
+                    ?: configured?.targetValue
+                    ?: activity.sessionTargetMinutes
+                    ?: activity.targetValue
+                    ?: activity.minimumValue
+                    ?: 1,
+                actualValue = log?.actualValue
+                    ?: configured?.sessionTargetMinutes
+                    ?: configured?.targetValue
+                    ?: activity.sessionTargetMinutes
+                    ?: activity.targetValue
+                    ?: activity.minimumValue
+                    ?: 0,
+                weeklyFrequencyTarget = effective.weeklyFrequencyTarget,
+                sessionTargetMinutes = effective.sessionTargetMinutes,
+                commitmentDurationMonths = effective.commitmentDurationMonths,
                 isCompletedToday = effective.isCompletedBy(log),
                 isFocusSignal = activity.id == focusSignalActivityId,
                 displaySurface = effective.displaySurface.name,
@@ -199,7 +205,7 @@ internal fun buildDashboardState(
                 isConfigured = configured != null,
             )
         },
-        supportItems = secondaryActivities.map { activity ->
+        supportItems = selfCareActivities.map { activity ->
             DashboardCheckItemState(
                 id = activity.id,
                 title = activity.name,
@@ -224,14 +230,14 @@ private fun ActivityDefinition.isCompletedBy(log: ActivityLog?): Boolean {
     if (log == null) return false
     if (log.completed) return true
     val actual = log.actualValue ?: return false
-    val minimum = minimumValue ?: targetValue ?: return false
+    val minimum = minimumValue ?: sessionTargetMinutes ?: targetValue ?: return false
     return actual >= minimum
 }
 
 private fun ActivityDefinition.valueLabel(): String =
     when (unit) {
-        ActivityUnit.Minutes -> "${targetValue ?: minimumValue ?: 0} min"
-        ActivityUnit.Count -> "${targetValue ?: minimumValue ?: 1}x"
+        ActivityUnit.Minutes -> "${sessionTargetMinutes ?: targetValue ?: minimumValue ?: 0} min"
+        ActivityUnit.Count -> "${sessionTargetMinutes ?: targetValue ?: minimumValue ?: 1}x"
         ActivityUnit.Boolean -> "hoy"
         ActivityUnit.Time -> "hora"
         ActivityUnit.Text -> "nota"
@@ -379,15 +385,6 @@ private fun buildSignals(
     )
 }
 
-private fun DashboardDimensionStatus.metaLabel(): String =
-    when (this) {
-        DashboardDimensionStatus.Stable -> "estable"
-        DashboardDimensionStatus.Motion -> "activa"
-        DashboardDimensionStatus.Attention -> "atencion"
-        DashboardDimensionStatus.Restoration -> "cuidado"
-        DashboardDimensionStatus.Unknown -> "sin marcar"
-    }
-
 private fun SleepLog?.sleepValue(): String {
     val log = this ?: return "--"
     val minutes = minutesBetween(log.sleptAt, log.wokeAt) ?: return "--"
@@ -495,46 +492,6 @@ private fun streakDays(
         cursor = cursor.minusDays(1)
     }
     return days
-}
-
-private fun buildSupports(
-    secondaryActivities: List<ActivityDefinition>,
-    completedActivities: List<ActivityDefinition>,
-    layerById: Map<String, Layer>,
-    tasks: List<Task>,
-): List<DashboardSupportState> {
-    val completedIds = completedActivities.map { it.id }.toSet()
-    val completedSecondaryCount = secondaryActivities.count { it.id in completedIds }
-    val pendingSecondary = secondaryActivities.filterNot { it.id in completedIds }
-    val firstSecondary = secondaryActivities.firstOrNull()
-    val secondSecondary = pendingSecondary.firstOrNull { it.id != firstSecondary?.id }
-        ?: secondaryActivities.getOrNull(1)
-    val pendingTasks = tasks
-        .filter { it.status == TaskStatus.Pending }
-        .sortedBy { it.dueDate ?: "9999-99-99" }
-
-    return listOf(
-        DashboardSupportState(
-            kind = DashboardSupportKind.Support,
-            title = "Soportes",
-            value = "$completedSecondaryCount/${secondaryActivities.size}",
-            copy = "cuidado basico",
-            first = firstSecondary?.name ?: "Sin cuidado base",
-            firstChecked = firstSecondary?.id?.let { it in completedIds } == true,
-            second = secondSecondary?.name ?: layerById.values.firstOrNull()?.name.orEmpty(),
-            secondChecked = secondSecondary?.id?.let { it in completedIds } == true,
-        ),
-        DashboardSupportState(
-            kind = DashboardSupportKind.Tasks,
-            title = "Pendientes",
-            value = pendingTasks.size.toString(),
-            copy = "tareas abiertas",
-            first = pendingTasks.getOrNull(0)?.title ?: "Sin pendientes",
-            firstChecked = false,
-            second = pendingTasks.getOrNull(1)?.title ?: "Agregar despues",
-            secondChecked = false,
-        ),
-    )
 }
 
 private fun buildWeekRows(

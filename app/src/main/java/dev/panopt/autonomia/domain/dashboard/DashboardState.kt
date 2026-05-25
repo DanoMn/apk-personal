@@ -12,7 +12,6 @@ internal data class DashboardState(
     val signals: List<DashboardSignalState> = emptyList(),
     val sobrietyTracks: List<DashboardSobrietyTrackState> = emptyList(),
     val anchorItems: List<DashboardCheckItemState> = emptyList(),
-    val supports: List<DashboardSupportState> = emptyList(),
     val weekRows: List<DashboardWeekRowState> = emptyList(),
     val dimensions: List<DashboardDimensionState> = emptyList(),
     val sleep: DashboardSleepState = DashboardSleepState(),
@@ -83,22 +82,6 @@ internal data class DashboardCheckItemState(
     val activityType: String = "",
 )
 
-internal data class DashboardSupportState(
-    val kind: DashboardSupportKind,
-    val title: String,
-    val value: String,
-    val copy: String,
-    val first: String,
-    val firstChecked: Boolean,
-    val second: String,
-    val secondChecked: Boolean,
-)
-
-internal enum class DashboardSupportKind {
-    Support,
-    Tasks,
-}
-
 internal data class DashboardWeekRowState(
     val layerId: String,
     val name: String,
@@ -136,6 +119,9 @@ internal data class DashboardActivityOptionState(
     val layerName: String,
     val targetValue: Int,
     val actualValue: Int,
+    val weeklyFrequencyTarget: Int? = null,
+    val sessionTargetMinutes: Int? = null,
+    val commitmentDurationMonths: Int? = null,
     val isCompletedToday: Boolean,
     val isFocusSignal: Boolean,
     val displaySurface: String, // DEPRECATED — replaced by activityType

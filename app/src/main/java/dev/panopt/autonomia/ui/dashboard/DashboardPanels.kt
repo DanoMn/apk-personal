@@ -1,11 +1,12 @@
 package dev.panopt.autonomia.ui.dashboard
 
-import dev.panopt.autonomia.TargetPeriod
-
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -80,29 +82,49 @@ internal fun DashboardSheetHost(
     onSaveActivityValue: (String, Int) -> Unit,
     onSaveSleep: (String, String, String, String, SleepQuality, String) -> Unit,
     onToggleRelapse: (String, Boolean) -> Unit,
-    onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
+    onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
-    onAddAnchor: (String, Int?, Int?, TargetPeriod?) -> Unit,
+    onAddAnchor: (String, Int, Int, Int?) -> Unit,
     onRemoveAnchor: (String) -> Unit,
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
 ) {
-    Box(
+    BackHandler {
+        if (sheet == DashboardSheet.AnchorConfig) {
+            onSwitchSheet(DashboardSheet.EntryMenu)
+        } else {
+            onDismiss()
+        }
+    }
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.48f))
-            .clickable(role = Role.Button, onClick = onDismiss),
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                role = Role.Button,
+                onClick = onDismiss,
+            ),
         contentAlignment = Alignment.BottomCenter,
     ) {
+        val maxSheetHeight = maxHeight * 0.94f
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 680.dp)
+                .heightIn(max = maxSheetHeight)
                 .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
                 .background(palette.drawer)
-                .clickable(onClick = {})
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(top = 14.dp, bottom = 18.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -128,7 +150,7 @@ internal fun DashboardSheetHost(
             when (sheet) {
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
                     palette = palette,
-                    onOpenAnchors = { onSwitchSheet(DashboardSheet.Anchor) },
+                    onOpenAnchors = { onSwitchSheet(DashboardSheet.AnchorConfig) },
                     onOpenSupports = { onSwitchSheet(DashboardSheet.Support) },
                     onOpenTasks = { onSwitchSheet(DashboardSheet.Tasks) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
@@ -183,11 +205,13 @@ internal fun DashboardSheetHost(
                     onSetFocusSignal = onSetFocusSignal,
                 )
                 DashboardSheet.AnchorConfig -> AnchorConfigPanel(
-                    layers = state.layers,
                     activityOptions = state.activityOptions,
                     palette = palette,
                     onAddAnchor = onAddAnchor,
-                    onRemoveAnchor = onRemoveAnchor,
+                    onOpenFullAnchorConfig = {
+                        onDismiss()
+                        onNavigateToAnchorConfig()
+                    },
                 )
                 DashboardSheet.SupportsConfig -> SupportsConfigPanel(
                     activityOptions = state.activityOptions,
@@ -271,7 +295,7 @@ private fun EntryMenuPanel(
                 palette = palette,
                 icon = { AnchorIcon(color = it, modifier = Modifier.size(28.dp)) },
                 label = "Anclas",
-                description = "Registrar ancla",
+                description = "Ajustar anclas",
                 onClick = onOpenAnchors,
                 modifier = Modifier.weight(1f),
             )
@@ -609,17 +633,15 @@ private fun ActivitySettingsPanel(
     palette: DashboardPalette,
     onToggleActivity: (String, Boolean) -> Unit,
     onSaveActivityValue: (String, Int) -> Unit,
-    onCreateActivity: (String, String, Int, Boolean, Boolean, Boolean) -> Unit,
+    onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var minutes by remember { mutableStateOf("20") }
     var layerId by remember(state.layers) { mutableStateOf(state.layers.firstOrNull()?.id.orEmpty()) }
     var isSecondary by remember { mutableStateOf(false) }
-    var isGoal by remember { mutableStateOf(false) }
-    var isMonthlyGoal by remember { mutableStateOf(false) }
 
-    SheetTitle(title = "Actividades", note = "anclas, metas y senales", palette = palette)
+    SheetTitle(title = "Actividades", note = "anclas, soportes y senales", palette = palette)
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -661,11 +683,11 @@ private fun ActivitySettingsPanel(
             }
         }
 
-        SheetSubtitle(text = "Goals activos", palette = palette)
+        SheetSubtitle(text = "Metas activas", palette = palette)
         val goals = state.activityOptions.filter { it.isGoal && it.targetValue > 0 }
         if (goals.isEmpty()) {
             Text(
-                text = "Sin goals configurados",
+                text = "Sin metas configuradas",
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 13.sp,
@@ -725,35 +747,19 @@ private fun ActivitySettingsPanel(
                 fontSize = 13.sp,
             )
         }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Checkbox(checked = isGoal, onCheckedChange = { isGoal = it })
-            Text(
-                text = "Goal",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontSize = 13.sp,
-            )
-            Checkbox(
-                checked = isMonthlyGoal,
-                onCheckedChange = { isMonthlyGoal = it },
-                enabled = isGoal,
-            )
-            Text(
-                text = "Mensual",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontSize = 13.sp,
-            )
-        }
         SheetButton(
             text = "Agregar actividad",
             palette = palette,
             primary = true,
             onClick = {
-                onCreateActivity(name, layerId, minutes.toIntOrNull() ?: 20, isSecondary, isGoal, isMonthlyGoal)
+                onCreateActivity(
+                    name,
+                    layerId,
+                    minutes.toIntOrNull() ?: 20,
+                    isSecondary,
+                    if (isSecondary) null else 3,
+                    null,
+                )
                 name = ""
             },
         )

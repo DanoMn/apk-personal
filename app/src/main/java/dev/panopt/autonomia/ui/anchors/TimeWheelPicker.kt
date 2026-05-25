@@ -29,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,11 +40,11 @@ import kotlin.math.abs
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
-/** Hours displayed on the wheel: 0..8 inclusive. */
-internal val wheelHours: List<Int> = (0..8).toList()
+/** Hours displayed on the wheel: 0..15 inclusive. */
+internal val wheelHours: List<Int> = (0..15).toList()
 
-/** Minutes displayed on the wheel: 0, 5, 10, …, 55. */
-internal val wheelMinutes: List<Int> = (0..55 step 5).toList()
+/** Minutes displayed on the wheel: 0 through 59. */
+internal val wheelMinutes: List<Int> = (0..59).toList()
 
 /**
  * Formats an integer wheel value into a two-digit string for display.
@@ -53,8 +52,8 @@ internal val wheelMinutes: List<Int> = (0..55 step 5).toList()
 internal fun formatWheelValue(value: Int): String =
     value.toString().padStart(2, '0')
 
-private val ItemHeight = 48
-private val WheelContainerHeight = 180
+private val ItemHeight = 44
+private val WheelContainerHeight = 152
 
 // ── Composable ───────────────────────────────────────────────────────────────
 
@@ -101,10 +100,11 @@ internal fun TimeWheelPicker(
             ) {
                 Text(
                     text = "h",
-                    color = palette.textMuted,
+                    color = palette.colorCardboard,
                     fontFamily = DashboardSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 28.sp,
+                    lineHeight = 30.sp,
                 )
             }
 
@@ -125,10 +125,11 @@ internal fun TimeWheelPicker(
             ) {
                 Text(
                     text = "m",
-                    color = palette.textMuted,
+                    color = palette.colorCardboard,
                     fontFamily = DashboardSans,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 28.sp,
+                    lineHeight = 30.sp,
                 )
             }
         }
@@ -150,12 +151,11 @@ private fun WheelColumn(
     modifier: Modifier = Modifier,
 ) {
     val initialIndex = values.indexOf(currentValue).coerceAtLeast(0)
-    val density = LocalDensity.current
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = initialIndex,
-        initialFirstVisibleItemScrollOffset = with(density) { WheelPad.dp.roundToPx() },
     )
     val snapBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val isScrollInProgress = listState.isScrollInProgress
 
     // Detect settled centre item
     val centerIndex by remember {
@@ -163,18 +163,24 @@ private fun WheelColumn(
             val layoutInfo = listState.layoutInfo
             if (layoutInfo.visibleItemsInfo.isEmpty()) return@derivedStateOf -1
 
-            val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset / 2
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
             layoutInfo.visibleItemsInfo
                 .minByOrNull { abs((it.offset + it.size / 2) - viewportCenter) }
                 ?.index ?: -1
         }
     }
 
-    // Notify parent when centre item changes
-    if (enabled && centerIndex in values.indices) {
-        val newValue = values[centerIndex]
-        if (newValue != currentValue) {
-            LaunchedEffect(newValue) {
+    LaunchedEffect(currentValue) {
+        val targetIndex = values.indexOf(currentValue)
+        if (!isScrollInProgress && targetIndex >= 0 && targetIndex != centerIndex) {
+            listState.scrollToItem(targetIndex)
+        }
+    }
+
+    LaunchedEffect(centerIndex, isScrollInProgress, enabled) {
+        if (enabled && !isScrollInProgress && centerIndex in values.indices) {
+            val newValue = values[centerIndex]
+            if (newValue != currentValue) {
                 onValueSnapped(newValue)
             }
         }

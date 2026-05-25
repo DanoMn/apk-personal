@@ -32,6 +32,9 @@ interface AutonomiaDao {
     @Query("DELETE FROM activity_logs WHERE activityId = :activityId AND date = :date")
     suspend fun deleteActivityLog(activityId: String, date: String)
 
+    @Query("DELETE FROM activity_logs WHERE activityId = :activityId")
+    suspend fun deleteActivityLogsForActivity(activityId: String)
+
     @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
     fun observeAbstinenceTracks(): Flow<List<AbstinenceTrackEntity>>
 
@@ -125,6 +128,9 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertActivityDefinitions(definitions: List<ActivityDefinitionEntity>)
 
+    @Query("DELETE FROM activity_definitions WHERE id = :activityId")
+    suspend fun deleteActivityDefinition(activityId: String)
+
     // --- New queries for user_activity_configs ---
 
     @Query("SELECT * FROM user_activity_configs WHERE active = 1 AND archived = 0")
@@ -136,7 +142,10 @@ interface AutonomiaDao {
     @Query(
         "UPDATE user_activity_configs SET activityType = :activityType, " +
             "targetValue = :targetValue, targetCount = :targetCount, " +
-            "targetPeriod = :targetPeriod, cadence = :cadence, active = :active, " +
+            "targetPeriod = :targetPeriod, cadence = :cadence, " +
+            "weeklyFrequencyTarget = :weeklyFrequencyTarget, " +
+            "sessionTargetMinutes = :sessionTargetMinutes, " +
+            "commitmentDurationMonths = :commitmentDurationMonths, active = :active, " +
             "archived = :archived, sortOrder = :sortOrder, updatedAt = :updatedAt " +
             "WHERE activityId = :activityId",
     )
@@ -147,6 +156,9 @@ interface AutonomiaDao {
         targetCount: Int?,
         targetPeriod: String?,
         cadence: String?,
+        weeklyFrequencyTarget: Int?,
+        sessionTargetMinutes: Int?,
+        commitmentDurationMonths: Int?,
         active: Boolean,
         archived: Boolean,
         sortOrder: Int,

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Vocal Anchor UX"
+  short_description: "Canonical UX for Mis anclas flows."
+  default_prompt: "Use $vocal-anchor-ux to update Mis anclas or Anclas quick settings while preserving the canonical UX."
+
+policy:
+  allow_implicit_invocation: true

@@ -39,6 +39,8 @@ internal fun SectionHeader(
     palette: DashboardPalette,
     title: String,
     note: String,
+    titleColor: Color = palette.colorCardboard,
+    titleSize: Float = 19.84f,
 ) {
     Spacer(modifier = Modifier.height(21.6.dp))
 
@@ -51,11 +53,11 @@ internal fun SectionHeader(
     ) {
         Text(
             text = title,
-            color = palette.colorCardboard,
+            color = titleColor,
             fontFamily = DashboardSerif,
             fontWeight = FontWeight.Medium,
-            fontSize = 19.84.sp,
-            lineHeight = 22.8.sp,
+            fontSize = titleSize.sp,
+            lineHeight = (titleSize * 1.15f).sp,
         )
         Text(
             text = note,

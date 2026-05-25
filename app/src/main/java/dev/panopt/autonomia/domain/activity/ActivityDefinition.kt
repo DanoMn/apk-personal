@@ -26,6 +26,9 @@ data class ActivityDefinition(
     val minimumValue: Int? = null,
     val targetCount: Int? = null,
     val targetPeriod: TargetPeriod? = null,
+    val weeklyFrequencyTarget: Int? = null,
+    val sessionTargetMinutes: Int? = null,
+    val commitmentDurationMonths: Int? = null,
     val unit: ActivityUnit,
     val active: Boolean = true,
     val archived: Boolean = false,
@@ -33,4 +36,3 @@ data class ActivityDefinition(
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 )
-

@@ -23,7 +23,7 @@ class DashboardProjectionTest {
     private val dateKey = today.toString()
 
     @Test
-    fun `support activities populate secondary checklist items`() {
+    fun `support activities populate support items`() {
         val anchor = supportActivity(
             id = "act_anchor",
             name = "Meditar",
@@ -68,23 +68,23 @@ class DashboardProjectionTest {
             today = today,
         )
 
-        // Secondary checklist should contain support items
+        // supportItems should contain configured supports.
         assertFalse(
-            "secondaryChecklistItems should not be empty when supports are configured",
-            state.secondaryChecklistItems.isEmpty(),
+            "supportItems should not be empty when supports are configured",
+            state.supportItems.isEmpty(),
         )
-        assertEquals(2, state.secondaryChecklistItems.size)
+        assertEquals(2, state.supportItems.size)
 
         // Each support item should have activityType populated
-        val bathItem = state.secondaryChecklistItems.first { it.title == "Bañarse" }
+        val bathItem = state.supportItems.first { it.title == "Bañarse" }
         assertEquals("Support", bathItem.activityType)
 
-        val eatItem = state.secondaryChecklistItems.first { it.title == "Comer" }
+        val eatItem = state.supportItems.first { it.title == "Comer" }
         assertEquals("Support", eatItem.activityType)
     }
 
     @Test
-    fun `anchor items have activityType Anchor in primary checklist`() {
+    fun `anchor items have activityType Anchor`() {
         val anchor = supportActivity(
             id = "act_anchor",
             name = "Meditar",
@@ -110,12 +110,12 @@ class DashboardProjectionTest {
             today = today,
         )
 
-        assertEquals(1, state.checklistItems.size)
-        assertEquals("Anchor", state.checklistItems[0].activityType)
+        assertEquals(1, state.anchorItems.size)
+        assertEquals("Anchor", state.anchorItems[0].activityType)
     }
 
     @Test
-    fun `no supports configured produces empty secondary checklist`() {
+    fun `no supports configured produces empty support items`() {
         val anchor = supportActivity(
             id = "act_anchor",
             name = "Meditar",
@@ -141,8 +141,8 @@ class DashboardProjectionTest {
         )
 
         assertTrue(
-            "secondaryChecklistItems should be empty when no supports configured",
-            state.secondaryChecklistItems.isEmpty(),
+            "supportItems should be empty when no supports configured",
+            state.supportItems.isEmpty(),
         )
     }
 
@@ -175,7 +175,7 @@ class DashboardProjectionTest {
     }
 
     @Test
-    fun `completed support items show as completed in secondary checklist`() {
+    fun `completed support items show as completed in support items`() {
         val bath = supportActivity(
             id = "act_bath",
             name = "Bañarse",
@@ -207,12 +207,12 @@ class DashboardProjectionTest {
             today = today,
         )
 
-        assertEquals(2, state.secondaryChecklistItems.size)
+        assertEquals(2, state.supportItems.size)
 
-        val bathItem = state.secondaryChecklistItems.first { it.title == "Bañarse" }
+        val bathItem = state.supportItems.first { it.title == "Bañarse" }
         assertTrue("Bañarse with log should be completed", bathItem.completed)
 
-        val eatItem = state.secondaryChecklistItems.first { it.title == "Comer" }
+        val eatItem = state.supportItems.first { it.title == "Comer" }
         assertFalse("Comer without log should not be completed", eatItem.completed)
     }
 

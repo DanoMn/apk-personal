@@ -273,7 +273,7 @@ object ScoreEngine {
         contributions += FeatureContribution(
             feature = ScoreFeature.Goal,
             layerId = null,
-            label = "Goals semanales/mensuales",
+            label = "Metas de anclas",
             value = ratio,
             maxValue = 1f,
         )
@@ -348,13 +348,13 @@ object ScoreEngine {
                 kind = ScoreGateKind.GoalMissing,
                 active = goalBonus <= 0,
                 maxScore = MOTION_MAX,
-                message = "Faltan goals semanales o mensuales para estados altos.",
+                message = "Faltan metas de anclas para estados altos.",
             ),
             ScoreGate(
                 kind = ScoreGateKind.GoalPartial,
                 active = goalBonus in 1..74,
                 maxScore = PLENITUDE_MAX,
-                message = "Los goals aun no alcanzan para Inquebrantable.",
+                message = "Las metas de anclas aun no alcanzan para Inquebrantable.",
             ),
         )
     }

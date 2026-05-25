@@ -6,12 +6,15 @@ documentos, este orden manda.
 ## 1. Estado actual
 
 - `estado-actual-mvp.md`: snapshot vigente del producto, alcance y proximas decisiones.
+- `mapa-flujos-estado-actual-2026-05-24.md`: mapa visual de navegacion, datos, dominio y flujos actuales.
 - `frontend-design.md`: reglas visuales actuales. Reemplaza cualquier idea anterior tipo cyberpunk, terminal o neon.
+- `mis-anclas-ux-canon-v1.md`: patron cerrado de UX/UI para Mis anclas, editor de anclas y Configuracion rapida > Anclas.
 - `tono-comunicacion.md`: voz de la app y reglas para mensajes.
 
 ## 2. Dominio y datos
 
 - `nucleo-dominio-autonomia.md`: centro conceptual de la app.
+- `configuracion-canonica-sistema-v1.md`: reglas vigentes de configuracion por superficie, incluyendo anclas.
 - `arquitectura-recomendada-autonomia.md`: decision arquitectonica para backend local, dominio, data y UI.
 - `especificacion-actividades-sobriedad-v1.md`: actividades, tipos, checklist y abstinencias.
 - `definicion-tablas-room-v1.md`: esquema Room v1 y tablas actuales.

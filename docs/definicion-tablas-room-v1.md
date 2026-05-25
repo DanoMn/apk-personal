@@ -1,6 +1,6 @@
 # Definición de tablas Room v1
 
-> **Nota de version**: Este documento fue actualizado para reflejar la migracion v3 → v4 (2026-05-22). La tabla `activities` fue dividida en `activity_definitions` + `user_activity_configs`. El enum `DisplaySurface` fue reemplazado por `ActivitySurface`.
+> **Nota de version**: Actualizado 2026-05-24 — `user_activity_configs` pasa a esquema v5 para anclas: `weeklyFrequencyTarget`, `sessionTargetMinutes` y `commitmentDurationMonths`. `commitmentDurationMonths = null` significa **Indefinido**, no ausencia de configuracion. Fuente canonica: `docs/configuracion-canonica-sistema-v1.md`.
 
 ## Principio de diseño
 
@@ -59,10 +59,10 @@ Catalogo inmutable de actividades. Define QUE se puede hacer, sin estado de usua
 | `layerId` | `String` | Capa a la que pertenece. |
 | `name` | `String` | Nombre visible. |
 | `description` | `String` | Ayuda breve o intencion. |
-| `type` | `String` | `Time`, `Check`, `SelfCare`, `AbstinenceSupport`, `Weekly`, `TimeOfDay`, `Note`. |
-| `role` | `String` | `Practice`, `SelfCare`, `ProjectWork`, `DomesticOrder`, `RelationalHabit`. |
+| `type` | `String` | `Time`, `Check`, `Count`, `Note`, `TimeOfDay`. |
+| `role` | `String` | `Practice`, `SelfCare`, `Boundary`, `DigitalHygiene`, `DomesticOrder`, `RelationalHabit`, `ProjectWork`, `Learning`, `Custom`. |
 | `unit` | `String` | `Minutes`, `Count`, `Boolean`, `Time`, `Text`. |
-| `contributionRole` | `String` | `Core`, `Support`, `Protective`, `Neutral`. |
+| `contributionRole` | `String` | `Core`, `Support`, `Protective`, `Recovery`, `Neutral`. |
 | `importanceTier` | `String` | `Low`, `Medium`, `High`, `Critical`. |
 | `presetCategory` | `String?` | `"anchor"` o `"support"` para presets; `null` para custom. |
 | `sortOrder` | `Int` | Orden de UI. |
@@ -71,43 +71,46 @@ Catalogo inmutable de actividades. Define QUE se puede hacer, sin estado de usua
 
 Indice: `idx_def_layer` sobre `layerId`.
 
-## `user_activity_configs` (NEW — v4)
+## `user_activity_configs` (v5 — actualizado 2026-05-24)
 
 Configuracion de usuario por actividad. Define COMO el usuario usa cada actividad.
+Una fila por actividad configurada. Si una actividad del catalogo no tiene fila
+aqui, no esta configurada y no aparece en el dashboard.
 
 | Campo | Tipo | Nota |
 | --- | --- | --- |
-| `id` | `Long` | Primary key auto-generada. |
-| `activityId` | `String` | FK → `activity_definitions.id`. Unico (una config por actividad). |
-| `activityType` | `String` | `"Anchor"`, `"Support"`, `"Task"` — reemplaza el viejo `DisplaySurface`. |
+| `activityId` | `String` | **Primary key**. FK → `activity_definitions.id`. Una config por actividad. |
+| `activityType` | `String` | `"Anchor"`, `"Support"`, `"Task"`. |
 | `active` | `Boolean` | Actividad activa para el usuario. Default `true`. |
 | `archived` | `Boolean` | Archivada sin borrar historial. Default `false`. |
-| `cadence` | `String?` | `Daily`, `Weekly`, `Monthly`. |
-| `targetValue` | `Int?` | Objetivo base, por ejemplo minutos esperados. |
+| `customName` | `String?` | Nombre personalizado por el usuario. Si es null, se usa el nombre original de la definicion. |
+| `customDescription` | `String?` | Descripcion personalizada por el usuario. |
+| `cadence` | `String?` | Para anclas nuevas siempre `"Weekly"`. `Monthly` queda como compatibilidad legacy. Null para Support y Task. |
+| `targetValue` | `Int?` | Campo legacy/espejo de `sessionTargetMinutes` para scoring actual. Null para Support y Task. |
 | `minimumValue` | `Int?` | Minimo para contar como hecho. |
-| `targetCount` | `Int?` | Veces por periodo (para goals). |
-| `targetPeriod` | `String?` | `Day`, `Week`, `Month`. |
+| `targetCount` | `Int?` | Campo legacy/espejo de `weeklyFrequencyTarget`. Para anclas nuevas: `2..7`. Null para Support y Task. |
+| `targetPeriod` | `String?` | Para anclas nuevas siempre `"Week"`. `"Month"` queda solo como dato legacy. Null para Support y Task. |
+| `weeklyFrequencyTarget` | `Int?` | **Obligatorio para Anchor**: meta semanal, entero `2..7`. Null para Support y Task. |
+| `sessionTargetMinutes` | `Int?` | **Obligatorio para Anchor**: tiempo por sesion, entero `1..900`. Null para Support y Task. |
+| `commitmentDurationMonths` | `Int?` | Duracion del compromiso en meses. `null` representa **Indefinido** y es un valor valido configurado. Aplica a anclas de cualquier capa. |
 | `sortOrder` | `Int` | Orden de UI. |
-| `updatedAt` | `Long` | Timestamp local. |
+| `createdAt` | `Long` | Timestamp de creacion. |
+| `updatedAt` | `Long` | Timestamp de ultima actualizacion. |
 
 Indice unico: `idx_conf_activity` sobre `activityId`.
 FK con `ON DELETE CASCADE`: borrar una definicion borra sus configs.
 
-## `ActivitySurface` enum (NEW — v4)
+## `ActivitySurface` enum (v4 — actualizado 2026-05-23)
 
-Reemplaza el viejo `DisplaySurface` (6 variantes: `Silent`, `Available`, `Compact`, `Contextual`, `PrimaryChecklist`, `SecondaryChecklist`).
+Reemplaza el viejo `DisplaySurface`.
 
-| Valor | Significado | UI canonico |
-| --- | --- | --- |
-| `Anchor` | Actividad principal del dia. Visible en checklist principal. | "Ancla", "Mis anclas" |
-| `Support` | Actividad de cuidado base. Visible en checklist secundaria. | "Cuidado base" |
-| `Task` | Actividad no visible en checklists diarios. Solo en catalogo. | — |
+| Valor | Significado | UI canonico | Targets | UX |
+| --- | --- | --- | --- | --- |
+| `Anchor` | Practica recurrente que construye base personal | "Ancla", "Mis anclas" | **Obligatorios**: `weeklyFrequencyTarget` + `sessionTargetMinutes`; `commitmentDurationMonths` admite `null = Indefinido` | Normal: usuario marca lo que SI hizo |
+| `Support` | Accion de mantenimiento diario que sostiene dignidad | "Soporte", "Soportes" | **Sin targets** | Inversa: usuario marca lo que NO hizo |
+| `Task` | Pendiente puntual, una sola vez, sin recurrencia | "Pendiente", "Pendientes" | **Sin targets** | Una vez: desaparece al completar |
 
-Mapeo de migracion (v3 → v4):
-- `PrimaryChecklist` + `Contextual` → `Anchor`
-- `SecondaryChecklist` → `Support`
-- `Available` + `Compact` → sin config (solo catalogo, `activityType` default `Anchor`)
-- `Silent` → `Anchor` con `archived = true`
+Fuente canonica de reglas: `docs/configuracion-canonica-sistema-v1.md`.
 
 ## Migracion v3 → v4 (MIGRATION_3_4)
 
@@ -119,7 +122,21 @@ Mapeo de migracion (v3 → v4):
 
 `activity_logs.activityId` sigue apuntando a `user_activity_configs.activityId` (mismos valores de ID, sin cambios en logs). |
 
-Regla actual de actividades de tiempo: tap registra `targetValue`; mantener presionado permite registrar minutos reales de hoy.
+## Migracion v4 → v5 (MIGRATION_4_5)
+
+1. ADD COLUMN `weeklyFrequencyTarget INTEGER`.
+2. ADD COLUMN `sessionTargetMinutes INTEGER`.
+3. ADD COLUMN `commitmentDurationMonths INTEGER`.
+4. Copia `targetValue` hacia `sessionTargetMinutes` en configs tipo `Anchor`.
+5. Calcula `weeklyFrequencyTarget` desde datos legacy:
+   - `targetPeriod = "Week"`: `targetCount` normalizado a `2..7`.
+   - `targetPeriod = "Month"`: aproximacion semanal `ceil(targetCount / 4)` normalizada a `2..7`.
+
+La migracion no borra `targetValue`, `targetCount` ni `targetPeriod`; quedan como
+espejos/compatibilidad mientras el scoring actual sigue leyendo esos campos.
+
+Regla actual de actividades de tiempo: tap registra `sessionTargetMinutes`
+como valor por defecto; mantener presionado permite registrar minutos reales de hoy.
 
 ## `activity_logs`
 

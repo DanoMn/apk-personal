@@ -89,6 +89,29 @@ No usar monospace para UI general.
 - Los completados bajan debajo de un separador `Completados`.
 - El check activo usa coral.
 
+### Bottom sheets y configuracion rapida
+
+- Deben contraerse cuando hay poco contenido y crecer solo hasta el maximo
+  disponible cuando el contenido lo necesita.
+- En Compose, usar un patron de alto maximo adaptativo (`heightIn(max = ...)`)
+  en lugar de forzar `fillMaxHeight(...)`.
+- Respetar `navigationBarsPadding()` en acciones inferiores.
+- Evitar ripple u oscurecimiento en contenedores usados solo para consumir
+  toques.
+
+### Mis anclas
+
+El patron canonico de Mis anclas esta en `docs/mis-anclas-ux-canon-v1.md`.
+
+- El editor ordena: identidad/nombre, tiempo objetivo, meta semanal, duracion
+  del compromiso y acciones.
+- El selector de tiempo debe estar arriba para reducir friccion entre scroll de
+  pantalla y wheel.
+- En actividad personalizada, la capa queda fija encima de los botones de
+  accion.
+- La recomendacion de `Indefinido` vive dentro del dialogo de configurar
+  duracion.
+
 ## Iconografia
 
 La iconografia ya no es generica. Es parte del lenguaje del producto.

@@ -66,6 +66,9 @@ Definido a nivel suficiente para MVP:
 - sobriedad/abstinencias son feature propia;
 - el estado del dia debe ser calculado;
 - Room guarda hechos y el dominio calcula senales.
+- las anclas nuevas requieren meta semanal (`2..7`) y tiempo por sesion (`1..900`);
+- la duracion del compromiso admite `Indefinido` (`commitmentDurationMonths = null`) y no es frecuencia mensual.
+- la UX cerrada de Mis anclas esta canonizada en `docs/mis-anclas-ux-canon-v1.md`.
 
 ## Lo que sigue abierto
 

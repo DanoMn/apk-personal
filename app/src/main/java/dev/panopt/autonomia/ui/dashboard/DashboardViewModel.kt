@@ -18,6 +18,8 @@ import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
+import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.weekStartKey
@@ -153,7 +155,7 @@ internal class DashboardViewModel(
 
     fun deleteActivity(activityId: String) {
         viewModelScope.launch {
-            repository.deleteUserActivityConfig(activityId)
+            repository.deleteCustomActivity(activityId)
         }
     }
 
@@ -207,12 +209,10 @@ internal class DashboardViewModel(
     fun createActivity(
         name: String,
         layerId: String,
-        targetMinutes: Int,
+        sessionTargetMinutes: Int,
         isSecondary: Boolean,
-        isGoal: Boolean,
-        isMonthlyGoal: Boolean,
-        targetCount: Int? = null,
-        targetPeriod: TargetPeriod? = null,
+        weeklyFrequencyTarget: Int? = null,
+        commitmentDurationMonths: Int? = null,
     ) {
         viewModelScope.launch {
             val trimmedName = name.trim()
@@ -221,16 +221,15 @@ internal class DashboardViewModel(
             val activityId = "act_custom_${UUID.randomUUID()}"
             val activityType = if (isSecondary) ActivitySurface.Support else ActivitySurface.Anchor
             val isProject = layerId == "layer_proyecto"
-            val resolvedTargetPeriod = targetPeriod ?: when {
-                !isGoal -> TargetPeriod.Day
-                isMonthlyGoal -> TargetPeriod.Month
-                else -> TargetPeriod.Week
+            val normalizedSessionTarget = if (isSecondary) {
+                null
+            } else {
+                normalizeAnchorSessionTargetMinutes(sessionTargetMinutes)
             }
-            val resolvedTargetCount = targetCount ?: if (isGoal) 1 else null
-            val resolvedCadence = when (resolvedTargetPeriod) {
-                TargetPeriod.Day -> ActivityCadence.Daily
-                TargetPeriod.Week -> ActivityCadence.Weekly
-                TargetPeriod.Month -> ActivityCadence.Monthly
+            val normalizedWeeklyTarget = if (isSecondary) {
+                null
+            } else {
+                normalizeAnchorWeeklyFrequencyTarget(weeklyFrequencyTarget)
             }
             // Insert definition
             repository.upsertActivityDefinition(
@@ -239,12 +238,12 @@ internal class DashboardViewModel(
                     layerId = layerId,
                     name = trimmedName,
                     description = "",
-                    type = ActivityType.Time.name,
+                    type = if (isSecondary) ActivityType.Check.name else ActivityType.Time.name,
                     role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
-                    unit = ActivityUnit.Minutes.name,
-                    contributionRole = ContributionRole.Core.name,
+                    unit = if (isSecondary) ActivityUnit.Boolean.name else ActivityUnit.Minutes.name,
+                    contributionRole = if (isSecondary) ContributionRole.Support.name else ContributionRole.Core.name,
                     importanceTier = ImportanceTier.Medium.name,
-                    presetCategory = null,
+                    presetCategory = if (isSecondary) "support" else "anchor",
                     sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                     createdAt = now,
                     updatedAt = now,
@@ -255,11 +254,14 @@ internal class DashboardViewModel(
                 UserActivityConfigEntity(
                     activityId = activityId,
                     activityType = activityType.name,
-                    cadence = resolvedCadence.name,
-                    targetValue = targetMinutes.coerceAtLeast(1),
-                    minimumValue = 1,
-                    targetCount = resolvedTargetCount,
-                    targetPeriod = resolvedTargetPeriod.name,
+                    cadence = if (isSecondary) null else ActivityCadence.Weekly.name,
+                    targetValue = normalizedSessionTarget,
+                    minimumValue = if (isSecondary) null else 1,
+                    targetCount = normalizedWeeklyTarget,
+                    targetPeriod = if (isSecondary) null else TargetPeriod.Week.name,
+                    weeklyFrequencyTarget = normalizedWeeklyTarget,
+                    sessionTargetMinutes = normalizedSessionTarget,
+                    commitmentDurationMonths = if (isSecondary) null else commitmentDurationMonths,
                     sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                     createdAt = now,
                     updatedAt = now,
@@ -282,16 +284,16 @@ internal class DashboardViewModel(
 
     fun addActivityAsAnchor(
         activityId: String,
-        targetValue: Int?,
-        targetCount: Int?,
-        targetPeriod: TargetPeriod?,
+        sessionTargetMinutes: Int,
+        weeklyFrequencyTarget: Int,
+        commitmentDurationMonths: Int?,
     ) {
         viewModelScope.launch {
             repository.addActivityAsAnchor(
                 activityId = activityId,
-                targetValue = targetValue,
-                targetCount = targetCount,
-                targetPeriod = targetPeriod,
+                sessionTargetMinutes = sessionTargetMinutes,
+                weeklyFrequencyTarget = weeklyFrequencyTarget,
+                commitmentDurationMonths = commitmentDurationMonths,
             )
         }
     }
@@ -317,6 +319,20 @@ internal class DashboardViewModel(
                 completed = !currentlyCompleted,
                 date = dateKey,
             )
+        }
+    }
+
+    fun resetSupportOmissions() {
+        viewModelScope.launch {
+            activities.value
+                .filter { it.activityType == ActivitySurface.Support }
+                .forEach { activity ->
+                    repository.setActivityCompleted(
+                        activity = activity,
+                        completed = false,
+                        date = dateKey,
+                    )
+                }
         }
     }
 

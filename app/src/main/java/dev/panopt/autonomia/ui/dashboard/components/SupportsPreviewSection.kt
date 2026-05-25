@@ -3,8 +3,12 @@ package dev.panopt.autonomia.ui.dashboard.components
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -21,8 +25,9 @@ import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
 
 /**
- * Renders individual support items as checkboxes with inverted semantics.
+ * Renders individual support items with inverted semantics.
  * Checked means "did NOT do it today" — awareness signal, not completion.
+ * Visually smaller than anchors to reflect lower weight in scoring.
  */
 @Composable
 internal fun SupportsPreviewSection(
@@ -30,31 +35,38 @@ internal fun SupportsPreviewSection(
     items: List<DashboardCheckItemState>,
     onToggle: (String) -> Unit,
     onOpenConfig: () -> Unit,
+    onResetAll: () -> Unit = {},
 ) {
-    // Count "completed (done)" = unchecked items (positive, did it today)
     val doneCount = items.count { !it.completed }
     val total = items.size
+    val hasOmissions = items.any { it.completed }
 
     SectionHeader(
         palette = palette,
         title = "Soportes",
-        note = if (items.isEmpty()) "Sin soportes" else "$doneCount/$total pendientes",
+        note = if (items.isEmpty()) "Sin soportes" else "$doneCount/$total",
+        titleColor = palette.textMuted,
+        titleSize = 17f,
     )
 
     if (items.isEmpty()) {
         Text(
             text = "Sin soportes configurados",
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(palette.bgSurface)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(palette.bgSurface).padding(16.dp),
             color = palette.textMuted,
             fontFamily = DashboardSans,
             fontSize = 14.sp,
         )
         return
     }
+
+    Text(
+        text = "Todo cumplido por defecto. Desmarcá solo lo que no hiciste hoy.",
+        color = palette.textMuted.copy(alpha = 0.6f),
+        fontFamily = DashboardSans,
+        fontSize = 11.sp,
+        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+    )
 
     Column(
         modifier = Modifier
@@ -76,16 +88,29 @@ internal fun SupportsPreviewSection(
             }
         }
 
-        // Navigate to full config
-        Text(
-            text = "editar soportes",
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 12.dp, top = 7.2.dp, bottom = 2.88.dp),
-            color = palette.colorCoral,
-            fontFamily = DashboardSans,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.16.sp,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 2.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "editar soportes",
+                color = palette.colorCoral,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.16.sp,
+                modifier = Modifier.clickable { onOpenConfig() },
+            )
+            if (hasOmissions) {
+                Text(
+                    text = "Restablecer todo",
+                    color = palette.textMuted,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    modifier = Modifier.clickable { onResetAll() },
+                )
+            }
+        }
     }
 }

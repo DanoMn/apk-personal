@@ -8,7 +8,7 @@ import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.TargetPeriod
 
 fun ActivityDefinition.isAnchor(): Boolean =
-    activityType == ActivitySurface.Anchor && !isGoal()
+    activityType == ActivitySurface.Anchor
 
 fun ActivityDefinition.isSupport(): Boolean =
     activityType == ActivitySurface.Support && !isGoal()
@@ -23,7 +23,7 @@ fun ActivityDefinition.defaultActualValue(): Int? =
     when (unit) {
         ActivityUnit.Minutes,
         ActivityUnit.Count,
-        ActivityUnit.Time -> targetValue ?: minimumValue
+        ActivityUnit.Time -> sessionTargetMinutes ?: targetValue ?: minimumValue
         ActivityUnit.Boolean,
         ActivityUnit.Text -> targetValue
     }
@@ -31,18 +31,18 @@ fun ActivityDefinition.defaultActualValue(): Int? =
 fun ActivityDefinition.progressFor(log: ActivityLog?): Float {
     if (log == null) return 0f
     if (log.completed && unit == ActivityUnit.Boolean) return 1f
-    val target = targetValue ?: minimumValue ?: if (unit == ActivityUnit.Boolean) 1 else 0
+    val target = sessionTargetMinutes ?: targetValue ?: minimumValue ?: if (unit == ActivityUnit.Boolean) 1 else 0
     if (target <= 0) return if (log.completed) 1f else 0f
     val actual = log.actualValue ?: if (log.completed) target else 0
     return (actual.toFloat() / target.toFloat()).coerceIn(0f, 1f)
 }
 
 fun ActivityDefinition.goalProgress(logs: List<ActivityLog>): Float {
-    val expectedCount = targetCount ?: 1
+    val expectedCount = weeklyFrequencyTarget ?: targetCount ?: 1
     val target = when (unit) {
         ActivityUnit.Minutes,
         ActivityUnit.Count,
-        ActivityUnit.Time -> (targetValue ?: minimumValue ?: 1) * expectedCount
+        ActivityUnit.Time -> (sessionTargetMinutes ?: targetValue ?: minimumValue ?: 1) * expectedCount
         ActivityUnit.Boolean,
         ActivityUnit.Text -> expectedCount
     }.coerceAtLeast(1)
@@ -51,7 +51,7 @@ fun ActivityDefinition.goalProgress(logs: List<ActivityLog>): Float {
             when (unit) {
                 ActivityUnit.Minutes,
                 ActivityUnit.Count,
-                ActivityUnit.Time -> targetValue ?: minimumValue ?: 1
+                ActivityUnit.Time -> sessionTargetMinutes ?: targetValue ?: minimumValue ?: 1
                 ActivityUnit.Boolean,
                 ActivityUnit.Text -> 1
             }
@@ -73,4 +73,3 @@ fun ImportanceTier.importanceWeight(): Float =
         ImportanceTier.High -> 1.20f
         ImportanceTier.Critical -> 1.35f
     }
-

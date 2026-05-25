@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AnchorPhraseDailySlotEntity::class,
         SleepLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
@@ -41,7 +41,7 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     AutonomiaDatabase::class.java,
                     "autonomia_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance
@@ -172,6 +172,34 @@ abstract class AutonomiaDatabase : RoomDatabase() {
 
                 // 5. Drop old activities table
                 db.execSQL("DROP TABLE IF EXISTS activities")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE user_activity_configs ADD COLUMN weeklyFrequencyTarget INTEGER")
+                db.execSQL("ALTER TABLE user_activity_configs ADD COLUMN sessionTargetMinutes INTEGER")
+                db.execSQL("ALTER TABLE user_activity_configs ADD COLUMN commitmentDurationMonths INTEGER")
+                db.execSQL(
+                    """
+                    UPDATE user_activity_configs
+                    SET sessionTargetMinutes = targetValue
+                    WHERE activityType = 'Anchor' AND targetValue IS NOT NULL
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    UPDATE user_activity_configs
+                    SET weeklyFrequencyTarget = CASE
+                        WHEN targetPeriod = 'Week' AND targetCount IS NOT NULL THEN
+                            MIN(MAX(targetCount, 2), 7)
+                        WHEN targetPeriod = 'Month' AND targetCount IS NOT NULL THEN
+                            MIN(MAX(((targetCount + 3) / 4), 2), 7)
+                        ELSE NULL
+                    END
+                    WHERE activityType = 'Anchor'
+                    """.trimIndent(),
+                )
             }
         }
     }

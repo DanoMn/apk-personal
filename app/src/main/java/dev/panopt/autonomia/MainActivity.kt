@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
                     onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
                     onNavigateToAnchorConfig = { currentScreen = AppScreen.AnchorConfig },
                     onToggleSupport = dashboardViewModel::onToggleSupport,
+                    onResetSupportOmissions = dashboardViewModel::resetSupportOmissions,
                     onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
                 )
                 AppScreen.AnchorConfig -> AnchorConfigScreen(
@@ -69,10 +70,22 @@ class MainActivity : ComponentActivity() {
                 )
                 AppScreen.Supports -> SupportsConfigScreen(
                     layers = dashboardState.layers,
-                    activityOptions = dashboardState.activityOptions,
+                    supportItems = dashboardState.supportItems,
+                    supportOptions = dashboardState.activityOptions.filter {
+                        !it.isConfigured && it.activityType == ActivitySurface.Support.name
+                    },
                     palette = palette,
-                    onAddToSupports = dashboardViewModel::addToSupports,
-                    onRemoveFromSupports = dashboardViewModel::removeFromSupports,
+                    onAddSupport = dashboardViewModel::addToSupports,
+                    onCreateSupport = { name, layerId ->
+                        dashboardViewModel.createActivity(
+                            name = name,
+                            layerId = layerId,
+                            sessionTargetMinutes = 0,
+                            isSecondary = true,
+                        )
+                    },
+                    onRemoveSupport = dashboardViewModel::removeFromSupports,
+                    onDeleteActivity = dashboardViewModel::deleteActivity,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
                 AppScreen.Tasks -> TasksScreen(
