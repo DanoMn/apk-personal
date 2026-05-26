@@ -4,6 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +31,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,18 +68,19 @@ import dev.panopt.autonomia.ui.dashboard.components.CheckItem
 import dev.panopt.autonomia.ui.dashboard.components.AnchorConfigPanel
 import dev.panopt.autonomia.ui.supports.SupportsConfigPanel
 
-internal enum class DashboardSheet {
-    EntryMenu,
-    Anchor,
-    Support,
-    Sleep,
-    Tasks,
-    Activities,
-    AnchorConfig,
-    SupportsConfig,
-    Relapse,
+internal sealed interface DashboardSheet {
+    data object EntryMenu : DashboardSheet
+    data object Anchor : DashboardSheet
+    data object Support : DashboardSheet
+    data object Sleep : DashboardSheet
+    data object Tasks : DashboardSheet
+    data object Activities : DashboardSheet
+    data object AnchorConfig : DashboardSheet
+    data object SupportsConfig : DashboardSheet
+    data object Relapse : DashboardSheet
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashboardSheetHost(
     sheet: DashboardSheet,
@@ -96,51 +105,24 @@ internal fun DashboardSheetHost(
 ) {
     BackHandler {
         if (sheet == DashboardSheet.AnchorConfig) {
-            onSwitchSheet(DashboardSheet.EntryMenu)
+            onDismiss() // Now simply dismisses, EntryMenu is gone from sheets
         } else {
             onDismiss()
         }
     }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.48f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                role = Role.Button,
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        val maxSheetHeight = maxHeight * 0.94f
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = maxSheetHeight)
-                .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-                .background(palette.drawer)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {},
-                )
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
-                .padding(top = 14.dp, bottom = 18.dp),
-        ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = palette.drawer,
+        scrimColor = Color.Black.copy(alpha = 0.48f),
+        dragHandle = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 14.dp)
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount > 20f) {
-                                onDismiss()
-                            }
-                        }
-                    },
+                    .padding(top = 14.dp, bottom = 14.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -150,7 +132,35 @@ internal fun DashboardSheetHost(
                         .background(Color.White.copy(alpha = 0.16f))
                 )
             }
+        },
+        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+    ) {
+        val blockNestedScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource
+                ): Offset {
+                    return available.copy(x = 0f)
+                }
+                override suspend fun onPostFling(
+                    consumed: Velocity,
+                    available: Velocity
+                ): Velocity {
+                    return available.copy(x = 0f)
+                }
+            }
+        }
 
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .nestedScroll(blockNestedScrollConnection)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 18.dp),
+        ) {
             when (sheet) {
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
                     palette = palette,
@@ -159,6 +169,7 @@ internal fun DashboardSheetHost(
                     onOpenTasks = { onSwitchSheet(DashboardSheet.Tasks) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
                     onOpenRelapse = { onSwitchSheet(DashboardSheet.Relapse) },
+                    onDismiss = onDismiss,
                 )
                 DashboardSheet.Anchor -> AnchorPanel(
                     title = "Registrar ancla",
@@ -286,14 +297,18 @@ private fun EntryMenuPanel(
     onOpenTasks: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenRelapse: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    SheetTitle(title = "Configuración rápida", note = "hechos y registro", palette = palette)
-
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
+        SheetTitle(title = "Configuración rápida", note = "hechos y registro", palette = palette)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -350,6 +365,7 @@ private fun EntryMenuPanel(
             Spacer(modifier = Modifier.weight(1f))
         }
     }
+}
 }
 
 @Composable
@@ -1006,59 +1022,3 @@ private fun SheetMiniButton(
     }
 }
 
-// -- Supports config panel (bottom sheet) --
-
-@Composable
-private fun SupportsConfigPanel(
-    activityOptions: List<DashboardActivityOptionState>,
-    palette: DashboardPalette,
-) {
-    val currentSupports = activityOptions.filter { it.activityType == "Support" }
-
-    SheetTitle(title = "Soportes", note = "${currentSupports.size} activos", palette = palette)
-
-    Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (currentSupports.isEmpty()) {
-            Text(
-                text = "Sin soportes configurados.\nUsa la pantalla de configuración para agregar.",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
-        } else {
-            currentSupports.forEach { support ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(palette.bgSurface)
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = support.title,
-                            color = palette.textMain,
-                            fontFamily = DashboardSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.5.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = support.layerName,
-                            color = palette.textMuted,
-                            fontFamily = DashboardSans,
-                            fontSize = 12.sp,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}

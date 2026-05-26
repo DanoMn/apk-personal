@@ -1,8 +1,11 @@
 # Auditoría del Dashboard — 2026-05-23
 
-Estado: diagnóstico técnico. No contiene soluciones todavía.
-Canónico: SÍ. Este es el documento oficial de referencia para los problemas
-detectados en el dashboard.
+Estado: diagnóstico técnico histórico. No contiene el cierre de soluciones.
+Canónico para entender los problemas detectados en esa fecha; no reemplaza los
+documentos vigentes posteriores.
+
+Para el cierre de UX de Mis anclas y Configuración rápida > Anclas, usar
+`docs/mis-anclas-ux-canon-v1.md`.
 
 ## Problemas detectados
 

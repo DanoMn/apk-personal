@@ -8,9 +8,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,18 +39,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
+import dev.panopt.autonomia.ui.dashboard.mix
 
 /**
- * Renders the support checklist with inverted semantics.
- * Collapsed by default — expands to show daily check items.
- * Smaller visual weight than AnchorPreviewSection.
+ * Renders the support checklist with inverted semantics (chips layout).
+ * All items are checked by default, user unchecks what they omitted.
+ * Collapsible layout.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SupportsPreviewSection(
     palette: DashboardPalette,
@@ -60,6 +65,7 @@ internal fun SupportsPreviewSection(
     val doneCount = items.count { !it.completed }
     val total = items.size
     val hasOmissions = items.any { it.completed }
+    
     var isExpanded by remember { mutableStateOf(false) }
     var saveConfirmed by remember { mutableStateOf(false) }
 
@@ -73,125 +79,149 @@ internal fun SupportsPreviewSection(
 
     if (items.isEmpty()) return
 
-    // ── Collapsed header row (always visible) ──
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(palette.bgSurface.copy(alpha = 0.55f))
-            .clickable(role = Role.Button) { isExpanded = !isExpanded }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (isExpanded) "\u25be" else "\u25b8",
-                color = palette.textMuted,
-                fontSize = 15.sp,
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(
-                text = "Soportes",
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
-            )
-        }
-        Text(
-            text = "$doneCount/$total hoy",
-            color = palette.textMuted.copy(alpha = 0.7f),
-            fontFamily = DashboardSans,
-            fontSize = 13.sp,
-        )
-    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // 1. Separacion explicita de las anclas (reducida para mejor ritmo visual)
+        Spacer(modifier = Modifier.height(12.dp))
 
-    // ── Expanded content ──
-    AnimatedVisibility(
-        visible = isExpanded,
-        enter = expandVertically(animationSpec = tween(200)),
-        exit = shrinkVertically(animationSpec = tween(200)),
-    ) {
-        Column(
+        // 2. Boton masivo y notorio para desplegar
+        val buttonBgColor = if (isExpanded) palette.bgSurface2 else mix(palette.colorCardboard, 0.12f, palette.bgSurface)
+        val accentColor = if (isExpanded) palette.textMuted else palette.colorCardboard
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 6.dp),
+                .height(56.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(buttonBgColor)
+                .clickable(role = Role.Button) { isExpanded = !isExpanded }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            // Indicator text: inverted semantics explanation
-            Text(
-                text = "Todo cumplido por defecto. Desmarc\u00e1 solo lo que no hiciste hoy.",
-                color = palette.textMuted.copy(alpha = 0.6f),
-                fontFamily = DashboardSans,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Flecha notoria
+                    Text(
+                        text = if (isExpanded) "\u25bc" else "\u25ba",
+                        color = accentColor,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    // Titulo fuerte
+                    Text(
+                        text = "Soportes Diarios",
+                        color = palette.textMain,
+                        fontFamily = DashboardSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                // Conteo rapido
+                Text(
+                    text = "$doneCount / $total",
+                    color = accentColor,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+        }
 
-            // Checklist container
+        // Expanded Content
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(animationSpec = tween(200)),
+            exit = shrinkVertically(animationSpec = tween(200)),
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(animationSpec = tween(220))
+                    .padding(top = 10.dp) // Separacion del boton masivo
                     .clip(RoundedCornerShape(20.dp))
-                    .background(palette.bgSurface.copy(alpha = 0.55f))
-                    .padding(5.6.dp),
+                    .background(palette.bgSurface.copy(alpha = 0.85f))
+                    .padding(16.dp),
             ) {
-                items.forEach { item ->
-                    key(item.id) {
-                        CheckItemSmall(
-                            palette = palette,
-                            item = item,
-                            checked = item.completed,
-                            onToggle = { onToggle(item.id) },
-                        )
+                // Indicator text
+                Text(
+                    text = "Todo cumplido por defecto. Desmarc\u00e1 solo lo que no hiciste hoy.",
+                    color = palette.textMuted.copy(alpha = 0.8f),
+                    fontFamily = DashboardSans,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 14.dp),
+                )
+
+                // Chips flow
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items.forEach { item ->
+                        key(item.id) {
+                            SupportChip(
+                                palette = palette,
+                                item = item,
+                                checked = !item.completed, // inverted: true if DONE (not omitted)
+                                onToggle = { onToggle(item.id) },
+                            )
+                        }
                     }
                 }
 
-                // Bottom action row
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Action buttons
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // "editar soportes" link
-                    Text(
-                        text = "editar soportes",
-                        color = palette.colorCoral,
-                        fontFamily = DashboardSans,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 12.sp,
-                        modifier = Modifier.clickable { onOpenConfig() },
-                    )
-                    // Action buttons row
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Desmarcar todo
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, palette.textFaint, RoundedCornerShape(12.dp))
+                            .clickable(role = Role.Button, onClick = onToggleAll),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        // Toggle all button
                         Text(
-                            text = if (hasOmissions) "Desmarcar todo" else "Marcar todo",
+                            text = if (hasOmissions) "Restaurar todo" else "Desmarcar todo",
                             color = palette.textMuted,
                             fontFamily = DashboardSans,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            modifier = Modifier.clickable { onToggleAll() },
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.5.sp,
                         )
-                        // Save button
-                        if (hasOmissions || saveConfirmed) {
-                            Text(
-                                text = if (saveConfirmed) "Guardado ✓" else "Guardar",
-                                color = if (saveConfirmed) palette.bgSurface2 else palette.colorCoral,
-                                fontFamily = DashboardSans,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp,
-                                modifier = Modifier.clickable {
-                                    onSaveChecklist()
-                                    saveConfirmed = true
-                                },
-                            )
-                        }
+                    }
+                    // Guardar
+                    val isSaved = saveConfirmed
+                    val saveBgColor = if (isSaved) mix(palette.colorCoral, 0.15f, palette.bgSurface2) else palette.colorCoral
+                    val saveTextColor = if (isSaved) palette.textFaint else palette.bgBase
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(saveBgColor)
+                            .clickable(role = Role.Button, enabled = !isSaved) {
+                                onSaveChecklist()
+                                saveConfirmed = true
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (isSaved) "Guardado \u2713" else "Guardar Registro",
+                            color = saveTextColor,
+                            fontFamily = DashboardSans,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp,
+                        )
                     }
                 }
             }
@@ -199,63 +229,67 @@ internal fun SupportsPreviewSection(
     }
 }
 
-/**
- * Smaller variant of CheckItem for Support items.
- * Reduced height, muted colors, amber checkbox (not coral).
- */
 @Composable
-private fun CheckItemSmall(
+private fun SupportChip(
     palette: DashboardPalette,
     item: DashboardCheckItemState,
     checked: Boolean,
     onToggle: () -> Unit,
 ) {
-    val rowAlpha by animateFloatAsState(
-        targetValue = if (checked) 0.55f else 1f,
-        animationSpec = tween(180),
-        label = "checkItemSmallAlpha",
+    val alphaAnim by animateFloatAsState(
+        targetValue = if (checked) 1f else 0.45f,
+        animationSpec = tween(200),
+        label = "chipAlpha"
     )
-    val titleColor by animateColorAsState(
-        targetValue = if (checked) palette.textMuted else palette.textMain,
-        animationSpec = tween(180),
-        label = "checkItemSmallColor",
+    val bgColor by animateColorAsState(
+        targetValue = if (checked) mix(palette.colorCardboard, 0.15f, palette.bgSurface) else palette.bgSurface2,
+        animationSpec = tween(200),
+        label = "chipBg"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (checked) palette.colorCardboard else palette.textMuted,
+        animationSpec = tween(200),
+        label = "chipText"
     )
 
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .alpha(rowAlpha)
-            .clip(RoundedCornerShape(12.dp))
+            .alpha(alphaAnim)
+            .clip(RoundedCornerShape(16.dp))
+            .background(bgColor)
             .toggleable(
                 value = checked,
                 role = Role.Checkbox,
                 onValueChange = { onToggle() },
             )
-            .padding(10.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // Smaller checkbox, amber color for inverted
-        CheckBoxMark(
-            palette = palette,
-            checked = checked,
-            isInverted = true,
-            modifier = Modifier.size(20.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title,
-                color = titleColor,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.Medium,
-                fontSize = 13.5.sp,
-                lineHeight = 16.sp,
-                textDecoration = if (checked) TextDecoration.LineThrough
-                    else TextDecoration.None,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        // Simple dot or checkmark
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(if (checked) palette.colorCardboard else palette.textFaint),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (checked) {
+                Text(
+                    text = "\u2713", // Checkmark
+                    color = palette.bgBase,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
+        Text(
+            text = item.title,
+            color = textColor,
+            fontFamily = DashboardSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            textDecoration = if (checked) TextDecoration.None else TextDecoration.LineThrough,
+        )
     }
 }

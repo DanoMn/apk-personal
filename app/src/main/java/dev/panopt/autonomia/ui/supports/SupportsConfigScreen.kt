@@ -257,14 +257,14 @@ internal fun SupportsConfigScreen(
                 } else {
                     supportItems.forEach { item ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(palette.bgSurface).padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(palette.bgSurface).padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             LayerStamp(
                                 layerId = item.layerId,
                                 color = layerColor(item.layerId, palette),
-                                size = 22,
+                                size = 24,
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.title, color = palette.textMain, fontFamily = DashboardSans, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
@@ -273,7 +273,7 @@ internal fun SupportsConfigScreen(
                             if (isCustomActivityId(item.id)) {
                                 Box(
                                     modifier = Modifier
-                                        .size(32.dp)
+                                        .size(36.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(mix(palette.risk, 0.16f, palette.bgSurface))
                                         .clickable(
@@ -291,7 +291,7 @@ internal fun SupportsConfigScreen(
                                     )
                                 }
                             }
-                            Box(modifier = Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(mix(palette.risk, 0.16f, palette.bgSurface)).clickable(role = Role.Button, onClick = { onRemoveSupport(item.id) }).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(mix(palette.risk, 0.16f, palette.bgSurface)).clickable(role = Role.Button, onClick = { onRemoveSupport(item.id) }).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                                 Text("Quitar", color = palette.risk, fontFamily = DashboardSans, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
@@ -309,20 +309,20 @@ internal fun SupportsConfigScreen(
                 } else {
                     filteredOptions.forEach { option ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(palette.bgSurface).padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(palette.bgSurface).padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             LayerStamp(
                                 layerId = option.layerId,
                                 color = layerColor(option.layerId, palette),
-                                size = 22,
+                                size = 24,
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(option.title, color = palette.textMain, fontFamily = DashboardSans, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
                                 Text(option.layerName, color = palette.textMuted, fontFamily = DashboardSans, fontSize = 12.sp)
                             }
-                            Box(modifier = Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(palette.colorCardboard).clickable(role = Role.Button, onClick = { onAddSupport(option.id) }).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(palette.colorCardboard).clickable(role = Role.Button, onClick = { onAddSupport(option.id) }).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                                 Text("Agregar", color = palette.bgBase, fontFamily = DashboardSans, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }

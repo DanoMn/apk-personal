@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -66,8 +67,7 @@ internal fun SupportsConfigPanel(
     val recoverableItems = currentSupports.filter { it.id in removedIds }
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.6f),
     ) {
         // Header
         Row(
@@ -91,6 +91,12 @@ internal fun SupportsConfigPanel(
             )
         }
 
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
         // Section: "Mis soportes"
         if (mySupports.isEmpty()) {
             Text(
@@ -218,6 +224,7 @@ internal fun SupportsConfigPanel(
                 }
             }
         }
+        } // Inner Column ends here
 
         // "Ver catálogo completo" button
         Spacer(modifier = Modifier.height(12.dp))
@@ -225,14 +232,14 @@ internal fun SupportsConfigPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(palette.bgSurface)
+                .clip(RoundedCornerShape(14.dp))
+                .background(palette.colorCardboard)
                 .clickable(role = Role.Button, onClick = onOpenFullConfig),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = "Ver catálogo completo",
-                color = palette.textMain,
+                color = palette.bgBase,
                 fontFamily = DashboardSans,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,

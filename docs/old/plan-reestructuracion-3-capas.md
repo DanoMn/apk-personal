@@ -4,6 +4,11 @@ Fecha: 2026-05-23
 Basado en: `docs/analisis-codigo-pre-reestructuracion.md` (10 hallazgos)
 Fuentes canónicas: `docs/configuracion-canonica-sistema-v1.md`, `docs/actividades-ancla-predeterminadas-v1.md`
 
+> Estado 2026-05-25: plan historico ya ejecutado en gran parte. No usar como
+> contrato vigente de UX de Mis anclas. Para la experiencia actual de anclas,
+> editar/anclar/configuracion rapida y sheet adaptativo, usar
+> `docs/mis-anclas-ux-canon-v1.md`.
+
 ---
 
 ## ⚠️ LECTURA OBLIGATORIA PARA EL AGENTE

@@ -7,6 +7,10 @@ Fecha: 2026-05-23
 Propósito: auditoría completa del código antes de planificar la reestructuración.
 Fuentes: análisis de 12 archivos del sistema.
 
+> Estado 2026-05-25: documento historico de diagnostico. Conserva valor para
+> entender bugs anteriores, pero no describe el estado vigente de Mis anclas.
+> Para el contrato actual usar `docs/mis-anclas-ux-canon-v1.md`.
+
 ---
 
 ## 1. AnchorConfigScreen.kt

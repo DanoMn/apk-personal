@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -45,12 +47,14 @@ import dev.panopt.autonomia.ui.dashboard.Icon
 import dev.panopt.autonomia.ui.dashboard.color
 import dev.panopt.autonomia.ui.dashboard.iconKind
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun CheckItem(
     palette: DashboardPalette,
     item: DashboardCheckItemState,
     checked: Boolean,
     onToggle: () -> Unit,
+    onLongToggle: () -> Unit = {},
     isInverted: Boolean = false,
 ) {
     val iconKind = item.iconKind()
@@ -73,10 +77,10 @@ internal fun CheckItem(
             .alpha(rowAlpha)
             .animateContentSize(animationSpec = tween(durationMillis = 180))
             .clip(RoundedCornerShape(14.dp))
-            .toggleable(
-                value = checked,
+            .combinedClickable(
                 role = Role.Checkbox,
-                onValueChange = { onToggle() },
+                onLongClick = { onLongToggle() },
+                onClick = { onToggle() },
             )
             .padding(11.52.dp),
         verticalAlignment = Alignment.CenterVertically,

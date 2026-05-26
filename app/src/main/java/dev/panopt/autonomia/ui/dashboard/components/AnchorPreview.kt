@@ -23,6 +23,7 @@ internal fun AnchorPreviewSection(
     palette: DashboardPalette,
     items: List<DashboardCheckItemState>,
     onToggle: (String, Boolean) -> Unit,
+    onOpenActivityInput: (String) -> Unit = {},
 ) {
     val pendingItems = items.filterNot { it.completed }
     val completedItems = items.filter { it.completed }
@@ -63,6 +64,7 @@ internal fun AnchorPreviewSection(
                     item = item,
                     checked = false,
                     onToggle = { onToggle(item.id, true) },
+                    onLongToggle = { onOpenActivityInput(item.id) },
                 )
             }
         }
@@ -76,6 +78,7 @@ internal fun AnchorPreviewSection(
                     item = item,
                     checked = true,
                     onToggle = { onToggle(item.id, false) },
+                    onLongToggle = { onOpenActivityInput(item.id) },
                 )
             }
         }

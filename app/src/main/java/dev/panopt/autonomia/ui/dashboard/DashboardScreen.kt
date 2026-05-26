@@ -1,6 +1,7 @@
 package dev.panopt.autonomia.ui.dashboard
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -21,16 +23,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.ui.dashboard.components.ActionButtons
+import dev.panopt.autonomia.ui.dashboard.components.ActivityValueInputDialog
 import dev.panopt.autonomia.ui.dashboard.components.AnchorPhraseCard
 import dev.panopt.autonomia.ui.dashboard.components.AnchorPreviewSection
 import dev.panopt.autonomia.ui.dashboard.components.DailyProgressCard
@@ -73,6 +78,7 @@ internal fun DashboardScreen(
     val palette = dashboardPalette(isDarkMode)
     var isDrawerOpen by remember { mutableStateOf(false) }
     var activeSheet by remember { mutableStateOf<DashboardSheet?>(null) }
+    var activityInputId by remember { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = isDrawerOpen) {
         isDrawerOpen = false
@@ -122,6 +128,7 @@ internal fun DashboardScreen(
                 palette = palette,
                 items = state.anchorItems,
                 onToggle = onToggleActivity,
+                onOpenActivityInput = { activityInputId = it },
             )
             SupportsPreviewSection(
                 palette = palette,
@@ -199,6 +206,23 @@ internal fun DashboardScreen(
                     onNavigateToSupportsConfig()
                 },
             )
+        }
+
+        activityInputId?.let { id ->
+            val activity = state.activityOptions.find { it.id == id }
+            if (activity != null) {
+                ActivityValueInputDialog(
+                    activity = activity,
+                    palette = palette,
+                    onDismiss = { activityInputId = null },
+                    onSave = { value ->
+                        onSaveActivityValue(id, value)
+                        activityInputId = null
+                    }
+                )
+            } else {
+                activityInputId = null
+            }
         }
     }
 }

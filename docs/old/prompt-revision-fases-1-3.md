@@ -1,5 +1,9 @@
 # Prompt de revisión — Reestructuración Fases 1-3
 
+> Estado 2026-05-25: prompt historico de revision. No usar como contrato
+> vigente de Mis anclas. Para el patron actual usar
+> `docs/mis-anclas-ux-canon-v1.md`.
+
 ## Contexto
 
 Se completó la reestructuración del dashboard de Vocal en 3 fases. Necesito que
