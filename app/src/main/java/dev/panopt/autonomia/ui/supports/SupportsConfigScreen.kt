@@ -24,6 +24,7 @@ import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
 import dev.panopt.autonomia.ui.anchors.ConfirmDeleteActivityDialog
+import dev.panopt.autonomia.ui.anchors.ConfigScreenContainer
 import dev.panopt.autonomia.ui.anchors.LayerStamp
 import dev.panopt.autonomia.ui.anchors.isCustomActivityId
 import dev.panopt.autonomia.ui.anchors.layerColor
@@ -50,15 +51,17 @@ internal fun SupportsConfigScreen(
     var isCreatingCustom by remember { mutableStateOf(false) }
     var customName by remember { mutableStateOf("") }
     var selectedLayerId by remember { mutableStateOf(layers.firstOrNull()?.id.orEmpty()) }
+    var selectedLayerFilter by remember { mutableStateOf<String?>(null) }
     var supportPendingDeletion by remember { mutableStateOf<DashboardCheckItemState?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(palette.bgBase)
-            .padding(horizontal = 18.dp)
-            .padding(top = 16.dp),
-    ) {
+    // Filter only applies to catalog options (not configured supports)
+    val filteredOptions = if (selectedLayerFilter == null) {
+        supportOptions
+    } else {
+        supportOptions.filter { it.layerId == selectedLayerFilter }
+    }
+
+    ConfigScreenContainer(palette = palette) {
         // Top bar
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
@@ -258,6 +261,11 @@ internal fun SupportsConfigScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            LayerStamp(
+                                layerId = item.layerId,
+                                color = layerColor(item.layerId, palette),
+                                size = 22,
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.title, color = palette.textMain, fontFamily = DashboardSans, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
                                 Text(item.layerName, color = palette.textMuted, fontFamily = DashboardSans, fontSize = 12.sp)
@@ -292,15 +300,24 @@ internal fun SupportsConfigScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Agregar soporte", color = palette.textMuted, fontFamily = DashboardSans, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                if (supportOptions.isEmpty()) {
-                    Text("No quedan soportes del catálogo para agregar.", color = palette.textMuted, fontFamily = DashboardSans, fontSize = 14.sp)
+                if (filteredOptions.isEmpty()) {
+                    Text(
+                        if (selectedLayerFilter != null) "No quedan soportes en esta capa."
+                        else "No quedan soportes del catálogo para agregar.",
+                        color = palette.textMuted, fontFamily = DashboardSans, fontSize = 14.sp,
+                    )
                 } else {
-                    supportOptions.forEach { option ->
+                    filteredOptions.forEach { option ->
                         Row(
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(palette.bgSurface).padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
+                            LayerStamp(
+                                layerId = option.layerId,
+                                color = layerColor(option.layerId, palette),
+                                size = 22,
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(option.title, color = palette.textMain, fontFamily = DashboardSans, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
                                 Text(option.layerName, color = palette.textMuted, fontFamily = DashboardSans, fontSize = 12.sp)
@@ -313,11 +330,68 @@ internal fun SupportsConfigScreen(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(palette.colorCardboard).clickable(role = Role.Button, onClick = { isCreatingCustom = true }),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("+ Crear soporte personalizado", color = palette.bgBase, fontFamily = DashboardSans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            // Create button — pinned above filter chips, inside else (list view only)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(top = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(palette.colorCardboard)
+                    .clickable(role = Role.Button, onClick = { isCreatingCustom = true }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("+ Crear soporte personalizado", color = palette.bgBase, fontFamily = DashboardSans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            // Bottom pinned layer filter chips — list view only
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                layers.forEach { layer ->
+                    val isSelected = selectedLayerFilter == layer.id
+                    val color = layerColor(layer.id, palette)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) mix(color, 0.22f, palette.bgSurface)
+                                else palette.bgSurface,
+                            )
+                            .clickable(role = Role.Button) {
+                                selectedLayerFilter = if (isSelected) null else layer.id
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            LayerStamp(
+                                layerId = layer.id,
+                                color = if (isSelected) color else palette.textMuted,
+                                size = 20,
+                            )
+                            Text(
+                                text = layer.name,
+                                color = if (isSelected) color else palette.textMuted,
+                                fontFamily = DashboardSans,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 9.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
         }

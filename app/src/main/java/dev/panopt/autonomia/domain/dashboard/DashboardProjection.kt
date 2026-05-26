@@ -199,7 +199,6 @@ internal fun buildDashboardState(
                 commitmentDurationMonths = effective.commitmentDurationMonths,
                 isCompletedToday = effective.isCompletedBy(log),
                 isFocusSignal = activity.id == focusSignalActivityId,
-                displaySurface = effective.displaySurface.name,
                 activityType = effective.activityType.name,
                 isGoal = effective.isGoal(),
                 isConfigured = configured != null,

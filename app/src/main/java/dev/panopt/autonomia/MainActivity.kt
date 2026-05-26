@@ -57,6 +57,10 @@ class MainActivity : ComponentActivity() {
                     onToggleSupport = dashboardViewModel::onToggleSupport,
                     onResetSupportOmissions = dashboardViewModel::resetSupportOmissions,
                     onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
+                    onAddSupport = dashboardViewModel::addToSupports,
+                    onRemoveSupport = dashboardViewModel::removeFromSupports,
+                    onToggleAllSupports = dashboardViewModel::toggleAllSupports,
+                    onSaveSupportChecklist = dashboardViewModel::saveSupportChecklist,
                 )
                 AppScreen.AnchorConfig -> AnchorConfigScreen(
                     layers = dashboardState.layers,

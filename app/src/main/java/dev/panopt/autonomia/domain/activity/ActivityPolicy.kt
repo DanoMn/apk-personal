@@ -11,7 +11,7 @@ fun ActivityDefinition.isAnchor(): Boolean =
     activityType == ActivitySurface.Anchor
 
 fun ActivityDefinition.isSupport(): Boolean =
-    activityType == ActivitySurface.Support && !isGoal()
+    activityType == ActivitySurface.Support
 
 fun ActivityDefinition.isGoal(): Boolean =
     cadence == ActivityCadence.Weekly ||

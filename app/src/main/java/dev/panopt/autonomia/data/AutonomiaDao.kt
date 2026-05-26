@@ -187,4 +187,15 @@ interface AutonomiaDao {
 
     @Query("DELETE FROM sleep_logs")
     suspend fun clearAllSleepLogs()
+
+    // --- Single-entity fetch queries (suspend, non-Flow) ---
+
+    @Query("SELECT * FROM activity_definitions WHERE id = :activityId LIMIT 1")
+    suspend fun getActivityDefinition(activityId: String): ActivityDefinitionEntity?
+
+    @Query("SELECT * FROM layers WHERE id = :layerId LIMIT 1")
+    suspend fun getLayer(layerId: String): LayerEntity?
+
+    @Query("SELECT * FROM user_activity_configs WHERE activityId = :activityId LIMIT 1")
+    suspend fun getUserActivityConfig(activityId: String): UserActivityConfigEntity?
 }

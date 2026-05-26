@@ -65,6 +65,10 @@ internal fun DashboardScreen(
     onToggleSupport: (String) -> Unit = {},
     onResetSupportOmissions: () -> Unit = {},
     onNavigateToSupportsConfig: () -> Unit = {},
+    onAddSupport: (String) -> Unit = {},
+    onRemoveSupport: (String) -> Unit = {},
+    onToggleAllSupports: () -> Unit = {},
+    onSaveSupportChecklist: () -> Unit = {},
 ) {
     val palette = dashboardPalette(isDarkMode)
     var isDrawerOpen by remember { mutableStateOf(false) }
@@ -125,6 +129,8 @@ internal fun DashboardScreen(
                 onToggle = onToggleSupport,
                 onOpenConfig = onNavigateToSupportsConfig,
                 onResetAll = onResetSupportOmissions,
+                onToggleAll = onToggleAllSupports,
+                onSaveChecklist = onSaveSupportChecklist,
             )
             TasksPreviewSection(
                 palette = palette,
@@ -186,6 +192,12 @@ internal fun DashboardScreen(
                 onCreateTask = onCreateTask,
                 onCompleteTask = onCompleteTask,
                 onNavigateToAnchorConfig = onNavigateToAnchorConfig,
+                onAddSupport = onAddSupport,
+                onRemoveSupport = onRemoveSupport,
+                onOpenFullSupportsConfig = {
+                    activeSheet = null
+                    onNavigateToSupportsConfig()
+                },
             )
         }
     }

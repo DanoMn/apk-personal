@@ -3,8 +3,12 @@ package dev.panopt.autonomia.ui.anchors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -27,6 +31,34 @@ import dev.panopt.autonomia.ui.dashboard.ProjectTriangleIcon
 import dev.panopt.autonomia.ui.dashboard.VinculosLayerIcon
 import dev.panopt.autonomia.ui.dashboard.WavesIcon
 import dev.panopt.autonomia.ui.dashboard.mix
+
+/**
+ * Shared container for all config screens.
+ * Provides consistent status bar padding, background, and horizontal insets.
+ *
+ * Usage:
+ * ```
+ * ConfigScreenContainer(palette) {
+ *     // screen content here
+ * }
+ * ```
+ */
+@Composable
+internal fun ConfigScreenContainer(
+    palette: DashboardPalette,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(palette.bgBase)
+            .statusBarsPadding()
+            .padding(horizontal = 18.dp)
+            .padding(top = 16.dp),
+    ) {
+        content()
+    }
+}
 
 /**
  * Shared composable stamp used to render a layer icon at the given [size].
@@ -91,7 +123,7 @@ internal fun layerColor(layerId: String, palette: DashboardPalette): Color = whe
 }
 
 internal fun isCustomActivityId(activityId: String): Boolean =
-    activityId.startsWith("act_custom_") || !activityId.startsWith("act_")
+    activityId.startsWith("act_custom_") || (!activityId.startsWith("act_") && !activityId.startsWith("sup_"))
 
 @Composable
 internal fun ConfirmDeleteActivityDialog(

@@ -124,8 +124,7 @@ internal data class DashboardActivityOptionState(
     val commitmentDurationMonths: Int? = null,
     val isCompletedToday: Boolean,
     val isFocusSignal: Boolean,
-    val displaySurface: String, // DEPRECATED — replaced by activityType
-    val activityType: String = "", // NEW — replaces displaySurface
+    val activityType: String = "", // activity type from user config
     val isGoal: Boolean = false,
     val isConfigured: Boolean = false, // true when user has a UserActivityConfig
 )

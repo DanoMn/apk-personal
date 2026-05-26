@@ -58,6 +58,7 @@ import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.DashboardTaskState
 import dev.panopt.autonomia.ui.dashboard.components.CheckItem
 import dev.panopt.autonomia.ui.dashboard.components.AnchorConfigPanel
+import dev.panopt.autonomia.ui.supports.SupportsConfigPanel
 
 internal enum class DashboardSheet {
     EntryMenu,
@@ -89,6 +90,9 @@ internal fun DashboardSheetHost(
     onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
+    onAddSupport: (String) -> Unit = {},
+    onRemoveSupport: (String) -> Unit = {},
+    onOpenFullSupportsConfig: () -> Unit = {},
 ) {
     BackHandler {
         if (sheet == DashboardSheet.AnchorConfig) {
@@ -151,7 +155,7 @@ internal fun DashboardSheetHost(
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
                     palette = palette,
                     onOpenAnchors = { onSwitchSheet(DashboardSheet.AnchorConfig) },
-                    onOpenSupports = { onSwitchSheet(DashboardSheet.Support) },
+                    onOpenSupports = { onSwitchSheet(DashboardSheet.SupportsConfig) },
                     onOpenTasks = { onSwitchSheet(DashboardSheet.Tasks) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
                     onOpenRelapse = { onSwitchSheet(DashboardSheet.Relapse) },
@@ -216,6 +220,8 @@ internal fun DashboardSheetHost(
                 DashboardSheet.SupportsConfig -> SupportsConfigPanel(
                     activityOptions = state.activityOptions,
                     palette = palette,
+                    onRemoveSupport = onRemoveSupport,
+                    onOpenFullConfig = onOpenFullSupportsConfig,
                 )
                 DashboardSheet.Relapse -> RelapsePanel(
                     tracks = state.sobrietyTracks,

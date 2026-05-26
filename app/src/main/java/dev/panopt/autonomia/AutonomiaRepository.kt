@@ -376,7 +376,42 @@ class AutonomiaRepository(context: Context) {
     suspend fun upsertUserActivityConfig(config: UserActivityConfigEntity) {
         dao.upsertUserActivityConfig(config)
     }
+
+    // ── Support-specific methods (validated, no targets) ──
+
+    suspend fun addSupport(activityId: String) {
+        val definition = dao.getActivityDefinition(activityId) ?: return
+        val layer = dao.getLayer(definition.layerId) ?: return
+        val now = System.currentTimeMillis()
+        dao.upsertUserActivityConfig(
+            UserActivityConfigEntity(
+                activityId = activityId,
+                activityType = ActivitySurface.Support.name,
+                active = true,
+                archived = false,
+                // Support has no targets by domain design
+                weeklyFrequencyTarget = null,
+                sessionTargetMinutes = null,
+                commitmentDurationMonths = null,
+                cadence = null,
+                targetValue = null,
+                minimumValue = null,
+                targetCount = null,
+                targetPeriod = null,
+                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
+
+    suspend fun removeSupport(activityId: String) {
+        val config = dao.getUserActivityConfig(activityId)
+        if (config != null && config.activityType == ActivitySurface.Support.name) {
+            dao.deleteUserActivityConfig(activityId)
+        }
+    }
 }
 
 private fun isCustomActivityId(activityId: String): Boolean =
-    activityId.startsWith("act_custom_") || !activityId.startsWith("act_")
+    activityId.startsWith("act_custom_") || (!activityId.startsWith("act_") && !activityId.startsWith("sup_"))

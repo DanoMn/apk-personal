@@ -13,7 +13,6 @@ import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.AnchorPhrase
 import dev.panopt.autonomia.AttributionStatus
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.PhraseFamily
@@ -49,7 +48,6 @@ internal fun mergeToDomain(
     description = config.customDescription ?: definition.description,
     type = runCatching { ActivityType.valueOf(definition.type) }.getOrDefault(ActivityType.Check),
     role = runCatching { ActivityRole.valueOf(definition.role) }.getOrDefault(ActivityRole.Practice),
-    displaySurface = runCatching { DisplaySurface.valueOf(config.activityType) }.getOrDefault(DisplaySurface.PrimaryChecklist),
     activityType = runCatching { ActivitySurface.valueOf(config.activityType) }.getOrDefault(ActivitySurface.Anchor),
     contributionRole = runCatching { ContributionRole.valueOf(definition.contributionRole) }.getOrDefault(ContributionRole.Core),
     importanceTier = runCatching { ImportanceTier.valueOf(definition.importanceTier) }.getOrDefault(ImportanceTier.Medium),
@@ -75,7 +73,6 @@ internal fun ActivityDefinitionEntity.toDomain(): ActivityDefinition = ActivityD
     id = id, layerId = layerId, name = name, description = description,
     type = runCatching { ActivityType.valueOf(type) }.getOrDefault(ActivityType.Check),
     role = runCatching { ActivityRole.valueOf(role) }.getOrDefault(ActivityRole.Practice),
-    displaySurface = DisplaySurface.Available, // Catalog-only, no placement yet
     activityType = when (presetCategory) {
         "anchor" -> ActivitySurface.Anchor
         "support" -> ActivitySurface.Support
@@ -103,7 +100,7 @@ private fun legacyWeeklyFrequencyTarget(
 }
 
 private fun isCustomActivityId(activityId: String): Boolean =
-    activityId.startsWith("act_custom_") || !activityId.startsWith("act_")
+    activityId.startsWith("act_custom_") || (!activityId.startsWith("act_") && !activityId.startsWith("sup_"))
 
 internal fun ActivityLogEntity.toDomain(): ActivityLog =
     ActivityLog(

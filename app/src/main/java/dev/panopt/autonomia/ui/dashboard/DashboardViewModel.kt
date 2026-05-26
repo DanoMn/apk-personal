@@ -338,17 +338,45 @@ internal class DashboardViewModel(
 
     fun addToSupports(activityId: String) {
         viewModelScope.launch {
-            repository.configureActivity(
-                activityId = activityId,
-                activityType = ActivitySurface.Support,
-            )
+            repository.addSupport(activityId)
         }
     }
 
     fun removeFromSupports(activityId: String) {
         viewModelScope.launch {
-            repository.deleteUserActivityConfig(activityId)
+            repository.removeSupport(activityId)
         }
+    }
+
+    fun toggleAllSupports() {
+        viewModelScope.launch {
+            val supports = activities.value.filter {
+                it.activityType == ActivitySurface.Support
+            }
+            if (supports.isEmpty()) return@launch
+
+            val todayLogs = repository.activityLogsForDateFlow(dateKey).first()
+            val supportLogs = todayLogs.filter { log ->
+                supports.any { it.id == log.activityId }
+            }
+            // Check if any support currently has an omission log (completed=true = NOT done)
+            val hasOmissions = supports.any { support ->
+                supportLogs.any { it.activityId == support.id && it.completed }
+            }
+
+            supports.forEach { support ->
+                repository.setActivityCompleted(
+                    activity = support,
+                    completed = !hasOmissions, // flip: if any omitted, mark all as done; else mark all as omitted
+                    date = dateKey,
+                )
+            }
+        }
+    }
+
+    fun saveSupportChecklist() {
+        // Individual toggles already persist via onToggleSupport.
+        // This method exists as a UX confirmation trigger. Data is already saved.
     }
 
     class Factory(

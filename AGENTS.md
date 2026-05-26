@@ -75,6 +75,20 @@ Usa estos nombres para TODOS los textos visibles en la UI. No uses los nombres t
 
 Regla: si agregas un texto nuevo en la UI, consulta esta tabla antes de hardcodear.
 
+## Reglas de UI globales
+
+- **Filtros de capa en pantallas de configuracion**: los chips de filtro por capa
+  (Interior, Cuerpo, Conducta, Vinculos, Proyecto) son **globales** de la pantalla.
+  Deben estar visibles y persistir su estado en TODAS las sub-vistas de la pantalla
+  (vista de lista, formulario de creacion, editor). No se ocultan al cambiar de vista
+  dentro de la misma pantalla. El estado del filtro (`selectedLayerFilter`) se preserva
+  y afecta a todas las sub-vistas.
+
+- **Pantalla de creacion/formulario**: cuando el usuario entra a crear un item
+  personalizado, los chips de filtro y botones de accion globales (como "Crear X")
+  NO deben mostrarse dentro del formulario de creacion. El formulario tiene su
+  propia UI con sus propios botones (Cancelar/Agregar).
+
 ## Arquitectura actual
 
 - App Android local-first en Kotlin + Jetpack Compose.
