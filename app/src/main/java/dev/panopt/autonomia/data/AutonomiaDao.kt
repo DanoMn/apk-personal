@@ -41,6 +41,18 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertAbstinenceTracks(tracks: List<AbstinenceTrackEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAbstinenceTrack(track: AbstinenceTrackEntity)
+
+    @Query("SELECT * FROM abstinence_tracks WHERE id = :trackId LIMIT 1")
+    suspend fun getAbstinenceTrack(trackId: String): AbstinenceTrackEntity?
+
+    @Query("UPDATE abstinence_tracks SET active = :active, updatedAt = :updatedAt WHERE id = :trackId")
+    suspend fun setAbstinenceTrackActive(trackId: String, active: Boolean, updatedAt: Long)
+
+    @Query("DELETE FROM abstinence_tracks WHERE id = :trackId")
+    suspend fun deleteAbstinenceTrack(trackId: String)
+
     @Query("SELECT * FROM abstinence_logs WHERE date = :date")
     fun observeAbstinenceLogsForDate(date: String): Flow<List<AbstinenceLogEntity>>
 
@@ -53,6 +65,9 @@ interface AutonomiaDao {
     @Query("DELETE FROM abstinence_logs WHERE trackId = :trackId AND date = :date")
     suspend fun deleteAbstinenceLog(trackId: String, date: String)
 
+    @Query("DELETE FROM abstinence_logs WHERE trackId = :trackId")
+    suspend fun deleteAbstinenceLogsForTrack(trackId: String)
+
     @Query("SELECT * FROM risk_events WHERE date = :date")
     fun observeRiskEventsForDate(date: String): Flow<List<RiskEventEntity>>
 
@@ -64,6 +79,9 @@ interface AutonomiaDao {
     
     @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
     fun observeTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
+    suspend fun getTask(taskId: String): TaskEntity?
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTask(task: TaskEntity)

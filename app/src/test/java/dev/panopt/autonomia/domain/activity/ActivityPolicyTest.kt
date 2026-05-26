@@ -6,7 +6,6 @@ import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.TargetPeriod
 import org.junit.Assert.assertFalse
@@ -15,8 +14,8 @@ import org.junit.Test
 
 class ActivityPolicyTest {
     @Test
-    fun primaryChecklistDefinitionIsAnchor() {
-        val definition = activity(displaySurface = DisplaySurface.PrimaryChecklist)
+    fun anchorDefinitionIsAnchor() {
+        val definition = activity(activityType = ActivitySurface.Anchor)
 
         assertTrue(definition.isAnchor())
         assertFalse(definition.isGoal())
@@ -24,7 +23,7 @@ class ActivityPolicyTest {
 
     @Test
     fun `anchor with weekly goal is still an anchor`() {
-        val definition = activity(displaySurface = DisplaySurface.PrimaryChecklist).copy(
+        val definition = activity(activityType = ActivitySurface.Anchor).copy(
             cadence = ActivityCadence.Weekly,
             targetPeriod = TargetPeriod.Week,
         )
@@ -34,14 +33,14 @@ class ActivityPolicyTest {
     }
 
     @Test
-    fun secondaryChecklistDefinitionIsSupport() {
-        val definition = activity(displaySurface = DisplaySurface.SecondaryChecklist)
+    fun supportDefinitionIsSupport() {
+        val definition = activity(activityType = ActivitySurface.Support)
 
         assertTrue(definition.isSupport())
         assertFalse(definition.isAnchor())
     }
 
-    private fun activity(displaySurface: DisplaySurface): ActivityDefinition =
+    private fun activity(activityType: ActivitySurface): ActivityDefinition =
         ActivityDefinition(
             id = "act_test",
             layerId = "layer_project",
@@ -49,20 +48,19 @@ class ActivityPolicyTest {
             description = "",
             type = ActivityType.Time,
             role = ActivityRole.Practice,
-            displaySurface = displaySurface,
-            activityType = when (displaySurface) {
-                DisplaySurface.PrimaryChecklist -> ActivitySurface.Anchor
-                DisplaySurface.SecondaryChecklist -> ActivitySurface.Support
-                else -> ActivitySurface.Anchor
+            activityType = activityType,
+            contributionRole = if (activityType == ActivitySurface.Anchor) {
+                ContributionRole.Core
+            } else {
+                ContributionRole.Support
             },
-            contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,
             cadence = ActivityCadence.Daily,
-            targetValue = 30,
-            minimumValue = 1,
+            targetValue = if (activityType == ActivitySurface.Anchor) 30 else null,
+            minimumValue = if (activityType == ActivitySurface.Anchor) 1 else null,
             targetCount = null,
-            targetPeriod = TargetPeriod.Day,
-            unit = ActivityUnit.Minutes,
+            targetPeriod = if (activityType == ActivitySurface.Anchor) TargetPeriod.Day else null,
+            unit = if (activityType == ActivitySurface.Anchor) ActivityUnit.Minutes else ActivityUnit.Boolean,
             sortOrder = 10,
         )
 }

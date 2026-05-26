@@ -179,6 +179,24 @@ internal class DashboardViewModel(
         }
     }
 
+    fun setAbstinenceTrackActive(trackId: String, active: Boolean) {
+        viewModelScope.launch {
+            repository.setAbstinenceTrackActive(trackId = trackId, active = active)
+        }
+    }
+
+    fun createCustomAbstinenceTrack(name: String) {
+        viewModelScope.launch {
+            repository.createCustomAbstinenceTrack(name)
+        }
+    }
+
+    fun deleteCustomAbstinenceTrack(trackId: String) {
+        viewModelScope.launch {
+            repository.deleteCustomAbstinenceTrack(trackId)
+        }
+    }
+
     fun saveSleep(
         plannedSleepAt: String,
         plannedWakeAt: String,
@@ -270,15 +288,21 @@ internal class DashboardViewModel(
         }
     }
 
-    fun createTask(title: String, layerId: String?, contributesToCore: Boolean) {
+    fun createTask(title: String, layerId: String?) {
         viewModelScope.launch {
-            repository.createTask(title, layerId, contributesToCore)
+            repository.createTask(title, layerId)
         }
     }
 
     fun completeTask(taskId: String) {
         viewModelScope.launch {
             repository.completeTask(taskId)
+        }
+    }
+
+    fun reactivateTask(taskId: String) {
+        viewModelScope.launch {
+            repository.reactivateTask(taskId)
         }
     }
 

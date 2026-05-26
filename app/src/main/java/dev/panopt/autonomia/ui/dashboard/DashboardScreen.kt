@@ -62,11 +62,12 @@ internal fun DashboardScreen(
     onToggleAbstinenceRelapse: (String, Boolean) -> Unit,
     onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
-    onCreateTask: (String, String?, Boolean) -> Unit,
     onCompleteTask: (String) -> Unit,
     onAddAnchor: (String, Int, Int, Int?) -> Unit,
     onRemoveAnchor: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
+    onNavigateToTasks: () -> Unit,
+    onNavigateToSobriety: () -> Unit,
     onToggleSupport: (String) -> Unit = {},
     onResetSupportOmissions: () -> Unit = {},
     onNavigateToSupportsConfig: () -> Unit = {},
@@ -123,6 +124,7 @@ internal fun DashboardScreen(
                 palette = palette,
                 tracks = state.sobrietyTracks,
                 onToggleClean = onToggleAbstinenceClean,
+                onOpenConfig = onNavigateToSobriety,
             )
             AnchorPreviewSection(
                 palette = palette,
@@ -142,7 +144,8 @@ internal fun DashboardScreen(
             TasksPreviewSection(
                 palette = palette,
                 tasks = state.pendingTasks,
-                onOpenTasks = { activeSheet = DashboardSheet.Tasks },
+                onCompleteTask = onCompleteTask,
+                onOpenTasks = onNavigateToTasks,
             )
             WeekSection(palette = palette, rows = state.weekRows)
         }
@@ -176,8 +179,8 @@ internal fun DashboardScreen(
             onThemeChange = onThemeChange,
             onOpenAnchors = onNavigateToAnchorConfig,
             onOpenSupports = onNavigateToSupportsConfig,
-            onOpenTasks = { activeSheet = DashboardSheet.Tasks },
-            onOpenRelapse = { activeSheet = DashboardSheet.Relapse },
+            onOpenTasks = onNavigateToTasks,
+            onOpenSobriety = onNavigateToSobriety,
             onOpenActivitySettings = { activeSheet = DashboardSheet.Activities },
         )
 
@@ -196,9 +199,8 @@ internal fun DashboardScreen(
                 onSetFocusSignal = onSetFocusSignal,
                 onAddAnchor = onAddAnchor,
                 onRemoveAnchor = onRemoveAnchor,
-                onCreateTask = onCreateTask,
-                onCompleteTask = onCompleteTask,
                 onNavigateToAnchorConfig = onNavigateToAnchorConfig,
+                onNavigateToSobriety = onNavigateToSobriety,
                 onAddSupport = onAddSupport,
                 onRemoveSupport = onRemoveSupport,
                 onOpenFullSupportsConfig = {

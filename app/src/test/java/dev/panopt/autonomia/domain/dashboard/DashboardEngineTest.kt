@@ -9,7 +9,6 @@ import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
@@ -108,7 +107,6 @@ class DashboardEngineTest {
             description = "",
             type = ActivityType.Time,
             role = role,
-            displaySurface = DisplaySurface.PrimaryChecklist,
             activityType = ActivitySurface.Anchor,
             contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,

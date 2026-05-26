@@ -62,12 +62,19 @@ sesiones de desarrollo.
 - `TasksPreviewSection` creada (tarjeta compacta en dashboard)
 - Panel de tasks existente verificado (capa opcional, creación libre)
 
+### ✅ Completado (2026-05-26)
+
+- Pendientes sale de Configuración rápida; queda como lista operativa en dashboard y pantalla propia.
+- `TaskPolicy` valida título, capa opcional, aporte neutral/soporte y transición `Done -> Pending`.
+- `DashboardState` separa `pendingTasks` y `completedTasks`.
+- `TasksScreen` permite crear, filtrar por capa, completar y revivir.
+- `TasksPanel` / `DashboardSheet.Tasks` eliminado.
+
 ### 🔲 Pendiente
 
 | ID | Tarea | Documentación | Código |
 |----|-------|--------------|--------|
-| T1 | **Revivir tareas completadas** — Mostrar historial de tareas completadas y permitir reactivarlas | `configuracion-canonica-sistema-v1.md` §3 | `DashboardPanels.kt` (TasksPanel) |
-| T2 | **Filtro de tasks por capa** — En TasksPanel, permitir filtrar por capa asociada | `configuracion-canonica-sistema-v1.md` §3 | `DashboardPanels.kt` |
+| T3 | **Archivo de pendientes** — Definir UX para `TaskStatus.Archived` si se necesita ocultar sin completar | `configuracion-canonica-sistema-v1.md` §3 | `TasksScreen.kt`, `AutonomiaRepository.kt` |
 
 ---
 
@@ -101,16 +108,22 @@ sesiones de desarrollo.
 
 - `SobrietyConfigScreen` creada (básica)
 
+### ✅ Completado (2026-05-26)
+
+- `SobrietyConfigScreen` conectada como pantalla profunda.
+- Presets opt-in: Alcohol, Sustancias, Conducta sexual.
+- Activar/desactivar rachas desde la pantalla profunda.
+- Crear y eliminar rachas personalizadas.
+- Marcar dia limpio desde dashboard.
+- Registrar/desmarcar recaida del dia actual desde panel rapido.
+- Dashboard solo muestra rachas activas; inactivas no aparecen, no pesan y no limitan.
+
 ### 🔲 Pendiente
 
 | ID | Tarea | Documentación | Código |
 |----|-------|--------------|--------|
-| B1 | **Integrar navegación** — Conectar al drawer y al dashboard | `plan-reestructuracion-3-capas.md` §2.7 | `MainActivity.kt`, `NavigationDrawer.kt` |
 | B2 | **Sistema de olvido** — Si el usuario no marca por 2-3 días, preguntar "¿Olvidaste marcar?". Sin respuesta → recaída | `configuracion-canonica-sistema-v1.md` §5 | `AutonomiaRepository.kt`, `DashboardViewModel.kt` |
 | B3 | **Respetar versión del usuario** — En recaída, permitir al usuario modificar la cantidad de días. El sistema sugiere pero el usuario decide | `configuracion-canonica-sistema-v1.md` §5 | `AutonomiaRepository.kt` |
-| B4 | **Marcar día limpio desde dashboard** — Botón en `SobrietySection` que registra el día como limpio | `configuracion-canonica-sistema-v1.md` §5 | `StreakCard.kt`, `DashboardViewModel.kt` |
-| B5 | **Diferencia visual limpio vs recaída** — Estados visuales distintos en la UI | — | `StreakCard.kt` |
-| B6 | **Tracks predeterminados en seed** — Alcohol, Sustancias, Conducta sexual como presets no eliminables | `configuracion-canonica-sistema-v1.md` §5 | Seed data, `AutonomiaDao.kt` |
 
 ---
 
@@ -126,7 +139,7 @@ Este roadmap solo lista las dependencias hacia el scoring.
 | SC1 | Sueño como piso del score (~700 puntos base) | D4, D5 |
 | SC2 | Peso diferenciado: Anchor > Support > Task | A1, S3 |
 | SC3 | Goals semanales/mensuales como bonus (0-100 puntos) | A1 |
-| SC4 | Recaídas en abstinencias activas limitan el estado | B2, B3 |
+| SC4 | Recaídas en abstinencias activas limitan el estado | Base implementada; B2 y B3 refinan el cierre |
 | SC5 | Estados Inquebrantable y Plenitud requieren consistencia alta | SC1-SC4 |
 
 ---
@@ -147,9 +160,7 @@ Este roadmap solo lista las dependencias hacia el scoring.
 ## Orden recomendado de ejecución
 
 1. **S1, S2** — Soportes funcionales (presets + navegación)
-2. **B1, B4** — Sobriedad funcional (navegación + marcar limpio)
-3. **B2, B3** — Sistema de olvido y respeto al usuario
-4. **T1** — Revivir tareas
-5. **D1, D2** — Sueño (quitar calidad + config screen)
-6. **SC1-SC5** — Scoring (scope separado)
-7. **AR1-AR4** — Limpieza arquitectónica
+2. **B2, B3** — Sobriedad: sistema de olvido y respeto al usuario
+3. **D1, D2** — Sueño (quitar calidad + config screen)
+4. **SC1-SC5** — Scoring (scope separado)
+5. **AR1-AR4** — Limpieza arquitectónica

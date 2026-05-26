@@ -11,7 +11,6 @@ import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
-import dev.panopt.autonomia.DisplaySurface
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
@@ -129,13 +128,58 @@ class ScoreEngineTest {
     }
 
     @Test
+    fun inactiveAbstinenceLogsDoNotCreateScoreByThemselves() {
+        val inactiveTrack = track.copy(active = false)
+        val report = ScoreEngine.calculate(
+            ScoreInput(
+                layers = coreLayers,
+                activities = emptyList(),
+                todayActivityLogs = emptyList(),
+                periodActivityLogs = emptyList(),
+                abstinenceTracks = listOf(inactiveTrack),
+                todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
+                allAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
+                tasks = emptyList(),
+                sleepLog = null,
+                today = today,
+            ),
+        )
+
+        assertEquals(ScoreState.NoData, report.state)
+        assertEquals(null, report.visibleScore)
+    }
+
+    @Test
+    fun moderateRelapseTodayCapsStateAtAttention() {
+        val moderateTrack = abstinenceTrack("trk_substances", AbstinenceSeverity.Moderate)
+        val activities = coreActivities() + goalActivity("act_goal", "layer_proyecto")
+        val todayLogs = coreActivities().map { log(it.id) }
+        val periodLogs = todayLogs + log("act_goal", actualValue = 100)
+
+        val report = ScoreEngine.calculate(
+            baseInput(
+                activities = activities,
+                todayActivityLogs = todayLogs,
+                periodActivityLogs = periodLogs,
+                abstinenceTracks = listOf(moderateTrack),
+                todayAbstinenceLogs = listOf(abstinenceLog(moderateTrack.id, today, AbstinenceStatus.Relapse)),
+                allAbstinenceLogs = cleanLogs(moderateTrack.id, 14),
+                sleepLog = sleep("23:30", "07:30", SleepQuality.Good),
+            ),
+        )
+
+        assertEquals(ScoreState.Attention, report.state)
+        assertTrue(checkNotNull(report.visibleScore) <= 799)
+    }
+
+    @Test
     fun primaryChecklistWeighsMoreThanSecondaryAndTasks() {
         val primary = singleLayerReport(
-            activity = activity("act_primary", "layer_interior", DisplaySurface.PrimaryChecklist),
+            activity = activity("act_primary", "layer_interior", ActivitySurface.Anchor),
             activityLog = log("act_primary"),
         )
         val secondary = singleLayerReport(
-            activity = activity("act_secondary", "layer_interior", DisplaySurface.SecondaryChecklist),
+            activity = activity("act_secondary", "layer_interior", ActivitySurface.Support),
             activityLog = log("act_secondary"),
         )
         val task = singleLayerReport(
@@ -148,7 +192,7 @@ class ScoreEngineTest {
 
     @Test
     fun neutralTasksDoNotAddScore() {
-        val blockingActivity = activity("act_primary", "layer_interior", DisplaySurface.PrimaryChecklist)
+        val blockingActivity = activity("act_primary", "layer_interior", ActivitySurface.Anchor)
         val neutral = singleLayerReport(
             activity = blockingActivity,
             tasks = listOf(task("task_neutral", "layer_interior", ContributionRole.Neutral)),
@@ -262,11 +306,11 @@ class ScoreEngineTest {
 
     private fun coreActivities(): List<ActivityDefinition> =
         listOf(
-            activity("act_interior", "layer_interior", DisplaySurface.PrimaryChecklist),
-            activity("act_body", "layer_cuerpo", DisplaySurface.PrimaryChecklist),
-            activity("act_conduct", "layer_conducta", DisplaySurface.PrimaryChecklist),
-            activity("act_vinculos", "layer_vinculos", DisplaySurface.PrimaryChecklist),
-            activity("act_project", "layer_proyecto", DisplaySurface.PrimaryChecklist),
+            activity("act_interior", "layer_interior", ActivitySurface.Anchor),
+            activity("act_body", "layer_cuerpo", ActivitySurface.Anchor),
+            activity("act_conduct", "layer_conducta", ActivitySurface.Anchor),
+            activity("act_vinculos", "layer_vinculos", ActivitySurface.Anchor),
+            activity("act_project", "layer_proyecto", ActivitySurface.Anchor),
         )
 
     private fun layer(id: String, name: String, sortOrder: Int): Layer =
@@ -275,7 +319,7 @@ class ScoreEngineTest {
     private fun activity(
         id: String,
         layerId: String,
-        displaySurface: DisplaySurface,
+        activityType: ActivitySurface,
     ): ActivityDefinition =
         ActivityDefinition(
             id = id,
@@ -284,13 +328,12 @@ class ScoreEngineTest {
             description = "",
             type = ActivityType.Time,
             role = ActivityRole.Practice,
-            displaySurface = displaySurface,
-            activityType = when (displaySurface) {
-                DisplaySurface.PrimaryChecklist -> ActivitySurface.Anchor
-                DisplaySurface.SecondaryChecklist -> ActivitySurface.Support
-                else -> ActivitySurface.Anchor
+            activityType = activityType,
+            contributionRole = if (activityType == ActivitySurface.Anchor) {
+                ContributionRole.Core
+            } else {
+                ContributionRole.Support
             },
-            contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,
             cadence = ActivityCadence.Daily,
             targetValue = 30,
@@ -302,7 +345,7 @@ class ScoreEngineTest {
         )
 
     private fun goalActivity(id: String, layerId: String): ActivityDefinition =
-        activity(id, layerId, DisplaySurface.PrimaryChecklist).copy(
+        activity(id, layerId, ActivitySurface.Anchor).copy(
             cadence = ActivityCadence.Weekly,
             targetValue = 100,
             targetCount = 1,

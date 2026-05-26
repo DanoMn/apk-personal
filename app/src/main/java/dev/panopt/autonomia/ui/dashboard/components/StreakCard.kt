@@ -37,18 +37,40 @@ internal fun SobrietySection(
     palette: DashboardPalette,
     tracks: List<DashboardSobrietyTrackState>,
     onToggleClean: (String, Boolean) -> Unit,
+    onOpenConfig: () -> Unit,
 ) {
     SectionHeader(
         palette = palette,
         title = "Sobriedad",
-        note = "rachas activas",
+        note = if (tracks.isEmpty()) "sin rachas activas" else "rachas activas",
     )
-
-    if (tracks.isEmpty()) return
 
     Column(
         verticalArrangement = Arrangement.spacedBy(11.2.dp),
     ) {
+        if (tracks.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(70.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(palette.bgSurface)
+                    .clickable(role = Role.Button, onClick = onOpenConfig)
+                    .padding(horizontal = 14.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    text = "Activa solo las rachas que quieres cuidar.",
+                    color = palette.textMuted,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.5.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+            return@Column
+        }
+
         tracks.chunked(2).forEach { rowTracks ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -68,6 +90,24 @@ internal fun SobrietySection(
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(palette.bgSurface)
+                .clickable(role = Role.Button, onClick = onOpenConfig),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Abrir sobriedad",
+                color = palette.colorCardboard,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.5.sp,
+            )
         }
     }
 }

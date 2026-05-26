@@ -73,7 +73,6 @@ internal sealed interface DashboardSheet {
     data object Anchor : DashboardSheet
     data object Support : DashboardSheet
     data object Sleep : DashboardSheet
-    data object Tasks : DashboardSheet
     data object Activities : DashboardSheet
     data object AnchorConfig : DashboardSheet
     data object SupportsConfig : DashboardSheet
@@ -96,9 +95,8 @@ internal fun DashboardSheetHost(
     onSetFocusSignal: (String) -> Unit,
     onAddAnchor: (String, Int, Int, Int?) -> Unit,
     onRemoveAnchor: (String) -> Unit,
-    onCreateTask: (String, String?, Boolean) -> Unit,
-    onCompleteTask: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
+    onNavigateToSobriety: () -> Unit,
     onAddSupport: (String) -> Unit = {},
     onRemoveSupport: (String) -> Unit = {},
     onOpenFullSupportsConfig: () -> Unit = {},
@@ -166,7 +164,6 @@ internal fun DashboardSheetHost(
                     palette = palette,
                     onOpenAnchors = { onSwitchSheet(DashboardSheet.AnchorConfig) },
                     onOpenSupports = { onSwitchSheet(DashboardSheet.SupportsConfig) },
-                    onOpenTasks = { onSwitchSheet(DashboardSheet.Tasks) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
                     onOpenRelapse = { onSwitchSheet(DashboardSheet.Relapse) },
                     onDismiss = onDismiss,
@@ -204,13 +201,6 @@ internal fun DashboardSheetHost(
                         onDismiss()
                     },
                 )
-                DashboardSheet.Tasks -> TasksPanel(
-                    tasks = state.pendingTasks,
-                    layers = state.layers,
-                    palette = palette,
-                    onCreateTask = onCreateTask,
-                    onCompleteTask = onCompleteTask,
-                )
                 DashboardSheet.Activities -> ActivitySettingsPanel(
                     state = state,
                     palette = palette,
@@ -238,6 +228,10 @@ internal fun DashboardSheetHost(
                     tracks = state.sobrietyTracks,
                     palette = palette,
                     onToggleRelapse = onToggleRelapse,
+                    onOpenSobriety = {
+                        onDismiss()
+                        onNavigateToSobriety()
+                    },
                 )
             }
         }
@@ -294,7 +288,6 @@ private fun EntryMenuPanel(
     palette: DashboardPalette,
     onOpenAnchors: () -> Unit,
     onOpenSupports: () -> Unit,
-    onOpenTasks: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenRelapse: () -> Unit,
     onDismiss: () -> Unit,
@@ -309,63 +302,49 @@ private fun EntryMenuPanel(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            EntryGridCard(
-                palette = palette,
-                icon = { AnchorIcon(color = it, modifier = Modifier.size(28.dp)) },
-                label = "Anclas",
-                description = "Ajustar anclas",
-                onClick = onOpenAnchors,
-                modifier = Modifier.weight(1f),
-            )
-            EntryGridCard(
-                palette = palette,
-                icon = { GlassWaterIcon(color = it, modifier = Modifier.size(28.dp)) },
-                label = "Cuidado",
-                description = "Cuidado base",
-                onClick = onOpenSupports,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            EntryGridCard(
-                palette = palette,
-                icon = { ListTodoIcon(color = it, modifier = Modifier.size(28.dp)) },
-                label = "Pendientes",
-                description = "Tareas abiertas",
-                onClick = onOpenTasks,
-                modifier = Modifier.weight(1f),
-            )
-            EntryGridCard(
-                palette = palette,
-                icon = { BarChartIcon(color = it) },
-                label = "Actividades",
-                description = "Metas y señales",
-                onClick = onOpenActivities,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            EntryGridCard(
-                palette = palette,
-                icon = { FlagIcon(color = it, modifier = Modifier.size(28.dp)) },
-                label = "Recaídas",
-                description = "Registrar recaída",
-                onClick = onOpenRelapse,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(modifier = Modifier.weight(1f))
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                EntryGridCard(
+                    palette = palette,
+                    icon = { AnchorIcon(color = it, modifier = Modifier.size(28.dp)) },
+                    label = "Anclas",
+                    description = "Ajustar anclas",
+                    onClick = onOpenAnchors,
+                    modifier = Modifier.weight(1f),
+                )
+                EntryGridCard(
+                    palette = palette,
+                    icon = { GlassWaterIcon(color = it, modifier = Modifier.size(28.dp)) },
+                    label = "Soportes",
+                    description = "Ajustar soportes",
+                    onClick = onOpenSupports,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                EntryGridCard(
+                    palette = palette,
+                    icon = { BarChartIcon(color = it) },
+                    label = "Actividades",
+                    description = "Metas y señales",
+                    onClick = onOpenActivities,
+                    modifier = Modifier.weight(1f),
+                )
+                EntryGridCard(
+                    palette = palette,
+                    icon = { FlagIcon(color = it, modifier = Modifier.size(28.dp)) },
+                    label = "Recaídas",
+                    description = "Registrar recaída",
+                    onClick = onOpenRelapse,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
-}
 }
 
 @Composable
@@ -504,148 +483,6 @@ private fun SleepPanel(
             primary = true,
             onClick = { onSave(plannedSleepAt, plannedWakeAt, sleptAt, wokeAt, quality, note) },
         )
-    }
-}
-
-@Composable
-private fun TasksPanel(
-    tasks: List<DashboardTaskState>,
-    layers: List<DashboardLayerState>,
-    palette: DashboardPalette,
-    onCreateTask: (String, String?, Boolean) -> Unit,
-    onCompleteTask: (String) -> Unit,
-) {
-    var title by remember { mutableStateOf("") }
-    var selectedLayerId by remember { mutableStateOf<String?>(null) }
-    SheetTitle(title = "Pendientes", note = "${tasks.size} abiertos", palette = palette)
-
-    Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        tasks.forEach { task ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(palette.bgSurface)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (task.layerId != null) {
-                    val layerColor = getLayerColor(task.layerId, palette)
-                    Box(
-                        modifier = Modifier.size(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LayerIcon(layerId = task.layerId, color = layerColor, modifier = Modifier.size(20.dp))
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-
-                Text(
-                    text = task.title,
-                    modifier = Modifier.weight(1f),
-                    color = palette.textMain,
-                    fontFamily = DashboardSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                var completedClicked by remember(task.id) { mutableStateOf(false) }
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(if (completedClicked) palette.colorCoral.copy(alpha = 0.2f) else Color.Transparent)
-                        .clickable {
-                            completedClicked = true
-                            onCompleteTask(task.id)
-                        }
-                        .border(
-                            width = 1.5.dp,
-                            color = if (completedClicked) palette.colorCoral else palette.textMuted.copy(alpha = 0.4f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (completedClicked) {
-                        CheckIcon(color = palette.colorCoral, modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        }
-        PanelField("Nuevo pendiente", title, { title = it }, palette, Modifier.fillMaxWidth())
-        
-        SheetSubtitle(text = "Asociar a capa", palette = palette)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val layerIds = listOf("layer_interior", "layer_cuerpo", "layer_conducta", "layer_vinculos", "layer_proyecto")
-            layerIds.forEach { id ->
-                val isSelected = selectedLayerId == id
-                val baseColor = getLayerColor(id, palette)
-                val iconColor = if (isSelected) baseColor else mix(baseColor, 0.4f, palette.bgSurface2)
-                val backgroundColor = if (isSelected) mix(baseColor, 0.15f, palette.bgSurface2) else palette.bgSurface2
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(backgroundColor)
-                        .clickable {
-                            selectedLayerId = if (isSelected) null else id
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    LayerIcon(layerId = id, color = iconColor, modifier = Modifier.size(22.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        SheetButton(
-            text = "Agregar pendiente",
-            palette = palette,
-            primary = true,
-            onClick = {
-                val finalTitle = title.trim()
-                if (finalTitle.isNotBlank()) {
-                    onCreateTask(finalTitle, selectedLayerId, selectedLayerId != null)
-                    title = ""
-                    selectedLayerId = null
-                }
-            },
-        )
-    }
-}
-
-@Composable
-private fun LayerIcon(layerId: String, color: Color, modifier: Modifier = Modifier) {
-    when (layerId) {
-        "layer_interior" -> InteriorLayerIcon(color = color, modifier = modifier)
-        "layer_cuerpo" -> WavesIcon(color = color, modifier = modifier)
-        "layer_conducta" -> InfinityIcon(color = color, modifier = modifier)
-        "layer_vinculos" -> VinculosLayerIcon(color = color, modifier = modifier)
-        "layer_proyecto" -> ProjectTriangleIcon(color = color, modifier = modifier)
-    }
-}
-
-private fun getLayerColor(layerId: String, palette: DashboardPalette): Color {
-    return when (layerId) {
-        "layer_interior" -> palette.layerInterior
-        "layer_cuerpo" -> palette.layerBody
-        "layer_conducta" -> palette.layerConduct
-        "layer_vinculos" -> palette.layerVinculos
-        "layer_proyecto" -> palette.layerProject
-        else -> palette.textMuted
     }
 }
 
@@ -793,6 +630,7 @@ private fun RelapsePanel(
     tracks: List<DashboardSobrietyTrackState>,
     palette: DashboardPalette,
     onToggleRelapse: (String, Boolean) -> Unit,
+    onOpenSobriety: () -> Unit,
 ) {
     SheetTitle(title = "Recaidas", note = "sobriedad definida", palette = palette)
 
@@ -800,6 +638,23 @@ private fun RelapsePanel(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        if (tracks.isEmpty()) {
+            Text(
+                text = "No hay rachas activas. Activa una racha antes de registrar una recaida.",
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontSize = 13.5.sp,
+                lineHeight = 18.sp,
+            )
+            SheetButton(
+                text = "Abrir sobriedad",
+                palette = palette,
+                primary = true,
+                onClick = onOpenSobriety,
+            )
+            return@Column
+        }
+
         tracks.forEach { track ->
             Row(
                 modifier = Modifier
@@ -1021,4 +876,3 @@ private fun SheetMiniButton(
         )
     }
 }
-

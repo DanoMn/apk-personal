@@ -20,6 +20,7 @@ flowchart TD
     MainActivity --> AnchorConfigScreen["AnchorConfigScreen / Mis anclas"]
     MainActivity --> SupportsConfigScreen["SupportsConfigScreen / Soportes"]
     MainActivity --> TasksScreen["TasksScreen / Pendientes"]
+    MainActivity --> SobrietyConfigScreen["SobrietyConfigScreen / Sobriedad"]
 
     DashboardScreen --> DashboardSheetHost["DashboardSheetHost / paneles inferiores"]
     DashboardScreen --> NavigationDrawer["NavigationDrawer / menu lateral"]
@@ -32,14 +33,13 @@ flowchart TD
 
     NavigationDrawer --> AnchorConfigScreen
     NavigationDrawer --> SupportsConfigScreen
-    NavigationDrawer --> TasksPanel["TasksPanel / panel inferior"]
-    NavigationDrawer --> RelapsePanel["RelapsePanel / recaidas"]
+    NavigationDrawer --> TasksScreen
+    NavigationDrawer --> SobrietyConfigScreen
 
     DashboardSheetHost --> EntryMenu["EntryMenuPanel"]
     DashboardSheetHost --> AnchorPanel["AnchorPanel / registrar ancla"]
     DashboardSheetHost --> SupportPanel["AnchorPanel usado como soporte"]
     DashboardSheetHost --> SleepPanel["SleepPanel"]
-    DashboardSheetHost --> TasksPanel
     DashboardSheetHost --> ActivitySettingsPanel["ActivitySettingsPanel"]
     DashboardSheetHost --> RelapsePanel
 ```
@@ -48,10 +48,9 @@ flowchart TD
 
 - La pantalla inicial real es `DashboardScreen`.
 - `MainActivity` cambia entre pantallas completas: Dashboard, Mis anclas,
-  Soportes y Pendientes.
+  Soportes, Pendientes y Sobriedad.
 - El dashboard tambien abre paneles inferiores para registro rapido.
-- `SobrietyConfigScreen` existe como pantalla basica interna, pero hoy no esta
-  cableada como pantalla completa en `MainActivity`.
+- `SobrietyConfigScreen` gestiona presets opt-in y rachas personalizadas.
 
 ---
 
@@ -136,7 +135,7 @@ flowchart TD
 |------------|---------------|-----------------|-----------|
 | Mis anclas | `AnchorConfigScreen` valida target obligatorio | `toggleActivity` / `saveActivityValue` | `AnchorPreviewSection` |
 | Soportes | `SupportsConfigScreen` agrega catalogo o custom sin targets | `onToggleSupport` usa semantica invertida | `SupportsPreviewSection` |
-| Pendientes | `TasksScreen` y `TasksPanel` crean tareas | `completeTask` marca Done | `TasksPreviewSection` |
+| Pendientes | `TasksScreen` crea y revive tareas | `completeTask` marca Done | `TasksPreviewSection` muestra solo abiertos |
 
 ---
 
@@ -237,29 +236,38 @@ stateDiagram-v2
 ```mermaid
 flowchart TD
     User["Usuario"] --> TasksScreen["TasksScreen / pantalla completa"]
-    User --> TasksPanel["TasksPanel / panel inferior"]
+    Dashboard["DashboardScreen / seccion Pendientes"] --> CompleteTask
+    Dashboard --> TasksScreen
 
     TasksScreen --> CreateTask["DashboardViewModel.createTask"]
-    TasksPanel --> CreateTask
     CreateTask --> RepositoryCreate["AutonomiaRepository.createTask"]
-    RepositoryCreate --> TaskEntity["tasks / status Pending"]
+    RepositoryCreate --> TaskPolicy["TaskPolicy.createDraft"]
+    TaskPolicy --> TaskEntity["tasks / status Pending"]
 
     TasksScreen --> CompleteTask["DashboardViewModel.completeTask"]
-    TasksPanel --> CompleteTask
     CompleteTask --> RepositoryDone["AutonomiaRepository.completeTask"]
     RepositoryDone --> TaskDone["tasks / status Done"]
+
+    TasksScreen --> ReactivateTask["DashboardViewModel.reactivateTask"]
+    ReactivateTask --> RepositoryReactivate["AutonomiaRepository.reactivateTask"]
+    RepositoryReactivate --> TaskEntity
 
     TaskEntity --> Projection["buildDashboardState"]
     TaskDone --> Projection
     Projection --> PendingTasks["DashboardState.pendingTasks"]
+    Projection --> CompletedTasks["DashboardState.completedTasks"]
     PendingTasks --> TasksPreview["TasksPreviewSection"]
+    PendingTasks --> TasksScreen
+    CompletedTasks --> TasksScreen
 ```
 
 ### Regla vigente
 
 - Solo se muestran en dashboard las tareas con `TaskStatus.Pending`.
-- Completar una tarea la saca de `pendingTasks`.
-- La capa es opcional; si no contribuye al core, queda neutral para scoring.
+- Completar una tarea la saca de `pendingTasks` y la mueve a `completedTasks`.
+- Revivir una tarea completada la vuelve `Pending`.
+- La capa es opcional; sin capa queda `ContributionRole.Neutral`, con capa queda `ContributionRole.Support`.
+- Pendientes no aparece en Configuracion rapida; no configura una base recurrente.
 
 ---
 
@@ -274,6 +282,13 @@ flowchart TD
     SleepPolicy --> SleepLog["sleep_logs"]
 
     Dashboard --> SobrietySection["SobrietySection"]
+    Dashboard --> SobrietyConfig["SobrietyConfigScreen"]
+    SobrietyConfig --> SetTrackActive["setAbstinenceTrackActive"]
+    SobrietyConfig --> CreateTrack["createCustomAbstinenceTrack"]
+    SobrietyConfig --> DeleteTrack["deleteCustomAbstinenceTrack"]
+    SetTrackActive --> AbstinenceTrack["abstinence_tracks / active"]
+    CreateTrack --> AbstinenceTrack
+    DeleteTrack --> AbstinenceTrack
     SobrietySection --> ToggleClean["toggleAbstinenceClean"]
     ToggleClean --> AbstinenceLogClean["abstinence_logs / Clean"]
 
@@ -281,7 +296,8 @@ flowchart TD
     RelapsePanel --> ToggleRelapse["toggleAbstinenceRelapse"]
     ToggleRelapse --> AbstinenceLogRelapse["abstinence_logs / Relapse"]
 
-    AbstinenceLogClean --> Projection["buildDashboardState"]
+    AbstinenceTrack --> Projection["buildDashboardState"]
+    AbstinenceLogClean --> Projection
     AbstinenceLogRelapse --> Projection
     SleepLog --> Projection
     Projection --> DashboardState["DashboardState"]
@@ -290,10 +306,9 @@ flowchart TD
 ### Estado vigente
 
 - Sueño se registra desde el panel inferior.
-- Sobriedad aparece en el dashboard y permite marcar limpio.
-- Recaidas se registran desde el panel inferior.
-- La pantalla `SobrietyConfigScreen` existe como base interna, pero falta
-  conectarla a navegacion de pantalla completa si se decide usarla.
+- Sobriedad aparece en el dashboard si hay rachas activas y permite marcar limpio.
+- `SobrietyConfigScreen` activa/desactiva presets opt-in y gestiona personalizadas.
+- Recaidas se registran desde el panel inferior para rachas activas.
 
 ---
 
@@ -307,9 +322,11 @@ flowchart TD
     Projection --> Layers["layers"]
     Projection --> Signals["signals"]
     Projection --> SobrietyTracks["sobrietyTracks"]
+    Projection --> SobrietyOptions["sobrietyOptions"]
     Projection --> AnchorItems["anchorItems"]
     Projection --> SupportItems["supportItems"]
     Projection --> PendingTasks["pendingTasks"]
+    Projection --> CompletedTasks["completedTasks"]
     Projection --> WeekRows["weekRows"]
     Projection --> Dimensions["dimensions"]
     Projection --> Sleep["sleep"]
@@ -317,7 +334,11 @@ flowchart TD
 
     AnchorItems --> AnchorPreview["AnchorPreviewSection"]
     SupportItems --> SupportsPreview["SupportsPreviewSection"]
+    SobrietyTracks --> SobrietyPreview["SobrietySection"]
+    SobrietyOptions --> SobrietyConfigScreen["SobrietyConfigScreen"]
     PendingTasks --> TasksPreview["TasksPreviewSection"]
+    PendingTasks --> TasksScreen["TasksScreen"]
+    CompletedTasks --> TasksScreen
     WeekRows --> WeekSection["WeekSection"]
     ActivityOptions --> ConfigScreens["Mis anclas / Soportes / paneles"]
 ```
@@ -343,7 +364,7 @@ flowchart TD
 
 | Area | Archivo principal | Rol |
 |------|-------------------|-----|
-| Navegacion de pantallas | `app/src/main/java/dev/panopt/autonomia/MainActivity.kt` | Cambia entre Dashboard, Mis anclas, Soportes y Pendientes |
+| Navegacion de pantallas | `app/src/main/java/dev/panopt/autonomia/MainActivity.kt` | Cambia entre Dashboard, Mis anclas, Soportes, Pendientes y Sobriedad |
 | Estado de UI | `app/src/main/java/dev/panopt/autonomia/ui/dashboard/DashboardViewModel.kt` | Combina flujos, recibe acciones y escribe en repositorio |
 | Persistencia | `app/src/main/java/dev/panopt/autonomia/AutonomiaRepository.kt` | Fachada sobre Room, seeds y preferencias |
 | Dominio dashboard | `app/src/main/java/dev/panopt/autonomia/domain/dashboard/DashboardProjection.kt` | Construye `DashboardState` |
@@ -351,4 +372,5 @@ flowchart TD
 | Anclas | `app/src/main/java/dev/panopt/autonomia/ui/anchors/AnchorConfigScreen.kt` | Configuracion completa de Mis anclas |
 | Soportes | `app/src/main/java/dev/panopt/autonomia/ui/supports/SupportsConfigScreen.kt` | Configuracion de Soportes |
 | Pendientes | `app/src/main/java/dev/panopt/autonomia/ui/tasks/TasksScreen.kt` | Pantalla completa de Pendientes |
+| Sobriedad | `app/src/main/java/dev/panopt/autonomia/ui/sobriety/SobrietyConfigScreen.kt` | Pantalla completa de Sobriedad |
 | Componentes dashboard | `app/src/main/java/dev/panopt/autonomia/ui/dashboard/components/` | Secciones visuales del dashboard |

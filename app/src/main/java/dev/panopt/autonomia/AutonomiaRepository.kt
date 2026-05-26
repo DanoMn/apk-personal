@@ -2,6 +2,7 @@ package dev.panopt.autonomia
 
 import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
+import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
@@ -14,10 +15,12 @@ import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
+import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import dev.panopt.autonomia.domain.sleep.SleepWindowValidation
+import dev.panopt.autonomia.domain.task.TaskPolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -146,6 +149,9 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun markAbstinenceClean(trackId: String, date: String = todayKey()) {
+        val track = dao.getAbstinenceTrack(trackId)?.toDomain() ?: return
+        if (!AbstinencePolicy.canRecordDailyLog(track)) return
+
         dao.upsertAbstinenceLog(
             AbstinenceLogEntity(
                 trackId = trackId,
@@ -161,6 +167,9 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun markAbstinenceRelapse(trackId: String, date: String = todayKey()) {
+        val track = dao.getAbstinenceTrack(trackId)?.toDomain() ?: return
+        if (!AbstinencePolicy.canRecordDailyLog(track)) return
+
         dao.upsertAbstinenceLog(
             AbstinenceLogEntity(
                 trackId = trackId,
@@ -173,6 +182,42 @@ class AutonomiaRepository(context: Context) {
 
     suspend fun clearAbstinenceLog(trackId: String, date: String = todayKey()) {
         dao.deleteAbstinenceLog(trackId, date)
+    }
+
+    suspend fun setAbstinenceTrackActive(trackId: String, active: Boolean) {
+        val track = dao.getAbstinenceTrack(trackId) ?: return
+        dao.setAbstinenceTrackActive(
+            trackId = track.id,
+            active = active,
+            updatedAt = System.currentTimeMillis(),
+        )
+    }
+
+    suspend fun createCustomAbstinenceTrack(name: String) {
+        val draft = AbstinencePolicy.createCustomDraft(name) ?: return
+        val now = System.currentTimeMillis()
+        dao.upsertAbstinenceTrack(
+            AbstinenceTrackEntity(
+                id = "trk_custom_${UUID.randomUUID()}",
+                name = draft.name,
+                substanceLabel = draft.substanceLabel,
+                severity = draft.severity.name,
+                contributionRole = draft.contributionRole.name,
+                importanceTier = draft.importanceTier.name,
+                active = draft.active,
+                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
+
+    suspend fun deleteCustomAbstinenceTrack(trackId: String) {
+        val track = dao.getAbstinenceTrack(trackId)?.toDomain() ?: return
+        if (!AbstinencePolicy.canDelete(track)) return
+
+        dao.deleteAbstinenceLogsForTrack(trackId)
+        dao.deleteAbstinenceTrack(trackId)
     }
 
     suspend fun recordDashboardRiskEvent(date: String = todayKey()) {
@@ -226,27 +271,21 @@ class AutonomiaRepository(context: Context) {
     suspend fun createTask(
         title: String,
         layerId: String?,
-        contributesToCore: Boolean,
     ) {
-        val trimmedTitle = title.trim()
-        if (trimmedTitle.isBlank()) return
+        val draft = TaskPolicy.createDraft(title = title, layerId = layerId) ?: return
+        if (draft.layerId != null && dao.getLayer(draft.layerId) == null) return
 
         val now = System.currentTimeMillis()
-        val scoringLayerId = layerId?.takeIf { contributesToCore && it.isNotBlank() }
         dao.upsertTask(
             TaskEntity(
                 id = "task_${UUID.randomUUID()}",
-                title = trimmedTitle,
+                title = draft.title,
                 description = "",
-                layerId = scoringLayerId,
+                layerId = draft.layerId,
                 projectId = null,
                 status = TaskStatus.Pending.name,
-                contributionRole = if (scoringLayerId == null) {
-                    ContributionRole.Neutral
-                } else {
-                    ContributionRole.Support
-                }.name,
-                importanceTier = ImportanceTier.Medium.name,
+                contributionRole = draft.contributionRole.name,
+                importanceTier = draft.importanceTier.name,
                 dueDate = null,
                 completedAt = null,
                 createdAt = now,
@@ -256,12 +295,27 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun completeTask(taskId: String) {
+        val task = dao.getTask(taskId)?.toDomain() ?: return
+        if (!TaskPolicy.canComplete(task)) return
+
         val now = System.currentTimeMillis()
         dao.updateTaskStatus(
             taskId = taskId,
             status = TaskStatus.Done.name,
             completedAt = now,
             updatedAt = now,
+        )
+    }
+
+    suspend fun reactivateTask(taskId: String) {
+        val task = dao.getTask(taskId)?.toDomain() ?: return
+        if (!TaskPolicy.canReactivate(task)) return
+
+        dao.updateTaskStatus(
+            taskId = taskId,
+            status = TaskStatus.Pending.name,
+            completedAt = null,
+            updatedAt = System.currentTimeMillis(),
         )
     }
 

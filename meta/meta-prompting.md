@@ -87,7 +87,7 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Asociación de Capas en Tareas**: Las tareas (`Task`) pueden estar asociadas a una de las 5 capas principales de la aplicación: `Interior`, `Cuerpo`, `Conducta`, `Vínculos` o `Proyecto`. Si no está asociada a ninguna, se considera de contribución Neutral.
 * **Interfaz de Creación de Pendientes**: Consiste en un campo de texto para el título del pendiente, y una fila horizontal debajo que muestra los 5 símbolos de las capas. El usuario puede tocar cualquiera de estos símbolos para asociar el pendiente a esa capa. Al tocarlo se destaca visualmente con el color de su respectiva capa. Si lo vuelve a tocar, se deselecciona. Al confirmar la creación del pendiente con el botón "Agregar pendiente", este se guarda en la base de datos con la capa seleccionada.
 * **Visualización de la Lista de Pendientes**: Cada pendiente activo en la lista se renderiza en una tarjeta plana. Si tiene una capa asignada, se muestra su símbolo característico al lado izquierdo del título de la tarea, pintado con el color correspondiente de la capa. Al lado derecho, se incluye un check circular sutil para completar la tarea de forma directa ("check, check, check").
-* **Flujo de Acciones de Pendientes**: El ViewModel expone `tasksFlow()` que lee desde Room. `createTask` recibe el título de la tarea, el `layerId` (nullable) y un booleano `contributesToCore` (que es true si el `layerId` no es nulo). `completeTask` marca la tarea como `Done` en Room.
+* **Flujo de Acciones de Pendientes**: El ViewModel expone `tasksFlow()` que lee desde Room. `createTask` recibe el titulo de la tarea y el `layerId` nullable; `TaskPolicy` decide si queda `Neutral` o `Support`. `completeTask` marca la tarea como `Done`; `reactivateTask` vuelve una tarea `Done` a `Pending`.
 
 ### Diagnostico de Bugs — Dashboard y Anclas (22/05/2026)
 
@@ -113,3 +113,16 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Tiempo Objetivo por Sesión (`sessionTargetMinutes`)**: Máximo permitido de 15 horas por día (900 minutos) para evitar desbalances en otras áreas/capas (sueño, cuerpo, vínculos, etc.). Se guarda en `targetValue` en `user_activity_configs`.
 * **Flujo UX de Duración del Compromiso**: Al seleccionar la meta semanal no se abre ningún modal. La recomendación de dejar la duración como `Indefinido` vive dentro del diálogo de meses, y ese diálogo solo se abre cuando el usuario presiona el botón de configuración.
 * **Canon UX de Mis anclas (25/05/2026)**: Fuente vigente en `docs/mis-anclas-ux-canon-v1.md`. Orden del editor: identidad/nombre, tiempo objetivo, meta semanal, duración del compromiso, acciones. Configuración rápida > Anclas ajusta anclas configuradas, no administra catálogo.
+
+### Pendientes V1 como lista operativa (26/05/2026)
+
+* **Pendientes no es Configuracion rapida**: `Task` / Pendientes no configura una base recurrente. Vive como feature operativa: dashboard expone pendientes abiertos y permite completar; la pantalla profunda crea, filtra, ve historial y revive.
+* **Comunicacion real entre capas**: la pantalla de Pendientes valida y ajusta lo que puede entrar; Room guarda el hecho; el nucleo separa `Pending`/`Done` y calcula aporte; dashboard solo presenta la proyeccion y permite acciones leves.
+* **Politica de aporte**: una tarea sin capa es `ContributionRole.Neutral`; una tarea con capa es `ContributionRole.Support`. Revivir es la transicion pura `Done` -> `Pending`.
+
+### Sobriedad V1 opt-in (26/05/2026)
+
+* **Sobriedad no es checklist**: es feature propia (`AbstinenceTrack` + `AbstinenceLog`) con racha, marca diaria y recaida como senal de recuperacion, no castigo.
+* **Presets opt-in**: Alcohol, Sustancias y Conducta sexual existen como presets inactivos. Solo tracks activos aparecen en dashboard, pesan en Conducta y pueden limitar estado.
+* **Backend local-first**: configuracion activa/desactiva/crea tracks; Room guarda hechos; `DashboardProjection` separa `sobrietyTracks` activas de `sobrietyOptions`; `ScoreEngine` ignora logs de tracks inactivos.
+* **V1 deliberada**: recaida simple del dia actual. Olvido de 2-3 dias y duracion multi-dia quedan fuera.

@@ -16,6 +16,7 @@ import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
+import dev.panopt.autonomia.ui.sobriety.SobrietyConfigScreen
 import dev.panopt.autonomia.ui.supports.SupportsConfigScreen
 import dev.panopt.autonomia.ui.tasks.TasksScreen
 
@@ -49,11 +50,12 @@ class MainActivity : ComponentActivity() {
                     onToggleAbstinenceRelapse = dashboardViewModel::toggleAbstinenceRelapse,
                     onCreateActivity = dashboardViewModel::createActivity,
                     onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
-                    onCreateTask = dashboardViewModel::createTask,
                     onCompleteTask = dashboardViewModel::completeTask,
                     onAddAnchor = dashboardViewModel::addActivityAsAnchor,
                     onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
                     onNavigateToAnchorConfig = { currentScreen = AppScreen.AnchorConfig },
+                    onNavigateToTasks = { currentScreen = AppScreen.Tasks },
+                    onNavigateToSobriety = { currentScreen = AppScreen.Sobriety },
                     onToggleSupport = dashboardViewModel::onToggleSupport,
                     onResetSupportOmissions = dashboardViewModel::resetSupportOmissions,
                     onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
@@ -94,10 +96,22 @@ class MainActivity : ComponentActivity() {
                 )
                 AppScreen.Tasks -> TasksScreen(
                     pendingTasks = dashboardState.pendingTasks,
+                    completedTasks = dashboardState.completedTasks,
                     layers = dashboardState.layers,
                     palette = palette,
                     onCreateTask = dashboardViewModel::createTask,
                     onCompleteTask = dashboardViewModel::completeTask,
+                    onReactivateTask = dashboardViewModel::reactivateTask,
+                    onBack = { currentScreen = AppScreen.Dashboard },
+                )
+                AppScreen.Sobriety -> SobrietyConfigScreen(
+                    tracks = dashboardState.sobrietyOptions,
+                    palette = palette,
+                    onToggleClean = dashboardViewModel::toggleAbstinenceClean,
+                    onToggleRelapse = dashboardViewModel::toggleAbstinenceRelapse,
+                    onSetTrackActive = dashboardViewModel::setAbstinenceTrackActive,
+                    onAddTrack = dashboardViewModel::createCustomAbstinenceTrack,
+                    onRemoveTrack = dashboardViewModel::deleteCustomAbstinenceTrack,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
             }
@@ -125,4 +139,5 @@ private enum class AppScreen {
     AnchorConfig,
     Supports,
     Tasks,
+    Sobriety,
 }

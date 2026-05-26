@@ -11,6 +11,7 @@ internal data class DashboardState(
     val layers: List<DashboardLayerState> = emptyList(),
     val signals: List<DashboardSignalState> = emptyList(),
     val sobrietyTracks: List<DashboardSobrietyTrackState> = emptyList(),
+    val sobrietyOptions: List<DashboardSobrietyTrackState> = emptyList(),
     val anchorItems: List<DashboardCheckItemState> = emptyList(),
     val weekRows: List<DashboardWeekRowState> = emptyList(),
     val dimensions: List<DashboardDimensionState> = emptyList(),
@@ -18,6 +19,7 @@ internal data class DashboardState(
     val activityOptions: List<DashboardActivityOptionState> = emptyList(),
     val supportItems: List<DashboardCheckItemState> = emptyList(),
     val pendingTasks: List<DashboardTaskState> = emptyList(),
+    val completedTasks: List<DashboardTaskState> = emptyList(),
 )
 
 internal data class DashboardStatusState(
@@ -68,6 +70,9 @@ internal data class DashboardSobrietyTrackState(
     val days: Int,
     val meta: String,
     val status: DashboardDimensionStatus,
+    val active: Boolean = true,
+    val isCustom: Boolean = false,
+    val severity: String = "",
     val isRelapseToday: Boolean = false,
     val isMarkedCleanToday: Boolean,
 )

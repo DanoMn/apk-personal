@@ -17,6 +17,7 @@ import dev.panopt.autonomia.SleepLog
 import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
+import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.isGoal
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
@@ -147,17 +148,21 @@ internal fun buildDashboardState(
             focusSignalActivityId = focusSignalActivityId,
         ),
         sobrietyTracks = activeTracks.map { track ->
-            val status = todayLogsByTrack[track.id]?.status ?: AbstinenceStatus.Unknown
-            DashboardSobrietyTrackState(
-                id = track.id,
-                label = track.name,
-                days = streakDays(track.id, allAbstinenceLogs, today),
-                meta = sobrietyMeta(status),
-                status = sobrietyStatus(status, track.severity),
-                isRelapseToday = status == AbstinenceStatus.Relapse,
-                isMarkedCleanToday = status == AbstinenceStatus.Clean,
+            track.toDashboardSobrietyTrack(
+                todayLogsByTrack = todayLogsByTrack,
+                allAbstinenceLogs = allAbstinenceLogs,
+                today = today,
             )
         },
+        sobrietyOptions = abstinenceTracks
+            .sortedBy { it.sortOrder }
+            .map { track ->
+                track.toDashboardSobrietyTrack(
+                    todayLogsByTrack = todayLogsByTrack,
+                    allAbstinenceLogs = allAbstinenceLogs,
+                    today = today,
+                )
+            },
         anchorItems = primaryActivities.map { activity ->
             DashboardCheckItemState(
                 id = activity.id,
@@ -217,7 +222,14 @@ internal fun buildDashboardState(
         },
         pendingTasks = tasks
             .filter { it.status == TaskStatus.Pending }
-            .sortedBy { it.dueDate ?: "9999-99-99" }
+            .sortedWith(
+                compareBy<Task> { it.dueDate ?: "9999-99-99" }
+                    .thenByDescending { it.createdAt },
+            )
+            .map { DashboardTaskState(id = it.id, title = it.title, layerId = it.layerId) },
+        completedTasks = tasks
+            .filter { it.status == TaskStatus.Done }
+            .sortedByDescending { it.completedAt ?: it.updatedAt }
             .map { DashboardTaskState(id = it.id, title = it.title, layerId = it.layerId) },
     )
 }
@@ -469,6 +481,26 @@ private fun sobrietyStatus(
         }
         AbstinenceStatus.Unknown -> DashboardDimensionStatus.Unknown
     }
+
+private fun AbstinenceTrack.toDashboardSobrietyTrack(
+    todayLogsByTrack: Map<String, AbstinenceLog>,
+    allAbstinenceLogs: List<AbstinenceLog>,
+    today: LocalDate,
+): DashboardSobrietyTrackState {
+    val status = todayLogsByTrack[id]?.status ?: AbstinenceStatus.Unknown
+    return DashboardSobrietyTrackState(
+        id = id,
+        label = name,
+        days = streakDays(id, allAbstinenceLogs, today),
+        meta = sobrietyMeta(status),
+        status = sobrietyStatus(status, severity),
+        active = active,
+        isCustom = AbstinencePolicy.isCustomTrack(this),
+        severity = severity.name,
+        isRelapseToday = status == AbstinenceStatus.Relapse,
+        isMarkedCleanToday = status == AbstinenceStatus.Clean,
+    )
+}
 
 private fun streakDays(
     trackId: String,

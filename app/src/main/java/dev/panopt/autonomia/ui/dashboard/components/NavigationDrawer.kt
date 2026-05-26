@@ -70,7 +70,7 @@ internal fun NavigationDrawer(
     onOpenAnchors: () -> Unit,
     onOpenSupports: () -> Unit = {},
     onOpenTasks: () -> Unit,
-    onOpenRelapse: () -> Unit,
+    onOpenSobriety: () -> Unit,
     onOpenActivitySettings: () -> Unit,
 ) {
     Column(
@@ -169,10 +169,10 @@ internal fun NavigationDrawer(
             }
             DrawerLink(
                 palette = palette,
-                text = "Recaidas",
+                text = "Sobriedad",
                 onClick = {
                     onClose()
-                    onOpenRelapse()
+                    onOpenSobriety()
                 },
             ) {
                 ShieldAlertIcon(color = it)

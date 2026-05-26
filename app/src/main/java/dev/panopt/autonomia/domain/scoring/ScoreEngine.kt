@@ -227,7 +227,13 @@ object ScoreEngine {
 
     private fun ScoreInput.hasAnyFact(): Boolean {
         val hasActivityFact = todayActivityLogs.isNotEmpty() || periodActivityLogs.isNotEmpty()
-        val hasAbstinenceFact = todayAbstinenceLogs.any { it.status != AbstinenceStatus.Unknown } || allAbstinenceLogs.isNotEmpty()
+        val activeTrackIds = abstinenceTracks
+            .filter { it.active }
+            .map { it.id }
+            .toSet()
+        val hasAbstinenceFact = (todayAbstinenceLogs + allAbstinenceLogs).any { log ->
+            log.trackId in activeTrackIds && log.status != AbstinenceStatus.Unknown
+        }
         val hasTaskFact = tasks.any { it.status == TaskStatus.Done }
         return hasActivityFact || hasAbstinenceFact || hasTaskFact || sleepLog != null
     }

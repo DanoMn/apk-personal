@@ -24,10 +24,32 @@ internal object DefaultSeeds {
         LayerEntity("layer_proyecto", "Proyecto", "Futuro, identidad, trabajo y creacion.", 50),
     )
 
-    val abstinenceTracks: List<AbstinenceTrackEntity> = emptyList()
-
     // New seed data for v4 schema
     private val seedTime = System.currentTimeMillis()
+
+    val abstinenceTracks: List<AbstinenceTrackEntity> = listOf(
+        abstinenceTrack(
+            id = "trk_alcohol",
+            name = "Alcohol",
+            severity = "Critical",
+            importanceTier = "Critical",
+            sortOrder = 10,
+        ),
+        abstinenceTrack(
+            id = "trk_substances",
+            name = "Sustancias",
+            severity = "Critical",
+            importanceTier = "Critical",
+            sortOrder = 20,
+        ),
+        abstinenceTrack(
+            id = "trk_sexual",
+            name = "Conducta sexual",
+            severity = "Moderate",
+            importanceTier = "High",
+            sortOrder = 30,
+        ),
+    )
 
     val activityDefinitions: List<ActivityDefinitionEntity> = listOf(
         // === Interior: 5 anchors ===
@@ -207,6 +229,25 @@ internal object DefaultSeeds {
         contributionRole = contributionRole.name,
         importanceTier = importanceTier.name,
         presetCategory = presetCategory,
+        sortOrder = sortOrder,
+        createdAt = seedTime,
+        updatedAt = seedTime,
+    )
+
+    private fun abstinenceTrack(
+        id: String,
+        name: String,
+        severity: String,
+        importanceTier: String,
+        sortOrder: Int,
+    ): AbstinenceTrackEntity = AbstinenceTrackEntity(
+        id = id,
+        name = name,
+        substanceLabel = name,
+        severity = severity,
+        contributionRole = ContributionRole.Protective.name,
+        importanceTier = importanceTier,
+        active = false,
         sortOrder = sortOrder,
         createdAt = seedTime,
         updatedAt = seedTime,
