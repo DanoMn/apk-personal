@@ -67,6 +67,15 @@ las anclas, no compite con ellas. 8 actividades canónicas en el seed.
 - UX inversa: el sistema asume todo cumplido. El usuario solo desmarca lo que
   NO hizo ese día.
 
+### UX/UI vigente
+
+Fuente canónica: `docs/mis-soportes-ux-canon-v1.md`.
+
+- El panel de configuración rápida de Soportes tiene una altura máxima del 60%.
+- Las vistas estáticas (cabecera y botón de catálogo) están fuera de la zona de scroll.
+- Comparte el diseño de botones con Anclas (`colorCardboard`).
+- Protegido contra cierres accidentales mediante `NestedScrollConnection`.
+
 ---
 
 ## 3. TaskList (Pendientes)

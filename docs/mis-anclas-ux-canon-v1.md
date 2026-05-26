@@ -164,28 +164,34 @@ No debe mostrar:
 El bottom sheet debe ser adaptativo:
 
 - contraerse cuando hay poco contenido;
-- crecer cuando el contenido lo necesita;
-- tener limite superior cercano a la pantalla completa;
+- crecer cuando el contenido lo necesita (ej. Anclas);
 - respetar `navigationBarsPadding()`.
 
-Patron Compose canonico:
+### Protección de gestos (Swipe to Dismiss)
+
+Dado que `ModalBottomSheet` asume que deslizar en cualquier lugar de su superficie cierra el panel, el contenedor principal de los bottom sheets en `DashboardPanels.kt` **debe interceptar el scroll anidado**. 
+
+Patrón Compose canónico para bloquear cierres accidentales por overscroll:
 
 ```kotlin
-BoxWithConstraints(...) {
-    val maxSheetHeight = maxHeight * 0.94f
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = maxSheetHeight)
-            .navigationBarsPadding()
-    ) {
-        // contenido
+val blockNestedScrollConnection = remember {
+    object : NestedScrollConnection {
+        override fun onPostScroll(...) = available.copy(x = 0f)
+        override suspend fun onPostFling(...) = available.copy(x = 0f)
     }
+}
+
+Box(
+    modifier = Modifier
+        .fillMaxWidth()
+        .nestedScroll(blockNestedScrollConnection)
+        .navigationBarsPadding()
+) {
+    // contenido de las vistas
 }
 ```
 
-No usar `fillMaxHeight(0.94f)` para este caso, porque fuerza altura casi
-completa incluso cuando hay pocos componentes.
+Gracias a esto, la ventana modal **solo se puede cerrar deslizando desde el drag handle superior** (el "top") o desde un área que no sea capturada por un contenedor scrolleable interno, protegiendo al usuario de cierres accidentales al navegar listas.
 
 ## Navegacion atras
 
