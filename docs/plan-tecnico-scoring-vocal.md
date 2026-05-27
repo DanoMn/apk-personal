@@ -133,7 +133,7 @@ implementacion.
 | 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
-| 6 | Pendiente | Crear pagina de scoring detallado. |
+| 6 | Hecha v0 | Crear pagina de scoring detallado. |
 | 7 | Hecha v0 | Agregar memoria semanal derivada y versionada. |
 | 8 | Pendiente | Refinar UI explicativa por capas. |
 
@@ -1535,6 +1535,8 @@ Resultado: build y tests en verde.
 - Calibrar `StabilityScore` con historial real cuando existan suficientes
   semanas de uso.
 - Agregar histeresis de estado cuando exista suficiente historial real.
+- Expandir `Estado Base` con tendencias y recomendaciones cuando exista mas
+  historial.
 - Implementar telemetria avanzada de sueno: sesiones, interrupciones,
   desbloqueos y confianza de fuente.
 - Materializar recaidas asumidas por sobriedad como eventos/rangos editables.
@@ -1812,7 +1814,54 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 19. Preguntas abiertas antes de implementar
+## 19. Registro de pagina Estado Base v0
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Crear una pantalla principal propia para el reporte de scoring, dejando el
+dashboard como resumen breve del estado del usuario.
+```
+
+Cambios realizados:
+
+```text
+DashboardScoreReportState
+  Estado de reporte ya mapeado desde dominio/dashboard para que Compose no
+  calcule scoring.
+
+DashboardProjection.kt
+  Convierte ScoreReport en labels, razones y detalle por capa.
+
+ScoringScreen.kt
+  Pantalla `Estado Base` con lectura semanal, razones y capas.
+
+ScoringReportComponents.kt
+  Componentes pequenos para metricas, razones, barras y cards de capa.
+
+NavigationDrawer.kt / DashboardScreen.kt / MainActivity.kt
+  Agregan entrada `Estado Base` desde el menu lateral y pantalla principal
+  propia en la navegacion local.
+```
+
+Reglas preservadas:
+
+- Compose solo renderiza estado;
+- formulas y labels numericos salen del dominio/proyeccion;
+- no se rediseno el dashboard;
+- la pantalla usa el reporte actual y queda lista para tendencias/historial.
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 20. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

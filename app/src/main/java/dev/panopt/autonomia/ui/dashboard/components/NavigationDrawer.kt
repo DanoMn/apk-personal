@@ -67,6 +67,7 @@ internal fun NavigationDrawer(
     modifier: Modifier,
     onClose: () -> Unit,
     onThemeChange: (Boolean) -> Unit,
+    onOpenScoring: () -> Unit,
     onOpenAnchors: () -> Unit,
     onOpenSupports: () -> Unit = {},
     onOpenTasks: () -> Unit,
@@ -136,6 +137,16 @@ internal fun NavigationDrawer(
                 onClick = onClose,
             ) {
                 LayoutGridIcon(color = it)
+            }
+            DrawerLink(
+                palette = palette,
+                text = "Estado Base",
+                onClick = {
+                    onClose()
+                    onOpenScoring()
+                },
+            ) {
+                BarChartIcon(color = it)
             }
             DrawerLink(
                 palette = palette,

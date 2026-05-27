@@ -25,6 +25,7 @@ import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
+import java.util.Locale
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
@@ -243,6 +244,7 @@ internal fun buildDashboardState(
             .filter { it.status == TaskStatus.Done }
             .sortedByDescending { it.completedAt ?: it.updatedAt }
             .map { DashboardTaskState(id = it.id, title = it.title, layerId = it.layerId) },
+        scoreReport = scoreReport.toDashboardScoreReportState(),
     )
 }
 
@@ -275,6 +277,55 @@ private fun pendingLabel(count: Int): String =
         1 -> "1 pendiente"
         else -> "$count pendientes"
     }
+
+private fun dev.panopt.autonomia.domain.scoring.ScoreReport.toDashboardScoreReportState(): DashboardScoreReportState {
+    val worstLayerName = worstLayerId
+        ?.let { id -> layerScores.firstOrNull { it.layerId == id }?.name }
+        ?: "Sin capa baja"
+    return DashboardScoreReportState(
+        stateTitle = scoreTitle(state),
+        headline = scoreHeadline(state),
+        scoreLabel = visibleScore?.toString() ?: "--",
+        progress = progress,
+        weeklyBaseLabel = scoreRatioLabel(weeklyBaseScore),
+        weeklyScoreLabel = scoreRatioLabel(weeklyScore),
+        averageLayerLabel = scoreRatioLabel(averageLayerScore),
+        worstLayerLabel = worstLayerName,
+        stabilityLabel = stabilityScore?.let {
+            "${scoreRatioLabel(it)} / $stabilityWeeks semanas"
+        } ?: "Sin memoria suficiente",
+        reasons = reasons.ifEmpty { listOf(scoreBody(state)) },
+        layers = layerScores.map { layer ->
+            DashboardScoreLayerReportState(
+                layerId = layer.layerId,
+                name = layer.name,
+                scoreLabel = scoreRatioLabel(layer.rawScore),
+                baseLabel = scoreRatioLabel(layer.baseScore),
+                progress = layer.score,
+                anchorLabel = layer.anchorScore.scoreOrDash(),
+                supportLabel = layer.supportScore.scoreOrDash(),
+                surplusLabel = if (layer.anchorSurplusBonus > 0f) {
+                    "+${scoreRatioLabel(layer.anchorSurplusBonus)}"
+                } else {
+                    "--"
+                },
+                taskMomentumLabel = if (layer.taskMomentumBonus > 0f) {
+                    "+${scoreRatioLabel(layer.taskMomentumBonus)}"
+                } else {
+                    "--"
+                },
+                sleepLabel = layer.sleepScore.scoreOrDash(),
+                sobrietyLabel = layer.sobrietyScore.scoreOrDash(),
+            )
+        },
+    )
+}
+
+private fun Float?.scoreOrDash(): String =
+    this?.let(::scoreRatioLabel) ?: "--"
+
+private fun scoreRatioLabel(value: Float): String =
+    String.format(Locale.US, "%.3f", value.coerceAtLeast(0f))
 
 private fun scoreTitle(state: ScoreState): String =
     when (state) {

@@ -19,6 +19,7 @@ internal data class DashboardState(
     val supportItems: List<DashboardCheckItemState> = emptyList(),
     val pendingTasks: List<DashboardTaskState> = emptyList(),
     val completedTasks: List<DashboardTaskState> = emptyList(),
+    val scoreReport: DashboardScoreReportState = DashboardScoreReportState(),
 )
 
 internal data class DashboardStatusState(
@@ -142,4 +143,32 @@ internal data class DashboardTaskState(
     val id: String,
     val title: String,
     val layerId: String? = null,
+)
+
+internal data class DashboardScoreReportState(
+    val stateTitle: String = "Sin datos",
+    val headline: String = "Todavia no hay lectura suficiente.",
+    val scoreLabel: String = "--",
+    val progress: Float = 0f,
+    val weeklyBaseLabel: String = "--",
+    val weeklyScoreLabel: String = "--",
+    val averageLayerLabel: String = "--",
+    val worstLayerLabel: String = "Sin capa baja",
+    val stabilityLabel: String = "Sin memoria suficiente",
+    val reasons: List<String> = emptyList(),
+    val layers: List<DashboardScoreLayerReportState> = emptyList(),
+)
+
+internal data class DashboardScoreLayerReportState(
+    val layerId: String,
+    val name: String,
+    val scoreLabel: String,
+    val baseLabel: String,
+    val progress: Float,
+    val anchorLabel: String,
+    val supportLabel: String,
+    val surplusLabel: String,
+    val taskMomentumLabel: String,
+    val sleepLabel: String,
+    val sobrietyLabel: String,
 )

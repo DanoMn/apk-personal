@@ -26,6 +26,7 @@ import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
+import dev.panopt.autonomia.ui.scoring.ScoringScreen
 import dev.panopt.autonomia.ui.sleep.SleepConfigScreen
 import dev.panopt.autonomia.ui.sobriety.SobrietyConfigScreen
 import dev.panopt.autonomia.ui.supports.SupportsConfigScreen
@@ -116,6 +117,7 @@ class MainActivity : ComponentActivity() {
                     onCompleteTask = dashboardViewModel::completeTask,
                     onAddAnchor = dashboardViewModel::addActivityAsAnchor,
                     onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                    onNavigateToScoring = { currentScreen = AppScreen.Scoring },
                     onNavigateToAnchorConfig = { currentScreen = AppScreen.AnchorConfig },
                     onNavigateToTasks = { currentScreen = AppScreen.Tasks },
                     onNavigateToSobriety = { currentScreen = AppScreen.Sobriety },
@@ -127,6 +129,11 @@ class MainActivity : ComponentActivity() {
                     onRemoveSupport = dashboardViewModel::removeFromSupports,
                     onToggleAllSupports = dashboardViewModel::toggleAllSupports,
                     onSaveSupportChecklist = dashboardViewModel::saveSupportChecklist,
+                )
+                AppScreen.Scoring -> ScoringScreen(
+                    state = dashboardState,
+                    palette = palette,
+                    onBack = { currentScreen = AppScreen.Dashboard },
                 )
                 AppScreen.AnchorConfig -> AnchorConfigScreen(
                     layers = dashboardState.layers,
@@ -208,6 +215,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class AppScreen {
     Dashboard,
+    Scoring,
     AnchorConfig,
     Supports,
     Tasks,
