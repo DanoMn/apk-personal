@@ -21,8 +21,9 @@ import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.isGoal
+import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
-import dev.panopt.autonomia.domain.scoring.ScoreInput
+import dev.panopt.autonomia.domain.scoring.ScoreInputSource
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
@@ -90,17 +91,19 @@ internal fun buildDashboardState(
     )
 
     val scoreReport = ScoreEngine.calculate(
-        ScoreInput(
-            layers = activeLayers,
-            activities = visibleActivities,
-            todayActivityLogs = todayActivityLogs,
-            periodActivityLogs = periodActivityLogs,
-            abstinenceTracks = activeTracks,
-            todayAbstinenceLogs = todayAbstinenceLogs,
-            allAbstinenceLogs = allAbstinenceLogs,
-            tasks = tasks,
-            sleepLog = sleepLog,
-            today = today,
+        BuildScoreInputUseCase(
+            ScoreInputSource(
+                layers = layers,
+                activities = activities,
+                todayActivityLogs = todayActivityLogs,
+                periodActivityLogs = periodActivityLogs,
+                abstinenceTracks = abstinenceTracks,
+                todayAbstinenceLogs = todayAbstinenceLogs,
+                allAbstinenceLogs = allAbstinenceLogs,
+                tasks = tasks,
+                sleepLog = sleepLog,
+                today = today,
+            ),
         ),
     )
     val scoreState = scoreReport.state

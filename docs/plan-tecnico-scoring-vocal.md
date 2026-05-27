@@ -129,7 +129,7 @@ implementacion.
 | 0 | Hecha | Auditoria read-only del codigo actual. |
 | 1 | Parcial v0 | Consolidar modelo de registro de hechos. |
 | 2 | Parcial v0 | Ajustar entidades Room y migraciones minimas. |
-| 3 | Parcial v0 | Crear input builder semanal desde hechos reales. |
+| 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
 | 6 | Pendiente | Crear pagina de scoring detallado. |
@@ -1526,8 +1526,6 @@ Resultado: build y tests en verde.
 
 ### Pendiente despues de v0
 
-- Crear `BuildScoreInputUseCase` formal para sacar el armado de input semanal
-  de `DashboardProjection`.
 - Migrar de `activity_logs` a `daily_activity_logs` como tabla limpia unica para
   anclas/soportes/tasks, o cerrar explicitamente `activity_logs` como nombre
   canonico si se decide no renombrar.
@@ -1599,7 +1597,49 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 15. Preguntas abiertas antes de implementar
+## 15. Registro de input builder semanal
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Sacar del dashboard la decision de que entra al scoring y dejar una entrada
+formal reutilizable por dashboard, Estado Base y snapshots.
+```
+
+Cambios realizados:
+
+```text
+ScoreInputSource.kt
+  Fuente cruda de hechos/configuracion para construir ScoreInput.
+
+BuildScoreInputUseCase.kt
+  Normaliza capas activas, actividades visibles de scoring y sobriedad activa.
+
+DashboardProjection.kt
+  Deja de construir ScoreInput a mano y llama al use case.
+
+BuildScoreInputUseCaseTest.kt
+  Protege el filtrado de capas, actividades y tracks activos.
+```
+
+Resultado:
+
+```text
+Dashboard ya no decide directamente la entrada del scoring.
+La misma construccion de ScoreInput queda lista para Estado Base y snapshots.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 16. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.
