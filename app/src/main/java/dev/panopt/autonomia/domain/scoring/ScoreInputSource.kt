@@ -20,4 +20,5 @@ data class ScoreInputSource(
     val tasks: List<Task>,
     val sleepLog: SleepLog?,
     val today: LocalDate = LocalDate.now(),
+    val weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
 )

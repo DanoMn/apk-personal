@@ -21,6 +21,7 @@ data class ScoreInput(
     val tasks: List<Task>,
     val sleepLog: SleepLog?,
     val today: LocalDate = LocalDate.now(),
+    val weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
 )
 
 data class ScoreReport(
@@ -38,6 +39,17 @@ data class ScoreReport(
     val worstLayerScore: Float = 0f,
     val worstLayerId: String? = null,
     val reasons: List<String> = emptyList(),
+    val stabilityScore: Float? = null,
+    val stabilityWeeks: Int = 0,
+)
+
+data class WeeklyScoreHistoryEntry(
+    val weekStart: String,
+    val weekEnd: String,
+    val scoringVersion: String,
+    val weeklyBaseScore: Float,
+    val weeklyScore: Float,
+    val state: ScoreState,
 )
 
 data class LayerScore(
@@ -146,4 +158,10 @@ internal data class WeeklyScoreSummary(
     val averageLayerScore: Float,
     val worstLayerScore: Float,
     val worstLayer: LayerEvaluation?,
+)
+
+internal data class StabilityEvaluation(
+    val stabilityScore: Float?,
+    val evaluatedWeeks: Int,
+    val hasTemporalMemory: Boolean,
 )

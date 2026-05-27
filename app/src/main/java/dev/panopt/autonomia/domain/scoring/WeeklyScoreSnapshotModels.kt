@@ -21,6 +21,7 @@ data class WeeklyScoreSnapshotDraft(
     val weeklyBaseScore: Float,
     val weeklyScore: Float,
     val stabilityScore: Float?,
+    val stabilityWeeks: Int,
     val state: String,
     val visibleScore: Int,
     val worstLayerId: String?,

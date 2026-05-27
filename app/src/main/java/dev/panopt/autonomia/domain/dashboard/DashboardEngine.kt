@@ -11,6 +11,7 @@ import dev.panopt.autonomia.SleepLog
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import java.time.LocalDate
 
@@ -31,6 +32,7 @@ internal object DashboardEngine {
         sleepLog: SleepLog?,
         sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
         sleepSession: SleepSessionState? = null,
+        weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
         focusSignalActivityId: String?,
         today: LocalDate,
     ): DashboardState =
@@ -50,6 +52,7 @@ internal object DashboardEngine {
             sleepLog = sleepLog,
             sleepConfig = sleepConfig,
             sleepSession = sleepSession,
+            weeklyHistory = weeklyHistory,
             focusSignalActivityId = focusSignalActivityId,
             today = today,
         )

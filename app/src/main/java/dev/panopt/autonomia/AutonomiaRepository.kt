@@ -14,6 +14,7 @@ import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.data.scoring.WeeklyScoreSnapshotWriter
+import dev.panopt.autonomia.data.scoring.toHistoryEntry
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
@@ -25,6 +26,7 @@ import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.domain.sleep.SleepConfigValidation
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import dev.panopt.autonomia.domain.task.TaskPolicy
+import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,6 +117,10 @@ class AutonomiaRepository(context: Context) {
     fun sleepSessionStateFlow(): Flow<SleepSessionState?> =
         dao.observeSleepSessionState(SleepPolicy.DEFAULT_SESSION_ID)
             .map { it?.toDomain() }
+
+    fun weeklyScoreHistoryFlow(): Flow<List<WeeklyScoreHistoryEntry>> =
+        dao.observeWeeklyScoreSnapshots()
+            .map { snapshots -> snapshots.map { it.toHistoryEntry() } }
 
     suspend fun ensureSeeded() {
         // Layers: only insert on first run (stable, user-agnostic)

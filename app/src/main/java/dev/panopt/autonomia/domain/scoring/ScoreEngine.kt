@@ -22,9 +22,19 @@ object ScoreEngine {
         val layerEvaluations = layerResults.map { it.evaluation }
         val weeklySummary = WeeklyScorePolicy.summarize(layerEvaluations)
         val visibleScore = VisibleScorePolicy.visibleScore(weeklySummary.weeklyBaseScore)
+        val stability = StabilityScoringPolicy.evaluate(
+            currentWeekStart = context.weekStart.toString(),
+            currentWeeklyBaseScore = weeklySummary.weeklyBaseScore,
+            history = input.weeklyHistory,
+        )
 
         return ScoreReport(
-            state = VisibleScorePolicy.stateFor(visibleScore),
+            state = BaseStatePolicy.stateFor(
+                visibleScore = visibleScore,
+                weeklyBaseScore = weeklySummary.weeklyBaseScore,
+                worstLayerScore = weeklySummary.worstLayerScore,
+                stability = stability,
+            ),
             visibleScore = visibleScore,
             baseScore = visibleScore,
             goalBonus = 0,
@@ -42,6 +52,8 @@ object ScoreEngine {
                 hasActiveSobriety = context.activeSobrietyTracks.isNotEmpty(),
                 sleepScore = context.sleepScore,
             ),
+            stabilityScore = stability.stabilityScore,
+            stabilityWeeks = stability.evaluatedWeeks,
         )
     }
 

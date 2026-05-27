@@ -237,6 +237,32 @@ class ScoreEngineTest {
 
         assertEquals(1000, report.visibleScore)
         assertEquals(ScoreState.Plenitude, report.state)
+        assertNull(report.stabilityScore)
+        assertEquals(1, report.stabilityWeeks)
+    }
+
+    @Test
+    fun unbreakableRequiresTemporalMemoryFromPreviousWeeks() {
+        val layers = coreLayers()
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
+        val logs = activities.flatMap { activity ->
+            weekDates.map { date -> log(activity.id, date, actualValue = 20) }
+        }
+        val track = abstinenceTrack()
+        val report = calculate(
+            layers = layers,
+            activities = activities,
+            activityLogs = logs,
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
+            sleepLog = sleep(),
+            weeklyHistory = highHistory(),
+        )
+
+        assertEquals(1000, report.visibleScore)
+        assertEquals(ScoreState.Unbreakable, report.state)
+        assertTrue((report.stabilityScore ?: 0f) >= 0.90f)
+        assertEquals(6, report.stabilityWeeks)
     }
 
     private fun calculate(
@@ -248,6 +274,7 @@ class ScoreEngineTest {
         abstinenceLogs: List<AbstinenceLog> = emptyList(),
         tasks: List<Task> = emptyList(),
         sleepLog: SleepLog? = null,
+        weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
     ): ScoreReport =
         ScoreEngine.calculate(
             ScoreInput(
@@ -261,6 +288,7 @@ class ScoreEngineTest {
                 tasks = tasks,
                 sleepLog = sleepLog,
                 today = today,
+                weeklyHistory = weeklyHistory,
             ),
         )
 
@@ -377,4 +405,19 @@ class ScoreEngineTest {
             wokeAt = "07:30",
             quality = SleepQuality.Good,
         )
+
+    private fun highHistory(): List<WeeklyScoreHistoryEntry> =
+        (1L..5L).map { index ->
+            val weekStart = today
+                .minusWeeks(index)
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            WeeklyScoreHistoryEntry(
+                weekStart = weekStart.toString(),
+                weekEnd = weekStart.plusDays(6).toString(),
+                scoringVersion = WeeklyScoreSnapshotConstants.SCORING_VERSION,
+                weeklyBaseScore = 0.95f,
+                weeklyScore = 0.95f,
+                state = ScoreState.Plenitude,
+            )
+        }
 }

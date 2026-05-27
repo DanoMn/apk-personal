@@ -119,9 +119,9 @@ implementacion.
 | Superhabit separado en magnitud visible y bonus capado | Decision aprobada. |
 | Recomendacion de metas: 7 dias tiempo/cantidad, 14 dias frecuencia | Decision aprobada. |
 | Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | Decision aprobada. |
-| Politica de estados y umbrales v1 | Propuesta pendiente de validacion. |
+| Politica de estados y umbrales v1 | Implementada v0, calibrable con historial real. |
 | `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard y WorkManager periodico a medianoche local. |
-| `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad, DAO y escritura v0 creados; `stabilityScore` pendiente. |
+| `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad, DAO, escritura v0 y `stabilityScore` v0 creados. |
 
 ## 2. Estado de fases
 
@@ -134,7 +134,7 @@ implementacion.
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
 | 6 | Pendiente | Crear pagina de scoring detallado. |
-| 7 | Parcial v0 + snapshot writer | Agregar memoria semanal derivada y versionada. |
+| 7 | Hecha v0 | Agregar memoria semanal derivada y versionada. |
 | 8 | Pendiente | Refinar UI explicativa por capas. |
 
 Regla de trazabilidad:
@@ -1109,7 +1109,7 @@ VisibleScore =
 700 + round(clamp(WeeklyBaseScore, 0.000, 1.000) * 300)
 ```
 
-### 7.1 Politica de estados sin gates duros (propuesta Codex pendiente de validacion)
+### 7.1 Politica de estados sin gates duros (v0 implementada, calibrable)
 
 Los estados se calculan con score, peor capa, estabilidad y presion de
 penalizaciones. No se usan bloqueos binarios.
@@ -1530,10 +1530,11 @@ Resultado: build y tests en verde.
 - Migrar de `activity_logs` a `daily_activity_logs` como tabla limpia unica para
   anclas/soportes/tasks, o cerrar explicitamente `activity_logs` como nombre
   canonico si se decide no renombrar.
-- Usar snapshots semanales derivados para calcular estabilidad, tendencia e
-  historial explicable.
-- Definir y probar `StabilityScore`.
-- Implementar politica final de estados con peor capa, estabilidad e histeresis.
+- Usar snapshots semanales derivados para tendencia, recomendaciones de
+  superhabit e historial explicable en `Estado Base`.
+- Calibrar `StabilityScore` con historial real cuando existan suficientes
+  semanas de uso.
+- Agregar histeresis de estado cuando exista suficiente historial real.
 - Implementar telemetria avanzada de sueno: sesiones, interrupciones,
   desbloqueos y confianza de fuente.
 - Materializar recaidas asumidas por sobriedad como eventos/rangos editables.
@@ -1737,9 +1738,9 @@ BuildWeeklyScoreSnapshotUseCaseTest.kt
 Decision tecnica:
 
 ```text
-La v0 refresca el snapshot de la semana actual. No calcula aun estabilidad ni
-usa el snapshot para decidir el estado. `stabilityScore` queda null hasta que se
-implemente la politica temporal con historial suficiente.
+La v0 refresca el snapshot de la semana actual. Desde la fase siguiente de esta
+misma iteracion, el motor tambien puede usar 5 semanas previas versionadas para
+calcular `stabilityScore`; si no hay historial suficiente, el campo queda null.
 ```
 
 Verificacion:
@@ -1750,7 +1751,68 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 18. Preguntas abiertas antes de implementar
+## 18. Registro de estabilidad temporal v0
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Usar la memoria semanal derivada para que `Inquebrantable` requiera historial
+temporal y no pueda salir desde una sola semana perfecta.
+```
+
+Cambios realizados:
+
+```text
+WeeklyScoreHistoryEntry
+  Modelo de dominio para snapshots historicos usados por el motor.
+
+StabilityScoringPolicy.kt
+  Calcula estabilidad con la semana actual + 5 semanas previas versionadas.
+
+BaseStatePolicy.kt
+  Centraliza estado visible sin gates duros: score, peor capa, plenitud e
+  inquebrantable por memoria temporal.
+
+ScoreInput / ScoreInputSource / BuildScoreInputUseCase
+  Aceptan historial semanal derivado.
+
+AutonomiaRepository.kt / WeeklyScoreSnapshotWriter.kt / DashboardViewModel.kt
+  Exponen y pasan historial semanal al motor. El writer tambien usa historial al
+  refrescar snapshots.
+
+ScoreEngineTest.kt
+  Protege que una semana perfecta queda en `Plenitud` sin memoria y solo llega
+  a `Inquebrantable` con 5 semanas previas fuertes.
+```
+
+Formula v0:
+
+```text
+StabilityScore =
+0.750 * average(lastSixWeeklyBaseScores)
++ 0.250 * worst(lastSixWeeklyBaseScores)
+```
+
+Reglas:
+
+- requiere 5 semanas previas versionadas mas la semana actual;
+- ignora snapshots de otra version de scoring;
+- no reemplaza hechos diarios;
+- se guarda en snapshots como dato derivado;
+- `Inquebrantable` requiere `WeeklyBaseScore >= 0.90`, peor capa actual
+  `>= 0.80` y `StabilityScore >= 0.90`.
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 19. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

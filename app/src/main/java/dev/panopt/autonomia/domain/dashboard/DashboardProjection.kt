@@ -24,6 +24,7 @@ import dev.panopt.autonomia.domain.activity.isGoal
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
+import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
@@ -47,6 +48,7 @@ internal fun buildDashboardState(
     sleepLog: SleepLog?,
     sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
     sleepSession: SleepSessionState? = null,
+    weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
     focusSignalActivityId: String?,
     today: LocalDate = LocalDate.now(),
 ): DashboardState {
@@ -103,6 +105,7 @@ internal fun buildDashboardState(
                 tasks = tasks,
                 sleepLog = sleepLog,
                 today = today,
+                weeklyHistory = weeklyHistory,
             ),
         ),
     )

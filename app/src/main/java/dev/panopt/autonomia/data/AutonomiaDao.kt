@@ -277,6 +277,9 @@ interface AutonomiaDao {
     @Query("SELECT * FROM weekly_score_snapshots ORDER BY weekStart DESC")
     fun observeWeeklyScoreSnapshots(): Flow<List<WeeklyScoreSnapshotEntity>>
 
+    @Query("SELECT * FROM weekly_score_snapshots ORDER BY weekStart DESC")
+    suspend fun getWeeklyScoreSnapshotsSnapshot(): List<WeeklyScoreSnapshotEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertWeeklyScoreSnapshot(snapshot: WeeklyScoreSnapshotEntity)
 

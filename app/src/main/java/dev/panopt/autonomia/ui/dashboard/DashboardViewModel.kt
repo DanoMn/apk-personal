@@ -103,7 +103,11 @@ internal class DashboardViewModel(
                     tasks = tasks,
                 )
             }
-        }        .let { factFlow ->
+        }.let { factFlow ->
+            combine(factFlow, repository.weeklyScoreHistoryFlow()) { facts, weeklyHistory ->
+                facts.copy(weeklyHistory = weeklyHistory)
+            }
+        }.let { factFlow ->
             combine(
                 factFlow,
                 catalogActivities,
@@ -127,6 +131,7 @@ internal class DashboardViewModel(
                     sleepLog = sleepSnapshot.log,
                     sleepConfig = sleepSnapshot.config,
                     sleepSession = sleepSnapshot.session,
+                    weeklyHistory = facts.weeklyHistory,
                     focusSignalActivityId = focusSignalActivityId,
                     today = today,
                 )
@@ -462,4 +467,5 @@ private data class DashboardFactSnapshot(
     val allAbstinenceLogs: List<dev.panopt.autonomia.AbstinenceLog>,
     val riskEvents: List<dev.panopt.autonomia.RiskEvent>,
     val tasks: List<dev.panopt.autonomia.Task>,
+    val weeklyHistory: List<dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry> = emptyList(),
 )

@@ -1,14 +1,12 @@
 package dev.panopt.autonomia.data.scoring
 
 import dev.panopt.autonomia.data.AutonomiaDao
-import dev.panopt.autonomia.data.WeeklyScoreSnapshotEntity
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.BuildWeeklyScoreSnapshotUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
-import dev.panopt.autonomia.domain.scoring.WeeklyScoreSnapshotDraft
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreSnapshotInput
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -25,6 +23,7 @@ class WeeklyScoreSnapshotWriter(
             endDate = dateKey,
         ).map { it.toDomain() }
         val allAbstinenceLogs = dao.getAllAbstinenceLogsSnapshot().map { it.toDomain() }
+        val weeklyHistory = dao.getWeeklyScoreSnapshotsSnapshot().map { it.toHistoryEntry() }
         val source = ScoreInputSource(
             layers = dao.getLayersSnapshot().map { it.toDomain() },
             activities = configuredActivitiesSnapshot(),
@@ -36,6 +35,7 @@ class WeeklyScoreSnapshotWriter(
             tasks = dao.getTasksSnapshot().map { it.toDomain() },
             sleepLog = dao.getSleepLogForDate(dateKey)?.toDomain(),
             today = today,
+            weeklyHistory = weeklyHistory,
         )
         val scoreInput = BuildScoreInputUseCase(source)
         val scoreReport = ScoreEngine.calculate(scoreInput)
@@ -64,21 +64,3 @@ class WeeklyScoreSnapshotWriter(
                     .sortedBy { it.sortOrder }
             }
 }
-
-private fun WeeklyScoreSnapshotDraft.toEntity(): WeeklyScoreSnapshotEntity =
-    WeeklyScoreSnapshotEntity(
-        weekStart = weekStart,
-        weekEnd = weekEnd,
-        scoringVersion = scoringVersion,
-        calculatedAt = calculatedAt,
-        configHash = configHash,
-        factsHash = factsHash,
-        weeklyBaseScore = weeklyBaseScore,
-        weeklyScore = weeklyScore,
-        stabilityScore = stabilityScore,
-        state = state,
-        visibleScore = visibleScore,
-        worstLayerId = worstLayerId,
-        layerSummariesJson = layerSummariesJson,
-        reasonsJson = reasonsJson,
-    )
