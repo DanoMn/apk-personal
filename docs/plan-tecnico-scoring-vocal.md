@@ -94,8 +94,9 @@ aportan lenguaje, reglas y direccion, pero no son canon tecnico cerrado.
 32. Decision aprobada: `WeeklyScoreSnapshotEntity` entra despues del motor
     estable y tests, como cache/historial derivado, versionado y recalculable.
 33. Implementacion v0: el cierre diario es idempotente, registra fechas
-    cerradas y procesa en orden cronologico los dias vencidos de la semana al
-    abrir el dashboard. Queda pendiente WorkManager a medianoche local.
+    cerradas y procesa en orden cronologico los dias vencidos de la semana.
+    Se ejecuta como garantia al abrir el dashboard y se programa con
+    WorkManager alrededor de la medianoche local.
 34. Implementacion v0 no crea todavia `daily_activity_logs` para evitar doble
     verdad durante la integracion. La fuente operativa sigue siendo
     `activity_logs`, ahora acompañada por `daily_closures`. La migracion a una
@@ -119,7 +120,7 @@ implementacion.
 | Recomendacion de metas: 7 dias tiempo/cantidad, 14 dias frecuencia | Decision aprobada. |
 | Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | Decision aprobada. |
 | Politica de estados y umbrales v1 | Propuesta pendiente de validacion. |
-| `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard; WorkManager pendiente. |
+| `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard y WorkManager periodico a medianoche local. |
 | `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad y DAO creados; escritura de snapshots pendiente. |
 
 ## 2. Estado de fases
@@ -127,7 +128,7 @@ implementacion.
 | Fase | Estado | Objetivo |
 | --- | --- | --- |
 | 0 | Hecha | Auditoria read-only del codigo actual. |
-| 1 | Parcial v0 | Consolidar modelo de registro de hechos. |
+| 1 | Parcial v0 + cierre programado | Consolidar modelo de registro de hechos. |
 | 2 | Parcial v0 | Ajustar entidades Room y migraciones minimas. |
 | 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
@@ -1529,8 +1530,6 @@ Resultado: build y tests en verde.
 - Migrar de `activity_logs` a `daily_activity_logs` como tabla limpia unica para
   anclas/soportes/tasks, o cerrar explicitamente `activity_logs` como nombre
   canonico si se decide no renombrar.
-- Implementar WorkManager de medianoche local para cierre diario en segundo
-  plano.
 - Escribir snapshots semanales derivados cuando se cierre una semana o cuando
   se pida historial.
 - Definir y probar `StabilityScore`.
@@ -1639,7 +1638,60 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 16. Preguntas abiertas antes de implementar
+## 16. Registro de cierre diario programado
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Completar la mitad de infraestructura pendiente del cierre diario: intentar el
+barrido en segundo plano alrededor de la medianoche local, manteniendo el cierre
+de garantia al abrir la app.
+```
+
+Cambios realizados:
+
+```text
+DailyClosureSchedulePolicy.kt
+  Policy puro que calcula la siguiente ejecucion local a las 00:01.
+
+DailyClosureWorkScheduler.kt
+  Agenda trabajo periodico unico con WorkManager y delay inicial hasta el
+  siguiente cierre local.
+
+DailyClosureWorker.kt
+  Worker de infraestructura que seedeea, resuelve zona horaria local y llama al
+  repositorio para cerrar dias vencidos.
+
+AutonomiaRepository.kt
+  `closeElapsedActivityDays` acepta `source` para diferenciar cierre por
+  apertura de cierre por WorkManager.
+
+MainActivity.kt
+  Registra el scheduler al iniciar la app, antes de Compose.
+
+DailyClosureSchedulePolicyTest.kt
+  Protege calculo horario en zona local y evita delays negativos.
+```
+
+Decision tecnica:
+
+```text
+Se usa PeriodicWorkRequest diario con `ExistingPeriodicWorkPolicy.KEEP`.
+WorkManager no garantiza ejecucion exacta al milisegundo, por eso el cierre de
+garantia al abrir la app sigue siendo parte del contrato.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 17. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

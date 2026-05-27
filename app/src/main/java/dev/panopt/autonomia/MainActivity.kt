@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import dev.panopt.autonomia.data.worker.DailyClosureWorkScheduler
 import dev.panopt.autonomia.sleep.SleepDeviceAdminReceiver
 import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
@@ -33,6 +34,7 @@ import dev.panopt.autonomia.ui.tasks.TasksScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DailyClosureWorkScheduler.schedule(applicationContext)
 
         setContent {
             val devicePolicyManager = remember {

@@ -142,6 +142,7 @@ class AutonomiaRepository(context: Context) {
     suspend fun closeElapsedActivityDays(
         today: LocalDate = LocalDate.now(),
         zoneId: ZoneId = ZoneId.systemDefault(),
+        source: String = "app_open",
     ) {
         val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val yesterday = today.minusDays(1)
@@ -149,7 +150,7 @@ class AutonomiaRepository(context: Context) {
 
         var cursor = weekStart
         while (!cursor.isAfter(yesterday)) {
-            closeActivityDay(date = cursor, zoneId = zoneId, source = "app_open")
+            closeActivityDay(date = cursor, zoneId = zoneId, source = source)
             cursor = cursor.plusDays(1)
         }
     }
