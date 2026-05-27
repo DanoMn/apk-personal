@@ -130,7 +130,7 @@ implementacion.
 | 1 | Parcial v0 | Consolidar modelo de registro de hechos. |
 | 2 | Parcial v0 | Ajustar entidades Room y migraciones minimas. |
 | 3 | Parcial v0 | Crear input builder semanal desde hechos reales. |
-| 4 | Hecha v0 | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
+| 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
 | 6 | Pendiente | Crear pagina de scoring detallado. |
 | 7 | Parcial v0 | Agregar memoria semanal derivada y versionada. |
@@ -142,6 +142,16 @@ Regla de trazabilidad:
 Al terminar cada fase implementada y verificada, crear un commit dedicado antes
 de pasar a la siguiente fase. El commit debe dejar claro que fase se cerro,
 que archivos principales cambio y que verificacion se ejecuto.
+```
+
+Regla de modularidad:
+
+```text
+Evitar archivos monoliticos. Si una fase introduce logica amplia, dividirla en
+componentes pequenos con responsabilidad clara: modelos, policies, builders,
+repositorio, mappers y UI state. Un archivo grande solo se acepta como paso
+temporal si hay una razon tecnica concreta y queda anotado como deuda de
+refactor inmediata.
 ```
 
 ## 2.1 Nucleo conceptual por feature
@@ -1532,7 +1542,64 @@ Resultado: build y tests en verde.
 - Materializar recaidas asumidas por sobriedad como eventos/rangos editables.
 - Crear la pagina principal `Estado Base`.
 
-## 14. Preguntas abiertas antes de implementar
+## 14. Registro de modularizacion de scoring
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Evitar que `ScoreEngine.kt` se convierta en archivo monolitico y dejar el
+scoring preparado para crecer por piezas: snapshots, estabilidad, Estado Base
+y telemetria avanzada.
+```
+
+Cambios realizados:
+
+```text
+ScoreEngine.kt
+  Orquestador publico. Mantiene API actual y arma ScoreReport.
+
+ScoreModels.kt
+  Contratos publicos e internos del scoring.
+
+WeeklyScoringContextBuilder.kt
+  Agrupa hechos semanales desde ScoreInput.
+
+AnchorScoringPolicy.kt
+SupportScoringPolicy.kt
+TaskMomentumPolicy.kt
+SobrietyScoringPolicy.kt
+LayerScoringPolicy.kt
+SpecialLayerScoringPolicy.kt
+LayerContributionPolicy.kt
+WeeklyScorePolicy.kt
+VisibleScorePolicy.kt
+ScoreReasonPolicy.kt
+  Policies atomicas de dominio.
+
+ScoringConstants.kt
+ScoringExtensions.kt
+  Constantes y helpers internos.
+```
+
+Resultado:
+
+```text
+ScoreEngine.kt quedo como orquestador pequeno.
+Las formulas principales viven en policies separadas.
+El comportamiento se mantuvo cubierto por los tests existentes.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 15. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.
