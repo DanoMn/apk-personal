@@ -121,7 +121,7 @@ implementacion.
 | Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | Decision aprobada. |
 | Politica de estados y umbrales v1 | Propuesta pendiente de validacion. |
 | `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard y WorkManager periodico a medianoche local. |
-| `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad y DAO creados; escritura de snapshots pendiente. |
+| `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad, DAO y escritura v0 creados; `stabilityScore` pendiente. |
 
 ## 2. Estado de fases
 
@@ -134,7 +134,7 @@ implementacion.
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
 | 6 | Pendiente | Crear pagina de scoring detallado. |
-| 7 | Parcial v0 | Agregar memoria semanal derivada y versionada. |
+| 7 | Parcial v0 + snapshot writer | Agregar memoria semanal derivada y versionada. |
 | 8 | Pendiente | Refinar UI explicativa por capas. |
 
 Regla de trazabilidad:
@@ -1530,8 +1530,8 @@ Resultado: build y tests en verde.
 - Migrar de `activity_logs` a `daily_activity_logs` como tabla limpia unica para
   anclas/soportes/tasks, o cerrar explicitamente `activity_logs` como nombre
   canonico si se decide no renombrar.
-- Escribir snapshots semanales derivados cuando se cierre una semana o cuando
-  se pida historial.
+- Usar snapshots semanales derivados para calcular estabilidad, tendencia e
+  historial explicable.
 - Definir y probar `StabilityScore`.
 - Implementar politica final de estados con peor capa, estabilidad e histeresis.
 - Implementar telemetria avanzada de sueno: sesiones, interrupciones,
@@ -1691,7 +1691,66 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 17. Preguntas abiertas antes de implementar
+## 17. Registro de snapshots semanales derivados
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Materializar la memoria semanal como cache derivado, versionado y recalculable,
+sin convertir `weekly_score_snapshots` en verdad primaria.
+```
+
+Cambios realizados:
+
+```text
+WeeklyScoreSnapshotModels.kt
+  Contrato puro del input/draft de snapshot y version de scoring.
+
+BuildWeeklyScoreSnapshotUseCase.kt
+  Construye el snapshot derivado desde ScoreInput + ScoreReport.
+
+ScoreSnapshotHashPolicy.kt
+  Calcula `configHash` y `factsHash` para saber cuando cambio la configuracion
+  o cambiaron los hechos usados por el reporte.
+
+ScoreSnapshotJson.kt
+  Serializa resumenes de capas y razones en JSON compacto para auditoria.
+
+WeeklyScoreSnapshotWriter.kt
+  Writer de datos dedicado: lee hechos Room, arma ScoreInput, ejecuta dominio y
+  persiste `WeeklyScoreSnapshotEntity`.
+
+AutonomiaDao.kt
+  Agrega queries suspend de snapshot para layers, logs, sobriedad, tasks y sueno.
+
+DashboardViewModel.kt
+DailyClosureWorker.kt
+  Refrescan el snapshot actual despues del cierre de garantia/app-open o cierre
+  programado por WorkManager.
+
+BuildWeeklyScoreSnapshotUseCaseTest.kt
+  Protege versionado, hashes, estado visible y serializacion basica.
+```
+
+Decision tecnica:
+
+```text
+La v0 refresca el snapshot de la semana actual. No calcula aun estabilidad ni
+usa el snapshot para decidir el estado. `stabilityScore` queda null hasta que se
+implemente la politica temporal con historial suficiente.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 18. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

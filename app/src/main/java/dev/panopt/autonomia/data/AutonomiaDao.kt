@@ -14,6 +14,9 @@ interface AutonomiaDao {
     @Query("SELECT * FROM layers ORDER BY sortOrder")
     fun observeLayers(): Flow<List<LayerEntity>>
 
+    @Query("SELECT * FROM layers ORDER BY sortOrder")
+    suspend fun getLayersSnapshot(): List<LayerEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertLayers(layers: List<LayerEntity>)
 
@@ -25,6 +28,9 @@ interface AutonomiaDao {
 
     @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate")
     fun observeActivityLogsBetween(startDate: String, endDate: String): Flow<List<ActivityLogEntity>>
+
+    @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate")
+    suspend fun getActivityLogsBetween(startDate: String, endDate: String): List<ActivityLogEntity>
 
     @Query("SELECT * FROM activity_logs WHERE date = :date")
     suspend fun getActivityLogsForDate(date: String): List<ActivityLogEntity>
@@ -43,6 +49,9 @@ interface AutonomiaDao {
 
     @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
     fun observeAbstinenceTracks(): Flow<List<AbstinenceTrackEntity>>
+
+    @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
+    suspend fun getAbstinenceTracksSnapshot(): List<AbstinenceTrackEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertAbstinenceTracks(tracks: List<AbstinenceTrackEntity>)
@@ -65,6 +74,9 @@ interface AutonomiaDao {
     @Query("SELECT * FROM abstinence_logs")
     fun observeAllAbstinenceLogs(): Flow<List<AbstinenceLogEntity>>
 
+    @Query("SELECT * FROM abstinence_logs")
+    suspend fun getAllAbstinenceLogsSnapshot(): List<AbstinenceLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAbstinenceLog(log: AbstinenceLogEntity)
 
@@ -85,6 +97,9 @@ interface AutonomiaDao {
     
     @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
     fun observeTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks ORDER BY createdAt DESC")
+    suspend fun getTasksSnapshot(): List<TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
     suspend fun getTask(taskId: String): TaskEntity?
@@ -122,6 +137,9 @@ interface AutonomiaDao {
 
     @Query("SELECT * FROM sleep_logs WHERE date = :date LIMIT 1")
     fun observeSleepLogForDate(date: String): Flow<SleepLogEntity?>
+
+    @Query("SELECT * FROM sleep_logs WHERE date = :date LIMIT 1")
+    suspend fun getSleepLogForDate(date: String): SleepLogEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSleepLog(log: SleepLogEntity)

@@ -13,6 +13,7 @@ import dev.panopt.autonomia.data.SleepLogEntity
 import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
+import dev.panopt.autonomia.data.scoring.WeeklyScoreSnapshotWriter
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
@@ -44,6 +45,7 @@ class AutonomiaRepository(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
     private val dao = AutonomiaDatabase.getInstance(appContext).autonomiaDao()
+    private val weeklyScoreSnapshotWriter = WeeklyScoreSnapshotWriter(dao)
 
     private val _isDarkMode = MutableStateFlow(prefs.getBoolean("dark_mode", true))
     private val _focusSignalActivityId = MutableStateFlow(prefs.getString("focus_signal_activity_id", null))
@@ -199,6 +201,12 @@ class AutonomiaRepository(context: Context) {
                 closureVersion = DAILY_CLOSURE_VERSION,
             ),
         )
+    }
+
+    suspend fun refreshCurrentWeeklyScoreSnapshot(
+        today: LocalDate = LocalDate.now(),
+    ) {
+        weeklyScoreSnapshotWriter.refreshCurrentWeek(today = today)
     }
 
     suspend fun setActivityCompleted(

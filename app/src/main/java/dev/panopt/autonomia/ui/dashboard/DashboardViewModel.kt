@@ -141,6 +141,7 @@ internal class DashboardViewModel(
         viewModelScope.launch {
             repository.ensureSeeded()
             repository.closeElapsedActivityDays(today = today)
+            repository.refreshCurrentWeeklyScoreSnapshot(today = today)
         }
     }
 

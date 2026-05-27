@@ -23,6 +23,7 @@ class DailyClosureWorker(
                 zoneId = zoneId,
                 source = DailyClosureWorkScheduler.WORK_SOURCE,
             )
+            repository.refreshCurrentWeeklyScoreSnapshot(today = today)
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { Result.retry() },
