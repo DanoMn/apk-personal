@@ -18,6 +18,7 @@ class DailyClosureWorker(
             val repository = AppGraph.autonomiaRepository(applicationContext)
 
             repository.ensureSeeded()
+            repository.materializeAssumedAbstinenceRelapses(today = today, zoneId = zoneId)
             repository.closeElapsedActivityDays(
                 today = today,
                 zoneId = zoneId,

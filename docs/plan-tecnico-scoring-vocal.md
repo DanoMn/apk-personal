@@ -127,7 +127,7 @@ implementacion.
 | --- | --- | --- |
 | 0 | Hecha | Auditoria read-only del codigo actual. |
 | 1 | Hecha v0 | Consolidar modelo de registro de hechos. |
-| 2 | Hecha v0 | Ajustar entidades Room y migraciones minimas. |
+| 2 | Hecha v0 + sobriedad sensible | Ajustar entidades Room y migraciones minimas. |
 | 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
@@ -1910,7 +1910,59 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 21. Preguntas abiertas antes de implementar
+## 21. Registro de sobriedad sensible v0
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Materializar recaidas asumidas despues de la ventana de olvido de 5 dias,
+manteniendo sobriedad como la unica feature con ausencia moldeable.
+```
+
+Cambios realizados:
+
+```text
+AbstinenceRelapseEventEntity
+  Nueva tabla `abstinence_relapse_events` para auditar rangos de recaida.
+
+AutonomiaDatabase.kt
+  Version 10 y migracion 9 -> 10.
+
+AbstinenceRelapseMaterializationPolicy.kt
+  Policy puro que detecta rangos sin tracking mayores a 5 dias y los separa por
+  logs ya confirmados.
+
+AutonomiaRepository.kt
+  Materializa logs `Relapse` y eventos `AssumedAfterMissingTracking` para tracks
+  activos.
+
+DailyClosureWorker.kt / DashboardViewModel.kt
+  Ejecutan la materializacion al cierre programado y al abrir la app.
+
+AbstinenceRelapseMaterializationPolicyTest.kt
+  Protege ventana de 5 dias, materializacion posterior y rangos partidos por
+  logs confirmados.
+```
+
+Decision tecnica:
+
+```text
+La v0 persiste la recaida asumida como logs diarios `Relapse` mas evento de
+auditoria. La correccion visual avanzada del rango queda para UI futura, pero la
+verdad primaria ya queda registrada y versionable.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 22. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

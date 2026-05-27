@@ -2,6 +2,7 @@ package dev.panopt.autonomia
 
 import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
+import dev.panopt.autonomia.data.AbstinenceRelapseEventEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
@@ -21,6 +22,7 @@ import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
+import dev.panopt.autonomia.domain.abstinence.AbstinenceRelapseMaterializationPolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.domain.sleep.SleepConfigValidation
@@ -222,6 +224,50 @@ class AutonomiaRepository(context: Context) {
         today: LocalDate = LocalDate.now(),
     ) {
         weeklyScoreSnapshotWriter.refreshCurrentWeek(today = today)
+    }
+
+    suspend fun materializeAssumedAbstinenceRelapses(
+        today: LocalDate = LocalDate.now(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) {
+        val tracks = dao.getAbstinenceTracksSnapshot().map { it.toDomain() }
+        val logs = dao.getAllAbstinenceLogsSnapshot().map { it.toDomain() }
+        val ranges = AbstinenceRelapseMaterializationPolicy.assumedRanges(
+            tracks = tracks,
+            logs = logs,
+            today = today,
+            zoneId = zoneId,
+        )
+        if (ranges.isEmpty()) return
+
+        val now = System.currentTimeMillis()
+        val relapseLogs = ranges.flatMap { range ->
+            range.dates.map { date ->
+                AbstinenceLogEntity(
+                    trackId = range.trackId,
+                    date = date.toString(),
+                    status = AbstinenceStatus.Relapse.name,
+                    note = ASSUMED_RELAPSE_NOTE,
+                    updatedAt = now,
+                )
+            }
+        }
+        val events = ranges.map { range ->
+            AbstinenceRelapseEventEntity(
+                id = assumedRelapseEventId(range.trackId, range.startDate),
+                trackId = range.trackId,
+                startDate = range.startDate.toString(),
+                endDate = range.endDate.toString(),
+                source = ASSUMED_RELAPSE_SOURCE,
+                userAdjusted = false,
+                note = ASSUMED_RELAPSE_NOTE,
+                createdAt = now,
+                updatedAt = now,
+            )
+        }
+
+        dao.upsertAbstinenceLogs(relapseLogs)
+        dao.upsertAbstinenceRelapseEvents(events)
     }
 
     suspend fun setActivityCompleted(
@@ -672,6 +718,11 @@ private fun isCustomActivityId(activityId: String): Boolean =
     activityId.startsWith("act_custom_") || (!activityId.startsWith("act_") && !activityId.startsWith("sup_"))
 
 private const val DAILY_CLOSURE_VERSION = 1
+private const val ASSUMED_RELAPSE_SOURCE = "AssumedAfterMissingTracking"
+private const val ASSUMED_RELAPSE_NOTE = "recaida_asumida_por_falta_de_tracking"
+
+private fun assumedRelapseEventId(trackId: String, startDate: LocalDate): String =
+    "relapse_assumed_${trackId}_${startDate}"
 
 private fun UserActivityConfigEntity.createdLocalDate(zoneId: ZoneId): LocalDate =
     Instant.ofEpochMilli(createdAt)

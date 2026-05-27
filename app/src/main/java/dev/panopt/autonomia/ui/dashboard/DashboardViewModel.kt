@@ -145,6 +145,7 @@ internal class DashboardViewModel(
     init {
         viewModelScope.launch {
             repository.ensureSeeded()
+            repository.materializeAssumedAbstinenceRelapses(today = today)
             repository.closeElapsedActivityDays(today = today)
             repository.refreshCurrentWeeklyScoreSnapshot(today = today)
         }

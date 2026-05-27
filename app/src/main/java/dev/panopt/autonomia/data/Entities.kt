@@ -76,6 +76,22 @@ data class AbstinenceLogEntity(
 )
 
 @Entity(
+    tableName = "abstinence_relapse_events",
+    indices = [Index("trackId"), Index("startDate"), Index("endDate")],
+)
+data class AbstinenceRelapseEventEntity(
+    @PrimaryKey val id: String,
+    val trackId: String,
+    val startDate: String,
+    val endDate: String,
+    val source: String,
+    val userAdjusted: Boolean = false,
+    val note: String = "",
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(
     tableName = "risk_events",
     indices = [Index("date")],
 )

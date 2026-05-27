@@ -80,6 +80,15 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAbstinenceLog(log: AbstinenceLogEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAbstinenceLogs(logs: List<AbstinenceLogEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAbstinenceRelapseEvents(events: List<AbstinenceRelapseEventEntity>)
+
+    @Query("SELECT * FROM abstinence_relapse_events ORDER BY startDate DESC")
+    suspend fun getAbstinenceRelapseEventsSnapshot(): List<AbstinenceRelapseEventEntity>
+
     @Query("DELETE FROM abstinence_logs WHERE trackId = :trackId AND date = :date")
     suspend fun deleteAbstinenceLog(trackId: String, date: String)
 

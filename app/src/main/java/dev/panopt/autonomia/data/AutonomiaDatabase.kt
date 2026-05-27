@@ -15,6 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DailyActivityLogEntity::class,
         AbstinenceTrackEntity::class,
         AbstinenceLogEntity::class,
+        AbstinenceRelapseEventEntity::class,
         RiskEventEntity::class,
         TaskEntity::class,
         AnchorPhraseEntity::class,
@@ -28,7 +29,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DailyClosureEntity::class,
         WeeklyScoreSnapshotEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
@@ -54,6 +55,7 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                         MIGRATION_6_7,
                         MIGRATION_7_8,
                         MIGRATION_8_9,
+                        MIGRATION_9_10,
                     )
                     .build()
                 INSTANCE = instance
@@ -320,6 +322,12 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createAbstinenceRelapseEventsTable(db)
+            }
+        }
+
         private fun createSleepSessionStateTable(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """
@@ -354,6 +362,27 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_date ON daily_activity_logs(date)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_subjectId ON daily_activity_logs(subjectId)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_layerId ON daily_activity_logs(layerId)")
+        }
+
+        private fun createAbstinenceRelapseEventsTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS abstinence_relapse_events (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    trackId TEXT NOT NULL,
+                    startDate TEXT NOT NULL,
+                    endDate TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    userAdjusted INTEGER NOT NULL DEFAULT 0,
+                    note TEXT NOT NULL DEFAULT '',
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_trackId ON abstinence_relapse_events(trackId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_startDate ON abstinence_relapse_events(startDate)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_endDate ON abstinence_relapse_events(endDate)")
         }
     }
 }
