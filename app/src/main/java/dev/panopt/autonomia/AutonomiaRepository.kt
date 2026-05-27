@@ -3,9 +3,9 @@ package dev.panopt.autonomia
 import android.content.Context
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
-import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
+import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.DailyClosureEntity
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepConfigEntity
@@ -174,7 +174,7 @@ class AutonomiaRepository(context: Context) {
         val definitionsById = dao.getActivityDefinitionsSnapshot().associateBy { it.id }
         val activeConfigs = dao.getActiveUserActivityConfigs()
         val existingActivityIds = dao.getActivityLogsForDate(dateKey)
-            .map { it.activityId }
+            .map { it.subjectId }
             .toSet()
         val now = System.currentTimeMillis()
         val closureLogs = activeConfigs
@@ -186,11 +186,20 @@ class AutonomiaRepository(context: Context) {
             .filter { config -> config.activityId !in existingActivityIds }
             .filter { config -> date >= config.createdLocalDate(zoneId) }
             .map { config ->
-                ActivityLogEntity(
-                    activityId = config.activityId,
+                val status = if (config.activityType == ActivitySurface.Support.name) {
+                    DailyActivityStatus.Done
+                } else {
+                    DailyActivityStatus.NotDone
+                }
+                DailyActivityLogEntity(
                     date = dateKey,
-                    completed = false,
-                    actualValue = 0,
+                    timezoneId = zoneId.id,
+                    subjectType = config.activityType,
+                    subjectId = config.activityId,
+                    layerId = definitionsById[config.activityId]?.layerId,
+                    status = status.name,
+                    actualValue = if (status == DailyActivityStatus.NotDone) 0 else null,
+                    createdAt = now,
                     updatedAt = now,
                 )
             }
@@ -225,13 +234,23 @@ class AutonomiaRepository(context: Context) {
             return
         }
 
+        val now = System.currentTimeMillis()
+        val status = if (activity.activityType == ActivitySurface.Support) {
+            DailyActivityStatus.Omitted
+        } else {
+            DailyActivityStatus.Done
+        }
         dao.upsertActivityLog(
-            ActivityLogEntity(
-                activityId = activity.id,
+            DailyActivityLogEntity(
                 date = date,
-                completed = true,
+                timezoneId = ZoneId.systemDefault().id,
+                subjectType = activity.activityType.name,
+                subjectId = activity.id,
+                layerId = activity.layerId,
+                status = status.name,
                 actualValue = activity.defaultActualValue(),
-                updatedAt = System.currentTimeMillis(),
+                createdAt = now,
+                updatedAt = now,
             ),
         )
     }
@@ -241,13 +260,18 @@ class AutonomiaRepository(context: Context) {
         actualValue: Int,
         date: String = todayKey(),
     ) {
+        val now = System.currentTimeMillis()
         dao.upsertActivityLog(
-            ActivityLogEntity(
-                activityId = activity.id,
+            DailyActivityLogEntity(
                 date = date,
-                completed = true,
+                timezoneId = ZoneId.systemDefault().id,
+                subjectType = activity.activityType.name,
+                subjectId = activity.id,
+                layerId = activity.layerId,
+                status = DailyActivityStatus.Done.name,
                 actualValue = actualValue.coerceAtLeast(0),
-                updatedAt = System.currentTimeMillis(),
+                createdAt = now,
+                updatedAt = now,
             ),
         )
     }
@@ -466,11 +490,27 @@ class AutonomiaRepository(context: Context) {
             completedAt = now,
             updatedAt = now,
         )
+        dao.upsertActivityLog(
+            DailyActivityLogEntity(
+                date = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate().toString(),
+                timezoneId = ZoneId.systemDefault().id,
+                subjectType = ActivitySurface.Task.name,
+                subjectId = taskId,
+                layerId = task.layerId,
+                status = DailyActivityStatus.Done.name,
+                actualValue = 1,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
     }
 
     suspend fun reactivateTask(taskId: String) {
         val task = dao.getTask(taskId)?.toDomain() ?: return
         if (!TaskPolicy.canReactivate(task)) return
+        task.completedAt
+            ?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate().toString() }
+            ?.let { completedDate -> dao.deleteActivityLog(taskId, completedDate) }
 
         dao.updateTaskStatus(
             taskId = taskId,

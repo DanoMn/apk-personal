@@ -17,6 +17,7 @@ data class ActivityLog(
     val actualValue: Int? = null,
     val note: String = "",
     val updatedAt: Long = 0L,
+    val status: DailyActivityStatus? = null,
 )
 
 data class AbstinenceTrack(
@@ -122,6 +123,7 @@ enum class ActivityType { Check, Time, Count, Note, TimeOfDay, SelfCare, Abstine
 enum class ActivityRole { Practice, SelfCare, Boundary, DigitalHygiene, DomesticOrder, AdministrativeOrder, RelationalHabit, ProjectWork, Learning, Custom }
 enum class DisplaySurface { PrimaryChecklist, SecondaryChecklist, Available, Compact, Contextual, Silent }
 enum class ActivitySurface { Anchor, Support, Task }
+enum class DailyActivityStatus { Done, NotDone, Omitted }
 enum class ContributionRole { Core, Support, Protective, Recovery, Neutral }
 enum class ImportanceTier { Low, Medium, High, Critical }
 enum class ActivityCadence { Daily, Weekly, Monthly, Custom, EventBased }

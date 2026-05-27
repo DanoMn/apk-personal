@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LayerEntity::class,
         ActivityDefinitionEntity::class,
         UserActivityConfigEntity::class,
-        ActivityLogEntity::class,
+        DailyActivityLogEntity::class,
         AbstinenceTrackEntity::class,
         AbstinenceLogEntity::class,
         RiskEventEntity::class,
@@ -28,7 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DailyClosureEntity::class,
         WeeklyScoreSnapshotEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
@@ -53,6 +53,7 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                         MIGRATION_5_6,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
+                        MIGRATION_8_9,
                     )
                     .build()
                 INSTANCE = instance
@@ -276,6 +277,49 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createDailyActivityLogsTable(db)
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO daily_activity_logs (
+                        date,
+                        timezoneId,
+                        subjectType,
+                        subjectId,
+                        layerId,
+                        status,
+                        actualValue,
+                        note,
+                        createdAt,
+                        updatedAt
+                    )
+                    SELECT
+                        logs.date,
+                        'system',
+                        COALESCE(configs.activityType, 'Anchor'),
+                        logs.activityId,
+                        definitions.layerId,
+                        CASE
+                            WHEN configs.activityType = 'Support' AND logs.completed = 1 THEN 'Omitted'
+                            WHEN configs.activityType = 'Support' THEN 'Done'
+                            WHEN logs.completed = 1 THEN 'Done'
+                            ELSE 'NotDone'
+                        END,
+                        logs.actualValue,
+                        logs.note,
+                        logs.updatedAt,
+                        logs.updatedAt
+                    FROM activity_logs AS logs
+                    LEFT JOIN user_activity_configs AS configs
+                        ON configs.activityId = logs.activityId
+                    LEFT JOIN activity_definitions AS definitions
+                        ON definitions.id = logs.activityId
+                    """.trimIndent(),
+                )
+            }
+        }
+
         private fun createSleepSessionStateTable(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """
@@ -287,6 +331,29 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                 )
                 """.trimIndent(),
             )
+        }
+
+        private fun createDailyActivityLogsTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS daily_activity_logs (
+                    date TEXT NOT NULL,
+                    timezoneId TEXT NOT NULL,
+                    subjectType TEXT NOT NULL,
+                    subjectId TEXT NOT NULL,
+                    layerId TEXT,
+                    status TEXT NOT NULL,
+                    actualValue INTEGER,
+                    note TEXT NOT NULL DEFAULT '',
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL,
+                    PRIMARY KEY(date, subjectType, subjectId)
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_date ON daily_activity_logs(date)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_subjectId ON daily_activity_logs(subjectId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_daily_activity_logs_layerId ON daily_activity_logs(layerId)")
         }
     }
 }

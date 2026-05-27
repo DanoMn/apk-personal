@@ -28,6 +28,24 @@ data class ActivityLogEntity(
     val updatedAt: Long,
 )
 
+@Entity(
+    tableName = "daily_activity_logs",
+    primaryKeys = ["date", "subjectType", "subjectId"],
+    indices = [Index("date"), Index("subjectId"), Index("layerId")],
+)
+data class DailyActivityLogEntity(
+    val date: String,
+    val timezoneId: String,
+    val subjectType: String,
+    val subjectId: String,
+    val layerId: String?,
+    val status: String,
+    val actualValue: Int?,
+    val note: String = "",
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
 @Entity(tableName = "abstinence_tracks")
 data class AbstinenceTrackEntity(
     @PrimaryKey val id: String,

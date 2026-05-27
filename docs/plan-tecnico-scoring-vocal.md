@@ -37,8 +37,8 @@ aportan lenguaje, reglas y direccion, pero no son canon tecnico cerrado.
 8. Scoring debe tener una pagina propia para mostrar el reporte completo.
 9. El primer componente del dashboard es una simplificacion del reporte de
    scoring, no el lugar donde vive toda la explicacion.
-10. El registro nuevo de actividades debe ir en una tabla nueva limpia, no
-    como parche semantico sobre `activity_logs`.
+10. El registro nuevo de actividades va en una tabla nueva limpia, no como
+    parche semantico sobre `activity_logs`.
 11. La pagina de scoring sera una pantalla principal propia, accesible desde el
     menu lateral y la navegacion principal. El dashboard solo muestra un resumen.
 12. La tabla nueva de registros diarios sera la unica fuente de verdad para
@@ -97,11 +97,9 @@ aportan lenguaje, reglas y direccion, pero no son canon tecnico cerrado.
     cerradas y procesa en orden cronologico los dias vencidos de la semana.
     Se ejecuta como garantia al abrir el dashboard y se programa con
     WorkManager alrededor de la medianoche local.
-34. Implementacion v0 no crea todavia `daily_activity_logs` para evitar doble
-    verdad durante la integracion. La fuente operativa sigue siendo
-    `activity_logs`, ahora acompañada por `daily_closures`. La migracion a una
-    tabla diaria limpia queda pendiente como fase de consolidacion, cuando el
-    dashboard y el input builder puedan leer solo esa tabla.
+34. Implementacion consolidada: `daily_activity_logs` es la fuente diaria
+    canonica para anclas, soportes y tasks. `activity_logs` queda como tabla
+    legacy migrada y fuera del flujo nuevo.
 
 ## 1.1 Estado de validacion de propuestas Codex
 
@@ -128,8 +126,8 @@ implementacion.
 | Fase | Estado | Objetivo |
 | --- | --- | --- |
 | 0 | Hecha | Auditoria read-only del codigo actual. |
-| 1 | Parcial v0 + cierre programado | Consolidar modelo de registro de hechos. |
-| 2 | Parcial v0 | Ajustar entidades Room y migraciones minimas. |
+| 1 | Hecha v0 | Consolidar modelo de registro de hechos. |
+| 2 | Hecha v0 | Ajustar entidades Room y migraciones minimas. |
 | 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
 | 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
@@ -1527,9 +1525,6 @@ Resultado: build y tests en verde.
 
 ### Pendiente despues de v0
 
-- Migrar de `activity_logs` a `daily_activity_logs` como tabla limpia unica para
-  anclas/soportes/tasks, o cerrar explicitamente `activity_logs` como nombre
-  canonico si se decide no renombrar.
 - Usar snapshots semanales derivados para tendencia, recomendaciones de
   superhabit e historial explicable en `Estado Base`.
 - Calibrar `StabilityScore` con historial real cuando existan suficientes
@@ -1861,7 +1856,61 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test
 
 Resultado: tests en verde.
 
-## 20. Preguntas abiertas antes de implementar
+## 20. Registro de daily_activity_logs canonico
+
+Fecha: 2026-05-27
+
+Objetivo:
+
+```text
+Cerrar la deuda de doble semantica de `activity_logs` y convertir el registro
+diario nuevo en fuente canonica para anclas, soportes y tasks.
+```
+
+Cambios realizados:
+
+```text
+DailyActivityLogEntity
+  Nueva tabla `daily_activity_logs` con status explicito:
+  `Done`, `NotDone`, `Omitted`.
+
+AutonomiaDatabase.kt
+  Version 9 y migracion 8 -> 9 desde `activity_logs` legacy, usando
+  `user_activity_configs` para interpretar soportes como omisiones reales.
+
+AutonomiaDao.kt
+  Las queries usadas por dashboard, input builder, snapshots y repositorio leen
+  y escriben `daily_activity_logs`.
+
+AutonomiaRepository.kt
+  Anclas, soportes y tasks escriben logs diarios canonicos. El cierre local crea
+  `NotDone` para anclas no marcadas y `Done` para soportes no omitidos.
+
+DomainMappers.kt
+  Traduce la semantica limpia a `ActivityLog` de compatibilidad para no romper
+  UI existente: soporte `Done` no equivale a omision; soporte `Omitted` si.
+
+DailyActivityLogMapperTest.kt
+  Protege la semantica critica de anclas y soportes.
+```
+
+Decision tecnica:
+
+```text
+`activity_logs` queda como tabla legacy. No se usa como fuente nueva de scoring.
+Se conserva el modelo `ActivityLog` como contrato de compatibilidad de dominio/UI
+mientras las pantallas existentes terminan de migrar a nombres mas explicitos.
+```
+
+Verificacion:
+
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"; .\gradlew.bat test --no-daemon
+```
+
+Resultado: tests en verde.
+
+## 21. Preguntas abiertas antes de implementar
 
 1. Definir permisos/API concretas para telemetria maxima de sueno en Android:
    desbloqueos, interrupciones, screen-on y nivel de confianza.

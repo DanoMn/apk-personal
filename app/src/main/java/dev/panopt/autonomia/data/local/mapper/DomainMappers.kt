@@ -13,6 +13,7 @@ import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.AnchorPhrase
 import dev.panopt.autonomia.AttributionStatus
 import dev.panopt.autonomia.ContributionRole
+import dev.panopt.autonomia.DailyActivityStatus
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.PhraseFamily
@@ -29,6 +30,7 @@ import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AnchorPhraseEntity
+import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepConfigEntity
@@ -115,6 +117,24 @@ internal fun ActivityLogEntity.toDomain(): ActivityLog =
         note = note,
         updatedAt = updatedAt,
     )
+
+internal fun DailyActivityLogEntity.toDomain(): ActivityLog {
+    val resolvedStatus = runCatching { DailyActivityStatus.valueOf(status) }.getOrDefault(DailyActivityStatus.NotDone)
+    val completed = when (resolvedStatus) {
+        DailyActivityStatus.Done -> subjectType != ActivitySurface.Support.name
+        DailyActivityStatus.NotDone -> false
+        DailyActivityStatus.Omitted -> true
+    }
+    return ActivityLog(
+        activityId = subjectId,
+        date = date,
+        completed = completed,
+        actualValue = actualValue,
+        note = note,
+        updatedAt = updatedAt,
+        status = resolvedStatus,
+    )
+}
 
 internal fun AbstinenceTrackEntity.toDomain(): AbstinenceTrack =
     AbstinenceTrack(

@@ -20,31 +20,31 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertLayers(layers: List<LayerEntity>)
 
-    @Query("SELECT * FROM activity_logs WHERE date = :date")
-    fun observeActivityLogsForDate(date: String): Flow<List<ActivityLogEntity>>
+    @Query("SELECT * FROM daily_activity_logs WHERE date = :date")
+    fun observeActivityLogsForDate(date: String): Flow<List<DailyActivityLogEntity>>
 
-    @Query("SELECT * FROM activity_logs")
-    fun observeAllActivityLogs(): Flow<List<ActivityLogEntity>>
+    @Query("SELECT * FROM daily_activity_logs")
+    fun observeAllActivityLogs(): Flow<List<DailyActivityLogEntity>>
 
-    @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate")
-    fun observeActivityLogsBetween(startDate: String, endDate: String): Flow<List<ActivityLogEntity>>
+    @Query("SELECT * FROM daily_activity_logs WHERE date >= :startDate AND date <= :endDate")
+    fun observeActivityLogsBetween(startDate: String, endDate: String): Flow<List<DailyActivityLogEntity>>
 
-    @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate")
-    suspend fun getActivityLogsBetween(startDate: String, endDate: String): List<ActivityLogEntity>
+    @Query("SELECT * FROM daily_activity_logs WHERE date >= :startDate AND date <= :endDate")
+    suspend fun getActivityLogsBetween(startDate: String, endDate: String): List<DailyActivityLogEntity>
 
-    @Query("SELECT * FROM activity_logs WHERE date = :date")
-    suspend fun getActivityLogsForDate(date: String): List<ActivityLogEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertActivityLog(log: ActivityLogEntity)
+    @Query("SELECT * FROM daily_activity_logs WHERE date = :date")
+    suspend fun getActivityLogsForDate(date: String): List<DailyActivityLogEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertActivityLogs(logs: List<ActivityLogEntity>)
+    suspend fun upsertActivityLog(log: DailyActivityLogEntity)
 
-    @Query("DELETE FROM activity_logs WHERE activityId = :activityId AND date = :date")
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertActivityLogs(logs: List<DailyActivityLogEntity>)
+
+    @Query("DELETE FROM daily_activity_logs WHERE subjectId = :activityId AND date = :date")
     suspend fun deleteActivityLog(activityId: String, date: String)
 
-    @Query("DELETE FROM activity_logs WHERE activityId = :activityId")
+    @Query("DELETE FROM daily_activity_logs WHERE subjectId = :activityId")
     suspend fun deleteActivityLogsForActivity(activityId: String)
 
     @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
@@ -168,7 +168,7 @@ interface AutonomiaDao {
     @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long)
 
-    @Query("DELETE FROM activity_logs")
+    @Query("DELETE FROM daily_activity_logs")
     suspend fun clearAllActivityLogs()
 
     @Query("DELETE FROM abstinence_logs")
