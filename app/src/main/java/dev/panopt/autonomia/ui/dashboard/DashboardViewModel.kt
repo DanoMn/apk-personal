@@ -12,7 +12,6 @@ import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
-import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
@@ -62,6 +61,15 @@ internal class DashboardViewModel(
             )
         }
 
+    private val sleepSnapshot =
+        combine(
+            repository.sleepLogForDateFlow(dateKey),
+            repository.sleepConfigFlow(),
+            repository.sleepSessionStateFlow(),
+        ) { sleepLog, sleepConfig, sleepSession ->
+            DashboardSleepSnapshot(log = sleepLog, config = sleepConfig, session = sleepSession)
+        }
+
     val isDarkMode: StateFlow<Boolean> = repository.isDarkModeFlow()
 
     val dashboardState: StateFlow<DashboardState> =
@@ -100,9 +108,9 @@ internal class DashboardViewModel(
                 factFlow,
                 catalogActivities,
                 repository.anchorPhrasesFlow(),
-                repository.sleepLogForDateFlow(dateKey),
+                sleepSnapshot,
                 repository.focusSignalActivityIdFlow(),
-            ) { facts, catalogActivities, anchorPhrases, sleepLog, focusSignalActivityId ->
+            ) { facts, catalogActivities, anchorPhrases, sleepSnapshot, focusSignalActivityId ->
                 DashboardEngine.buildState(
                     layers = facts.core.layers,
                     activityDefinitions = facts.core.activities,
@@ -116,7 +124,9 @@ internal class DashboardViewModel(
                     riskEvents = facts.riskEvents,
                     tasks = facts.tasks,
                     anchorPhrases = anchorPhrases,
-                    sleepLog = sleepLog,
+                    sleepLog = sleepSnapshot.log,
+                    sleepConfig = sleepSnapshot.config,
+                    sleepSession = sleepSnapshot.session,
                     focusSignalActivityId = focusSignalActivityId,
                     today = today,
                 )
@@ -130,6 +140,7 @@ internal class DashboardViewModel(
     init {
         viewModelScope.launch {
             repository.ensureSeeded()
+            repository.closeElapsedActivityDays(today = today)
         }
     }
 
@@ -197,23 +208,30 @@ internal class DashboardViewModel(
         }
     }
 
-    fun saveSleep(
-        plannedSleepAt: String,
-        plannedWakeAt: String,
-        sleptAt: String,
-        wokeAt: String,
-        quality: SleepQuality,
-        note: String,
+    fun startSleepSession(onStarted: () -> Unit = {}) {
+        viewModelScope.launch {
+            if (repository.startSleepSession()) {
+                onStarted()
+            }
+        }
+    }
+
+    fun finishSleepSession(note: String = "") {
+        viewModelScope.launch {
+            repository.finishSleepSession(note)
+        }
+    }
+
+    fun saveSleepConfig(
+        targetSleepAt: String,
+        targetWakeAt: String,
+        digitalWindDownMinutes: Int,
     ) {
         viewModelScope.launch {
-            repository.saveSleepLog(
-                plannedSleepAt = plannedSleepAt,
-                plannedWakeAt = plannedWakeAt,
-                sleptAt = sleptAt,
-                wokeAt = wokeAt,
-                quality = quality,
-                note = note,
-                date = dateKey,
+            repository.saveSleepConfig(
+                targetSleepAt = targetSleepAt,
+                targetWakeAt = targetWakeAt,
+                digitalWindDownMinutes = digitalWindDownMinutes,
             )
         }
     }
@@ -429,6 +447,12 @@ private data class DashboardActivityLogSnapshot(
     val todayActivityLogs: List<dev.panopt.autonomia.ActivityLog>,
     val weekActivityLogs: List<dev.panopt.autonomia.ActivityLog>,
     val periodActivityLogs: List<dev.panopt.autonomia.ActivityLog>,
+)
+
+private data class DashboardSleepSnapshot(
+    val log: dev.panopt.autonomia.SleepLog?,
+    val config: dev.panopt.autonomia.SleepConfig,
+    val session: dev.panopt.autonomia.SleepSessionState?,
 )
 
 private data class DashboardFactSnapshot(

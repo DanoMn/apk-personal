@@ -32,7 +32,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
-import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.ui.dashboard.components.ActionButtons
 import dev.panopt.autonomia.ui.dashboard.components.ActivityValueInputDialog
@@ -54,11 +53,14 @@ import dev.panopt.autonomia.ui.dashboard.components.rememberDrawerWidth
 internal fun DashboardScreen(
     state: DashboardState,
     isDarkMode: Boolean,
+    isSleepLockActive: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    onRequestSleepLockPermission: () -> Unit,
     onToggleActivity: (String, Boolean) -> Unit,
     onToggleAbstinenceClean: (String, Boolean) -> Unit,
     onSaveActivityValue: (String, Int) -> Unit,
-    onSaveSleep: (String, String, String, String, SleepQuality, String) -> Unit,
+    onStartSleepSession: () -> Unit,
+    onFinishSleepSession: (String) -> Unit,
     onToggleAbstinenceRelapse: (String, Boolean) -> Unit,
     onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
@@ -68,6 +70,7 @@ internal fun DashboardScreen(
     onNavigateToAnchorConfig: () -> Unit,
     onNavigateToTasks: () -> Unit,
     onNavigateToSobriety: () -> Unit,
+    onNavigateToSleepConfig: () -> Unit,
     onToggleSupport: (String) -> Unit = {},
     onResetSupportOmissions: () -> Unit = {},
     onNavigateToSupportsConfig: () -> Unit = {},
@@ -110,6 +113,15 @@ internal fun DashboardScreen(
             AnchorPhraseCard(palette = palette, phrase = state.anchorPhrase)
             ActionButtons(
                 palette = palette,
+                sleep = state.sleep,
+                isSleepLockActive = isSleepLockActive,
+                onSleepActionClick = {
+                    when {
+                        !isSleepLockActive -> onRequestSleepLockPermission()
+                        state.sleep.isSessionOpen -> onFinishSleepSession("")
+                        else -> onStartSleepSession()
+                    }
+                },
                 onQuickConfigClick = { activeSheet = DashboardSheet.EntryMenu },
                 onRiesgoClick = { activeSheet = DashboardSheet.Relapse },
             )
@@ -181,6 +193,7 @@ internal fun DashboardScreen(
             onOpenSupports = onNavigateToSupportsConfig,
             onOpenTasks = onNavigateToTasks,
             onOpenSobriety = onNavigateToSobriety,
+            onOpenSleepConfig = onNavigateToSleepConfig,
             onOpenActivitySettings = { activeSheet = DashboardSheet.Activities },
         )
 
@@ -193,7 +206,10 @@ internal fun DashboardScreen(
                 onSwitchSheet = { activeSheet = it },
                 onToggleActivity = onToggleActivity,
                 onSaveActivityValue = onSaveActivityValue,
-                onSaveSleep = onSaveSleep,
+                isSleepLockActive = isSleepLockActive,
+                onRequestSleepLockPermission = onRequestSleepLockPermission,
+                onStartSleepSession = onStartSleepSession,
+                onFinishSleepSession = onFinishSleepSession,
                 onToggleRelapse = onToggleAbstinenceRelapse,
                 onCreateActivity = onCreateActivity,
                 onSetFocusSignal = onSetFocusSignal,
@@ -201,6 +217,10 @@ internal fun DashboardScreen(
                 onRemoveAnchor = onRemoveAnchor,
                 onNavigateToAnchorConfig = onNavigateToAnchorConfig,
                 onNavigateToSobriety = onNavigateToSobriety,
+                onNavigateToSleepConfig = {
+                    activeSheet = null
+                    onNavigateToSleepConfig()
+                },
                 onAddSupport = onAddSupport,
                 onRemoveSupport = onRemoveSupport,
                 onOpenFullSupportsConfig = {

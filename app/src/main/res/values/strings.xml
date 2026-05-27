@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Autonomía sin límites</string>
+    <string name="sleep_device_admin_label">Bloqueo de sueño</string>
+    <string name="sleep_device_admin_explanation">Permite que Vocal bloquee la pantalla cuando tocas Ir a dormir. No borra datos ni cambia tu clave.</string>
 </resources>

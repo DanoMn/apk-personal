@@ -1,9 +1,15 @@
 package dev.panopt.autonomia
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.SideEffect
@@ -12,10 +18,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import dev.panopt.autonomia.sleep.SleepDeviceAdminReceiver
 import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
+import dev.panopt.autonomia.ui.sleep.SleepConfigScreen
 import dev.panopt.autonomia.ui.sobriety.SobrietyConfigScreen
 import dev.panopt.autonomia.ui.supports.SupportsConfigScreen
 import dev.panopt.autonomia.ui.tasks.TasksScreen
@@ -25,6 +35,54 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val devicePolicyManager = remember {
+                getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            }
+            val sleepAdmin = remember {
+                ComponentName(this@MainActivity, SleepDeviceAdminReceiver::class.java)
+            }
+            var isSleepLockActive by remember {
+                mutableStateOf(devicePolicyManager.isAdminActive(sleepAdmin))
+            }
+            val adminLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                ActivityResultContracts.StartActivityForResult(),
+            ) {
+                isSleepLockActive = devicePolicyManager.isAdminActive(sleepAdmin)
+            }
+            DisposableEffect(Unit) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        isSleepLockActive = devicePolicyManager.isAdminActive(sleepAdmin)
+                    }
+                }
+                lifecycle.addObserver(observer)
+                onDispose { lifecycle.removeObserver(observer) }
+            }
+
+            val requestSleepLockPermission = {
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, sleepAdmin)
+                    .putExtra(
+                        DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                        getString(R.string.sleep_device_admin_explanation),
+                    )
+                adminLauncher.launch(intent)
+            }
+            val lockPhoneNow: () -> Unit = {
+                if (devicePolicyManager.isAdminActive(sleepAdmin)) {
+                    isSleepLockActive = true
+                    runCatching {
+                        devicePolicyManager.lockNow()
+                    }.onFailure {
+                        isSleepLockActive = devicePolicyManager.isAdminActive(sleepAdmin)
+                        requestSleepLockPermission()
+                    }
+                } else {
+                    isSleepLockActive = false
+                    requestSleepLockPermission()
+                }
+            }
+
             val dashboardViewModel: DashboardViewModel = viewModel(
                 factory = DashboardViewModel.Factory(applicationContext),
             )
@@ -42,11 +100,14 @@ class MainActivity : ComponentActivity() {
                 AppScreen.Dashboard -> DashboardScreen(
                     state = dashboardState,
                     isDarkMode = isDarkMode,
+                    isSleepLockActive = isSleepLockActive,
                     onThemeChange = dashboardViewModel::setDarkMode,
+                    onRequestSleepLockPermission = requestSleepLockPermission,
                     onToggleActivity = dashboardViewModel::toggleActivity,
                     onToggleAbstinenceClean = dashboardViewModel::toggleAbstinenceClean,
                     onSaveActivityValue = dashboardViewModel::saveActivityValue,
-                    onSaveSleep = dashboardViewModel::saveSleep,
+                    onStartSleepSession = { dashboardViewModel.startSleepSession(lockPhoneNow) },
+                    onFinishSleepSession = dashboardViewModel::finishSleepSession,
                     onToggleAbstinenceRelapse = dashboardViewModel::toggleAbstinenceRelapse,
                     onCreateActivity = dashboardViewModel::createActivity,
                     onSetFocusSignal = dashboardViewModel::setFocusSignalActivity,
@@ -56,6 +117,7 @@ class MainActivity : ComponentActivity() {
                     onNavigateToAnchorConfig = { currentScreen = AppScreen.AnchorConfig },
                     onNavigateToTasks = { currentScreen = AppScreen.Tasks },
                     onNavigateToSobriety = { currentScreen = AppScreen.Sobriety },
+                    onNavigateToSleepConfig = { currentScreen = AppScreen.SleepConfig },
                     onToggleSupport = dashboardViewModel::onToggleSupport,
                     onResetSupportOmissions = dashboardViewModel::resetSupportOmissions,
                     onNavigateToSupportsConfig = { currentScreen = AppScreen.Supports },
@@ -114,6 +176,14 @@ class MainActivity : ComponentActivity() {
                     onRemoveTrack = dashboardViewModel::deleteCustomAbstinenceTrack,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
+                AppScreen.SleepConfig -> SleepConfigScreen(
+                    sleep = dashboardState.sleep,
+                    isSleepLockActive = isSleepLockActive,
+                    palette = palette,
+                    onRequestSleepLockPermission = requestSleepLockPermission,
+                    onSave = dashboardViewModel::saveSleepConfig,
+                    onBack = { currentScreen = AppScreen.Dashboard },
+                )
             }
         }
     }
@@ -140,4 +210,5 @@ private enum class AppScreen {
     Supports,
     Tasks,
     Sobriety,
+    SleepConfig,
 }

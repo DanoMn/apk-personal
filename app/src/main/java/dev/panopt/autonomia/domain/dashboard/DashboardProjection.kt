@@ -13,8 +13,9 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.RiskEvent
 import dev.panopt.autonomia.ScoreState
+import dev.panopt.autonomia.SleepConfig
 import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
@@ -22,9 +23,10 @@ import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.isGoal
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.ScoreInput
+import dev.panopt.autonomia.domain.sleep.SleepPolicy
+import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
 import kotlin.math.roundToInt
 
@@ -42,6 +44,8 @@ internal fun buildDashboardState(
     tasks: List<Task>,
     anchorPhrases: List<AnchorPhrase>,
     sleepLog: SleepLog?,
+    sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
+    sleepSession: SleepSessionState? = null,
     focusSignalActivityId: String?,
     today: LocalDate = LocalDate.now(),
 ): DashboardState {
@@ -145,6 +149,8 @@ internal fun buildDashboardState(
             activities = timeActivities,
             logsByActivity = todayLogsByActivity,
             sleepLog = sleepLog,
+            sleepConfig = sleepConfig,
+            sleepSession = sleepSession,
             focusSignalActivityId = focusSignalActivityId,
         ),
         sobrietyTracks = activeTracks.map { track ->
@@ -176,7 +182,7 @@ internal fun buildDashboardState(
         },
         weekRows = weekRows,
         dimensions = dimensions,
-        sleep = sleepLog.toSleepState(),
+        sleep = sleepLog.toSleepState(sleepConfig, sleepSession),
         activityOptions = catalogActivities.map { activity ->
             val log = todayLogsByActivity[activity.id]
             val configured = configuredById[activity.id]
@@ -359,6 +365,8 @@ private fun buildSignals(
     activities: List<ActivityDefinition>,
     logsByActivity: Map<String, ActivityLog>,
     sleepLog: SleepLog?,
+    sleepConfig: SleepConfig,
+    sleepSession: SleepSessionState?,
     focusSignalActivityId: String?,
 ): List<DashboardSignalState> {
     val projectActivities = activities.filter {
@@ -375,9 +383,9 @@ private fun buildSignals(
         DashboardSignalState(
             kind = DashboardSignalKind.Sleep,
             label = "Sueno",
-            value = sleepLog.sleepValue(),
-            meta = sleepLog.sleepMeta(),
-            status = sleepLog.sleepStatus(),
+            value = sleepLog.sleepValue(sleepConfig, sleepSession),
+            meta = sleepLog.sleepMeta(sleepConfig, sleepSession),
+            status = sleepLog.sleepStatus(sleepSession),
         ),
         DashboardSignalState(
             kind = DashboardSignalKind.Project,
@@ -396,28 +404,35 @@ private fun buildSignals(
     )
 }
 
-private fun SleepLog?.sleepValue(): String {
+private fun SleepLog?.sleepValue(
+    sleepConfig: SleepConfig,
+    sleepSession: SleepSessionState?,
+): String {
+    if (sleepSession != null) return "desde ${sleepSession.startedAt}"
     val log = this ?: return "--"
-    val minutes = minutesBetween(log.sleptAt, log.wokeAt) ?: return "--"
-    val hours = minutes / 60
-    val rest = minutes % 60
-    return if (hours > 0) "${hours}h ${rest}m" else "${rest}m"
+    val minutes = SleepPolicy.minutesBetween(log.sleptAt, log.wokeAt) ?: return "--"
+    val target = sleepConfig.targetMinutes()
+    return "${SleepPolicy.formatDuration(minutes)} de ${SleepPolicy.formatDuration(target)}"
 }
 
-private fun SleepLog?.sleepMeta(): String =
-    when (this?.quality) {
-        SleepQuality.Low -> "baja"
-        SleepQuality.Acceptable -> "aceptable"
-        SleepQuality.Good -> "buena"
-        null -> "toca registrar"
-    }
+private fun SleepLog?.sleepMeta(
+    sleepConfig: SleepConfig,
+    sleepSession: SleepSessionState?,
+): String {
+    if (sleepSession != null) return "en descanso"
+    val log = this ?: return "toca registrar"
+    val actual = SleepPolicy.minutesBetween(log.sleptAt, log.wokeAt) ?: return "toca registrar"
+    val target = sleepConfig.targetMinutes()
+    return if (actual >= target) "base cubierta" else "descanso bajo"
+}
 
-private fun SleepLog?.sleepStatus(): DashboardDimensionStatus =
-    when (this?.quality) {
-        SleepQuality.Low -> DashboardDimensionStatus.Attention
-        SleepQuality.Acceptable -> DashboardDimensionStatus.Motion
-        SleepQuality.Good -> DashboardDimensionStatus.Stable
-        null -> DashboardDimensionStatus.Unknown
+private fun SleepLog?.sleepStatus(sleepSession: SleepSessionState?): DashboardDimensionStatus =
+    when {
+        sleepSession != null -> DashboardDimensionStatus.Motion
+        this == null -> DashboardDimensionStatus.Unknown
+        SleepScoring.score(this) >= 0.90f -> DashboardDimensionStatus.Stable
+        SleepScoring.score(this) >= 0.70f -> DashboardDimensionStatus.Motion
+        else -> DashboardDimensionStatus.Attention
     }
 
 private fun ActivityDefinition?.activityValue(logsByActivity: Map<String, ActivityLog>): String {
@@ -438,28 +453,36 @@ private fun ActivityDefinition.shortLabel(): String =
 private fun String.projectMeta(): String =
     replace("Proyecto ", "").substringBefore("/").trim().lowercase().ifBlank { "proyecto" }
 
-private fun SleepLog?.toSleepState(): DashboardSleepState =
+private fun SleepLog?.toSleepState(
+    sleepConfig: SleepConfig,
+    sleepSession: SleepSessionState?,
+): DashboardSleepState =
     if (this == null) {
-        DashboardSleepState()
+        DashboardSleepState(
+            targetSleepAt = sleepConfig.targetSleepAt,
+            targetWakeAt = sleepConfig.targetWakeAt,
+            targetMinutes = sleepConfig.targetMinutes(),
+            digitalWindDownMinutes = sleepConfig.digitalWindDownMinutes,
+            pendingStartedAt = sleepSession?.startedAt.orEmpty(),
+            pendingDate = sleepSession?.date.orEmpty(),
+        )
     } else {
         DashboardSleepState(
-            plannedSleepAt = plannedSleepAt,
-            plannedWakeAt = plannedWakeAt,
+            targetSleepAt = sleepConfig.targetSleepAt,
+            targetWakeAt = sleepConfig.targetWakeAt,
+            targetMinutes = sleepConfig.targetMinutes(),
+            digitalWindDownMinutes = sleepConfig.digitalWindDownMinutes,
+            pendingStartedAt = sleepSession?.startedAt.orEmpty(),
+            pendingDate = sleepSession?.date.orEmpty(),
             sleptAt = sleptAt,
             wokeAt = wokeAt,
-            quality = quality,
             note = note,
         )
     }
 
-private fun minutesBetween(start: String, end: String): Int? {
-    val startTime = runCatching { LocalTime.parse(start) }.getOrNull() ?: return null
-    val endTime = runCatching { LocalTime.parse(end) }.getOrNull() ?: return null
-    val startMinutes = startTime.hour * 60 + startTime.minute
-    val endMinutes = endTime.hour * 60 + endTime.minute
-    val raw = endMinutes - startMinutes
-    return if (raw >= 0) raw else raw + 24 * 60
-}
+private fun SleepConfig.targetMinutes(): Int =
+    SleepPolicy.plannedWindowMinutes(targetSleepAt, targetWakeAt)
+        ?: SleepPolicy.DEFAULT_SLEEP_WINDOW_MINUTES
 
 private fun sobrietyMeta(status: AbstinenceStatus): String =
     when (status) {

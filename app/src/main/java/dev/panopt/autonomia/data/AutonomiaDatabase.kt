@@ -22,9 +22,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AnchorPhrasePhaseRuleEntity::class,
         AnchorPhraseImpressionEntity::class,
         AnchorPhraseDailySlotEntity::class,
-        SleepLogEntity::class
+        SleepConfigEntity::class,
+        SleepSessionStateEntity::class,
+        SleepLogEntity::class,
+        DailyClosureEntity::class,
+        WeeklyScoreSnapshotEntity::class,
     ],
-    version = 5,
+    version = 8,
     exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
@@ -41,7 +45,15 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     AutonomiaDatabase::class.java,
                     "autonomia_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(
+                        MIGRATION_1_2,
+                        MIGRATION_2_3,
+                        MIGRATION_3_4,
+                        MIGRATION_4_5,
+                        MIGRATION_5_6,
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                    )
                     .build()
                 INSTANCE = instance
                 instance
@@ -201,6 +213,80 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     """.trimIndent(),
                 )
             }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sleep_config (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        targetSleepAt TEXT NOT NULL,
+                        targetWakeAt TEXT NOT NULL,
+                        digitalWindDownMinutes INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createSleepSessionStateTable(db)
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS daily_closures (
+                        date TEXT NOT NULL PRIMARY KEY,
+                        timezoneId TEXT NOT NULL,
+                        closedAt INTEGER NOT NULL,
+                        source TEXT NOT NULL,
+                        closureVersion INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weekly_score_snapshots (
+                        weekStart TEXT NOT NULL,
+                        weekEnd TEXT NOT NULL,
+                        scoringVersion TEXT NOT NULL,
+                        calculatedAt INTEGER NOT NULL,
+                        configHash TEXT NOT NULL,
+                        factsHash TEXT NOT NULL,
+                        weeklyBaseScore REAL NOT NULL,
+                        weeklyScore REAL NOT NULL,
+                        stabilityScore REAL,
+                        state TEXT NOT NULL,
+                        visibleScore INTEGER NOT NULL,
+                        worstLayerId TEXT,
+                        layerSummariesJson TEXT NOT NULL,
+                        reasonsJson TEXT NOT NULL,
+                        PRIMARY KEY(weekStart, scoringVersion)
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_weekly_score_snapshots_weekEnd ON weekly_score_snapshots(weekEnd)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_weekly_score_snapshots_calculatedAt ON weekly_score_snapshots(calculatedAt)")
+            }
+        }
+
+        private fun createSleepSessionStateTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS sleep_session_state (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    date TEXT NOT NULL,
+                    startedAt TEXT NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
         }
     }
 }

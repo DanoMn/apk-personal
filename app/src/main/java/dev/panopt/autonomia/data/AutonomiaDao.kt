@@ -26,8 +26,14 @@ interface AutonomiaDao {
     @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate")
     fun observeActivityLogsBetween(startDate: String, endDate: String): Flow<List<ActivityLogEntity>>
 
+    @Query("SELECT * FROM activity_logs WHERE date = :date")
+    suspend fun getActivityLogsForDate(date: String): List<ActivityLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertActivityLog(log: ActivityLogEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertActivityLogs(logs: List<ActivityLogEntity>)
 
     @Query("DELETE FROM activity_logs WHERE activityId = :activityId AND date = :date")
     suspend fun deleteActivityLog(activityId: String, date: String)
@@ -120,6 +126,27 @@ interface AutonomiaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSleepLog(log: SleepLogEntity)
 
+    @Query("SELECT * FROM sleep_config WHERE id = :id LIMIT 1")
+    fun observeSleepConfig(id: String): Flow<SleepConfigEntity?>
+
+    @Query("SELECT * FROM sleep_config WHERE id = :id LIMIT 1")
+    suspend fun getSleepConfig(id: String): SleepConfigEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSleepConfig(config: SleepConfigEntity)
+
+    @Query("SELECT * FROM sleep_session_state WHERE id = :id LIMIT 1")
+    fun observeSleepSessionState(id: String): Flow<SleepSessionStateEntity?>
+
+    @Query("SELECT * FROM sleep_session_state WHERE id = :id LIMIT 1")
+    suspend fun getSleepSessionState(id: String): SleepSessionStateEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSleepSessionState(state: SleepSessionStateEntity)
+
+    @Query("DELETE FROM sleep_session_state WHERE id = :id")
+    suspend fun deleteSleepSessionState(id: String)
+
     @Query("UPDATE tasks SET status = :status, completedAt = :completedAt, updatedAt = :updatedAt WHERE id = :taskId")
     suspend fun updateTaskStatus(taskId: String, status: String, completedAt: Long?, updatedAt: Long)
 
@@ -153,6 +180,12 @@ interface AutonomiaDao {
 
     @Query("SELECT * FROM user_activity_configs WHERE active = 1 AND archived = 0")
     fun observeUserActivityConfigs(): Flow<List<UserActivityConfigEntity>>
+
+    @Query("SELECT * FROM user_activity_configs WHERE active = 1 AND archived = 0")
+    suspend fun getActiveUserActivityConfigs(): List<UserActivityConfigEntity>
+
+    @Query("SELECT * FROM activity_definitions")
+    suspend fun getActivityDefinitionsSnapshot(): List<ActivityDefinitionEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertUserActivityConfig(config: UserActivityConfigEntity)
@@ -216,4 +249,19 @@ interface AutonomiaDao {
 
     @Query("SELECT * FROM user_activity_configs WHERE activityId = :activityId LIMIT 1")
     suspend fun getUserActivityConfig(activityId: String): UserActivityConfigEntity?
+
+    @Query("SELECT * FROM daily_closures WHERE date = :date LIMIT 1")
+    suspend fun getDailyClosure(date: String): DailyClosureEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertDailyClosure(closure: DailyClosureEntity)
+
+    @Query("SELECT * FROM weekly_score_snapshots ORDER BY weekStart DESC")
+    fun observeWeeklyScoreSnapshots(): Flow<List<WeeklyScoreSnapshotEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertWeeklyScoreSnapshot(snapshot: WeeklyScoreSnapshotEntity)
+
+    @Query("DELETE FROM weekly_score_snapshots WHERE weekStart = :weekStart AND scoringVersion = :scoringVersion")
+    suspend fun deleteWeeklyScoreSnapshot(weekStart: String, scoringVersion: String)
 }

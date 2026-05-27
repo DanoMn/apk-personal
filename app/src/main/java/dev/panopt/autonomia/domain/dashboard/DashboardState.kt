@@ -1,7 +1,6 @@
 package dev.panopt.autonomia.domain.dashboard
 
 import dev.panopt.autonomia.ScoreState
-import dev.panopt.autonomia.SleepQuality
 
 internal data class DashboardState(
     val isLoading: Boolean = true,
@@ -109,13 +108,18 @@ internal enum class DashboardDimensionStatus {
 }
 
 internal data class DashboardSleepState(
-    val plannedSleepAt: String = "23:30",
-    val plannedWakeAt: String = "07:30",
+    val targetSleepAt: String = "23:30",
+    val targetWakeAt: String = "07:30",
+    val targetMinutes: Int = 480,
+    val digitalWindDownMinutes: Int = 0,
+    val pendingStartedAt: String = "",
+    val pendingDate: String = "",
     val sleptAt: String = "",
     val wokeAt: String = "",
-    val quality: SleepQuality = SleepQuality.Acceptable,
     val note: String = "",
-)
+) {
+    val isSessionOpen: Boolean = pendingStartedAt.isNotBlank()
+}
 
 internal data class DashboardActivityOptionState(
     val id: String,

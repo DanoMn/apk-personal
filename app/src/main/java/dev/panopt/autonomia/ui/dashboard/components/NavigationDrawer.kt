@@ -71,6 +71,7 @@ internal fun NavigationDrawer(
     onOpenSupports: () -> Unit = {},
     onOpenTasks: () -> Unit,
     onOpenSobriety: () -> Unit,
+    onOpenSleepConfig: () -> Unit,
     onOpenActivitySettings: () -> Unit,
 ) {
     Column(
@@ -176,6 +177,16 @@ internal fun NavigationDrawer(
                 },
             ) {
                 ShieldAlertIcon(color = it)
+            }
+            DrawerLink(
+                palette = palette,
+                text = "Sueno",
+                onClick = {
+                    onClose()
+                    onOpenSleepConfig()
+                },
+            ) {
+                MoonIcon(color = it)
             }
             DrawerLink(
                 palette = palette,

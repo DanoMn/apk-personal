@@ -92,6 +92,21 @@ data class SleepLog(
     val updatedAt: Long = 0L,
 )
 
+data class SleepConfig(
+    val id: String = "default",
+    val targetSleepAt: String,
+    val targetWakeAt: String,
+    val digitalWindDownMinutes: Int,
+    val updatedAt: Long = 0L,
+)
+
+data class SleepSessionState(
+    val id: String = "default",
+    val date: String,
+    val startedAt: String,
+    val updatedAt: Long = 0L,
+)
+
 // -- Enums --
 
 enum class ScoreState(val uiAlias: String) {

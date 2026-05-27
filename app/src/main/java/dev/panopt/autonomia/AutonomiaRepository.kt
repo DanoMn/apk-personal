@@ -6,8 +6,11 @@ import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
+import dev.panopt.autonomia.data.DailyClosureEntity
 import dev.panopt.autonomia.data.RiskEventEntity
+import dev.panopt.autonomia.data.SleepConfigEntity
 import dev.panopt.autonomia.data.SleepLogEntity
+import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.data.local.mapper.toDomain
@@ -18,8 +21,8 @@ import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.defaultActualValue
+import dev.panopt.autonomia.domain.sleep.SleepConfigValidation
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
-import dev.panopt.autonomia.domain.sleep.SleepWindowValidation
 import dev.panopt.autonomia.domain.task.TaskPolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +30,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 
 class AutonomiaRepository(context: Context) {
@@ -95,6 +106,14 @@ class AutonomiaRepository(context: Context) {
     fun sleepLogForDateFlow(date: String): Flow<SleepLog?> =
         dao.observeSleepLogForDate(date).map { it?.toDomain() }
 
+    fun sleepConfigFlow(): Flow<SleepConfig> =
+        dao.observeSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID)
+            .map { it?.toDomain() ?: SleepPolicy.defaultConfig() }
+
+    fun sleepSessionStateFlow(): Flow<SleepSessionState?> =
+        dao.observeSleepSessionState(SleepPolicy.DEFAULT_SESSION_ID)
+            .map { it?.toDomain() }
+
     suspend fun ensureSeeded() {
         // Layers: only insert on first run (stable, user-agnostic)
         if (dao.layerCount() == 0) {
@@ -105,6 +124,80 @@ class AutonomiaRepository(context: Context) {
         // reach existing installations without losing user-configured ones.
         dao.upsertActivityDefinitions(DefaultSeeds.activityDefinitions)
         dao.upsertAbstinenceTracks(DefaultSeeds.abstinenceTracks)
+
+        if (dao.getSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID) == null) {
+            val config = SleepPolicy.defaultConfig()
+            dao.upsertSleepConfig(
+                SleepConfigEntity(
+                    id = SleepPolicy.DEFAULT_CONFIG_ID,
+                    targetSleepAt = config.targetSleepAt,
+                    targetWakeAt = config.targetWakeAt,
+                    digitalWindDownMinutes = config.digitalWindDownMinutes,
+                    updatedAt = System.currentTimeMillis(),
+                ),
+            )
+        }
+    }
+
+    suspend fun closeElapsedActivityDays(
+        today: LocalDate = LocalDate.now(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) {
+        val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val yesterday = today.minusDays(1)
+        if (yesterday.isBefore(weekStart)) return
+
+        var cursor = weekStart
+        while (!cursor.isAfter(yesterday)) {
+            closeActivityDay(date = cursor, zoneId = zoneId, source = "app_open")
+            cursor = cursor.plusDays(1)
+        }
+    }
+
+    suspend fun closeActivityDay(
+        date: LocalDate,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        source: String = "manual",
+    ) {
+        val dateKey = date.toString()
+        if (dao.getDailyClosure(dateKey) != null) return
+
+        val definitionsById = dao.getActivityDefinitionsSnapshot().associateBy { it.id }
+        val activeConfigs = dao.getActiveUserActivityConfigs()
+        val existingActivityIds = dao.getActivityLogsForDate(dateKey)
+            .map { it.activityId }
+            .toSet()
+        val now = System.currentTimeMillis()
+        val closureLogs = activeConfigs
+            .filter { config ->
+                config.activityType == ActivitySurface.Anchor.name ||
+                    config.activityType == ActivitySurface.Support.name
+            }
+            .filter { config -> definitionsById.containsKey(config.activityId) }
+            .filter { config -> config.activityId !in existingActivityIds }
+            .filter { config -> date >= config.createdLocalDate(zoneId) }
+            .map { config ->
+                ActivityLogEntity(
+                    activityId = config.activityId,
+                    date = dateKey,
+                    completed = false,
+                    actualValue = 0,
+                    updatedAt = now,
+                )
+            }
+
+        if (closureLogs.isNotEmpty()) {
+            dao.upsertActivityLogs(closureLogs)
+        }
+        dao.upsertDailyClosure(
+            DailyClosureEntity(
+                date = dateKey,
+                timezoneId = zoneId.id,
+                closedAt = now,
+                source = source,
+                closureVersion = DAILY_CLOSURE_VERSION,
+            ),
+        )
     }
 
     suspend fun setActivityCompleted(
@@ -237,36 +330,89 @@ class AutonomiaRepository(context: Context) {
     }
 
     suspend fun saveSleepLog(
-        plannedSleepAt: String,
-        plannedWakeAt: String,
         sleptAt: String,
         wokeAt: String,
-        quality: SleepQuality,
         note: String,
         date: String = todayKey(),
     ): Boolean {
-        val resolvedPlannedSleepAt = plannedSleepAt.ifBlank { "23:30" }
-        val resolvedPlannedWakeAt = plannedWakeAt.ifBlank { "07:30" }
-        val validation = SleepPolicy.validatePlannedWindow(
-            plannedSleepAt = resolvedPlannedSleepAt,
-            plannedWakeAt = resolvedPlannedWakeAt,
-        )
-        if (validation is SleepWindowValidation.Invalid) return false
+        val config = currentSleepConfig()
+        val resolvedSleptAt = sleptAt.ifBlank { config.targetSleepAt }
+        val resolvedWokeAt = wokeAt.ifBlank { config.targetWakeAt }
+        SleepPolicy.minutesBetween(resolvedSleptAt, resolvedWokeAt) ?: return false
 
         dao.upsertSleepLog(
             SleepLogEntity(
                 date = date,
-                plannedSleepAt = resolvedPlannedSleepAt,
-                plannedWakeAt = resolvedPlannedWakeAt,
-                sleptAt = sleptAt.ifBlank { "00:00" },
-                wokeAt = wokeAt.ifBlank { "07:00" },
-                quality = quality.name,
+                plannedSleepAt = config.targetSleepAt,
+                plannedWakeAt = config.targetWakeAt,
+                sleptAt = resolvedSleptAt,
+                wokeAt = resolvedWokeAt,
+                quality = SleepQuality.Acceptable.name,
                 note = note,
                 updatedAt = System.currentTimeMillis(),
             ),
         )
         return true
     }
+
+    suspend fun startSleepSession(
+        date: String = todayKey(),
+        startedAt: String = currentTimeKey(),
+    ): Boolean {
+        SleepPolicy.minutesBetween(startedAt, startedAt) ?: return false
+        dao.upsertSleepSessionState(
+            SleepSessionStateEntity(
+                id = SleepPolicy.DEFAULT_SESSION_ID,
+                date = date,
+                startedAt = startedAt,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+        return true
+    }
+
+    suspend fun finishSleepSession(note: String = ""): Boolean {
+        val session = dao.getSleepSessionState(SleepPolicy.DEFAULT_SESSION_ID)?.toDomain() ?: return false
+        val saved = saveSleepLog(
+            sleptAt = session.startedAt,
+            wokeAt = currentTimeKey(),
+            note = note,
+            date = session.date,
+        )
+        if (saved) {
+            dao.deleteSleepSessionState(SleepPolicy.DEFAULT_SESSION_ID)
+        }
+        return saved
+    }
+
+    suspend fun saveSleepConfig(
+        targetSleepAt: String,
+        targetWakeAt: String,
+        digitalWindDownMinutes: Int,
+    ): Boolean {
+        val validation = SleepPolicy.validateConfig(
+            targetSleepAt = targetSleepAt,
+            targetWakeAt = targetWakeAt,
+            digitalWindDownMinutes = digitalWindDownMinutes,
+        )
+        val config = when (validation) {
+            is SleepConfigValidation.Valid -> validation.config
+            is SleepConfigValidation.Invalid -> return false
+        }
+        dao.upsertSleepConfig(
+            SleepConfigEntity(
+                id = SleepPolicy.DEFAULT_CONFIG_ID,
+                targetSleepAt = config.targetSleepAt,
+                targetWakeAt = config.targetWakeAt,
+                digitalWindDownMinutes = config.digitalWindDownMinutes,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+        return true
+    }
+
+    private suspend fun currentSleepConfig(): SleepConfig =
+        dao.getSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID)?.toDomain() ?: SleepPolicy.defaultConfig()
 
     suspend fun createTask(
         title: String,
@@ -469,3 +615,15 @@ class AutonomiaRepository(context: Context) {
 
 private fun isCustomActivityId(activityId: String): Boolean =
     activityId.startsWith("act_custom_") || (!activityId.startsWith("act_") && !activityId.startsWith("sup_"))
+
+private const val DAILY_CLOSURE_VERSION = 1
+
+private fun UserActivityConfigEntity.createdLocalDate(zoneId: ZoneId): LocalDate =
+    Instant.ofEpochMilli(createdAt)
+        .atZone(zoneId)
+        .toLocalDate()
+
+private fun currentTimeKey(): String =
+    LocalTime.now()
+        .truncatedTo(ChronoUnit.MINUTES)
+        .format(DateTimeFormatter.ofPattern("HH:mm"))

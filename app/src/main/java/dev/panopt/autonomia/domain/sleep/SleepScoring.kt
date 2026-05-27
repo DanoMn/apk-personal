@@ -1,7 +1,6 @@
 package dev.panopt.autonomia.domain.sleep
 
 import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
 
 object SleepScoring {
     fun score(log: SleepLog): Float {
@@ -20,15 +19,9 @@ object SleepScoring {
             SleepPolicy.scheduleCloseness(log.sleptAt, log.plannedSleepAt),
             SleepPolicy.scheduleCloseness(log.wokeAt, log.plannedWakeAt),
         )
-        val qualityScore = when (log.quality) {
-            SleepQuality.Low -> 0.35f
-            SleepQuality.Acceptable -> 0.72f
-            SleepQuality.Good -> 1f
-        }
-        return (durationScore * 0.55f + scheduleScore * 0.25f + qualityScore * 0.20f).coerceIn(0f, 1f)
+        return (durationScore * 0.70f + scheduleScore * 0.30f).coerceIn(0f, 1f)
     }
 
     private fun averageOf(first: Float, second: Float): Float =
         (first + second) / 2f
 }
-

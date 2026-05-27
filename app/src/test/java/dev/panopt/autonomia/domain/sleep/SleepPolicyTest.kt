@@ -22,6 +22,52 @@ class SleepPolicyTest {
     }
 
     @Test
+    fun acceptsFiveHourConfigAcrossMidnight() {
+        val result = SleepPolicy.validateConfig(
+            targetSleepAt = "23:30",
+            targetWakeAt = "04:30",
+            digitalWindDownMinutes = 20,
+        )
+
+        assertTrue(result is SleepConfigValidation.Valid)
+        assertEquals(300, SleepPolicy.minutesBetween("23:30", "04:30"))
+    }
+
+    @Test
+    fun rejectsConfigUnderFiveHours() {
+        val result = SleepPolicy.validateConfig(
+            targetSleepAt = "23:30",
+            targetWakeAt = "04:29",
+            digitalWindDownMinutes = 20,
+        )
+
+        assertEquals(
+            SleepConfigValidation.Invalid("La ventana minima es de 5 horas."),
+            result,
+        )
+    }
+
+    @Test
+    fun validatesAllowedDigitalWindDownChips() {
+        val valid = SleepPolicy.validateConfig(
+            targetSleepAt = "23:30",
+            targetWakeAt = "07:30",
+            digitalWindDownMinutes = 45,
+        )
+        val invalid = SleepPolicy.validateConfig(
+            targetSleepAt = "23:30",
+            targetWakeAt = "07:30",
+            digitalWindDownMinutes = 15,
+        )
+
+        assertTrue(valid is SleepConfigValidation.Valid)
+        assertEquals(
+            SleepConfigValidation.Invalid("Descanso digital fuera de rango."),
+            invalid,
+        )
+    }
+
+    @Test
     fun scoringUsesPersonalTargetWithoutUpperLimit() {
         val eightHourScore = SleepScoring.score(
             sleep(plannedSleepAt = "23:00", plannedWakeAt = "07:00", sleptAt = "23:00", wokeAt = "07:00"),
@@ -34,11 +80,26 @@ class SleepPolicyTest {
         assertEquals(1f, elevenHourScore, 0.001f)
     }
 
+    @Test
+    fun scoringIgnoresSubjectiveQuality() {
+        val lowQuality = sleep(
+            plannedSleepAt = "23:30",
+            plannedWakeAt = "07:30",
+            sleptAt = "23:30",
+            wokeAt = "07:30",
+            quality = SleepQuality.Low,
+        )
+        val goodQuality = lowQuality.copy(quality = SleepQuality.Good)
+
+        assertEquals(SleepScoring.score(goodQuality), SleepScoring.score(lowQuality), 0.001f)
+    }
+
     private fun sleep(
         plannedSleepAt: String,
         plannedWakeAt: String,
         sleptAt: String,
         wokeAt: String,
+        quality: SleepQuality = SleepQuality.Good,
     ): SleepLog =
         SleepLog(
             date = "2026-05-21",
@@ -46,7 +107,6 @@ class SleepPolicyTest {
             plannedWakeAt = plannedWakeAt,
             sleptAt = sleptAt,
             wokeAt = wokeAt,
-            quality = SleepQuality.Good,
+            quality = quality,
         )
 }
-

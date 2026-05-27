@@ -1,28 +1,27 @@
 package dev.panopt.autonomia.domain.scoring
 
 import dev.panopt.autonomia.AbstinenceLog
-import dev.panopt.autonomia.AbstinenceSeverity
 import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.AbstinenceTrack
+import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.ActivitySurface
+import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
-import dev.panopt.autonomia.domain.activity.goalProgress
-import dev.panopt.autonomia.domain.activity.importanceWeight
-import dev.panopt.autonomia.domain.activity.isGoal
-import dev.panopt.autonomia.domain.activity.progressFor
 import dev.panopt.autonomia.domain.sleep.SleepScoring
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
+import kotlin.math.exp
 import kotlin.math.roundToInt
 
 data class ScoreInput(
@@ -47,6 +46,12 @@ data class ScoreReport(
     val layerScores: List<LayerScore>,
     val featureContributions: List<FeatureContribution>,
     val gates: List<ScoreGate>,
+    val weeklyBaseScore: Float = 0f,
+    val weeklyScore: Float = 0f,
+    val averageLayerScore: Float = 0f,
+    val worstLayerScore: Float = 0f,
+    val worstLayerId: String? = null,
+    val reasons: List<String> = emptyList(),
 )
 
 data class LayerScore(
@@ -54,6 +59,14 @@ data class LayerScore(
     val name: String,
     val score: Float,
     val configured: Boolean,
+    val baseScore: Float = 0f,
+    val rawScore: Float = 0f,
+    val anchorScore: Float? = null,
+    val supportScore: Float? = null,
+    val anchorSurplusBonus: Float = 0f,
+    val taskMomentumBonus: Float = 0f,
+    val sleepScore: Float? = null,
+    val sobrietyScore: Float? = null,
 )
 
 data class FeatureContribution(
@@ -93,149 +106,326 @@ enum class ScoreGateKind {
 object ScoreEngine {
     private const val BODY_LAYER_ID = "layer_cuerpo"
     private const val CONDUCT_LAYER_ID = "layer_conducta"
-    private const val RESTORATION_MAX = 749
-    private const val ATTENTION_MAX = 799
-    private const val MOTION_MAX = 899
-    private const val PLENITUDE_MAX = 949
+    private const val ANCHOR_FREQUENCY_WEIGHT = 0.70f
+    private const val ANCHOR_VALUE_WEIGHT = 0.30f
+    private const val ANCHOR_WITH_SUPPORT_WEIGHT = 0.80f
+    private const val SUPPORT_WEIGHT = 0.20f
+    private const val SLEEP_WEIGHT_IN_BODY = 0.30f
+    private const val SOBRIETY_WEIGHT_IN_CONDUCT = 0.30f
+    private const val WEEKLY_AVERAGE_WEIGHT = 0.75f
+    private const val WEEKLY_WORST_WEIGHT = 0.25f
+    private const val TASK_MOMENTUM_MAX = 0.050f
+    private const val ANCHOR_SURPLUS_MAX = 0.100f
+    private const val SOBRIETY_PENDING_CLEAN_VALUE = 0.50f
+    private const val SOBRIETY_PENDING_CONFIDENCE_PENALTY = 0.15f
+    private const val SOBRIETY_RELAPSE_DECAY = 1.5f
+    private const val SOBRIETY_FORGIVENESS_WINDOW_DAYS = 5L
 
     fun calculate(input: ScoreInput): ScoreReport {
         val activeLayers = input.layers.filter { it.active }.sortedBy { it.sortOrder }
         if (activeLayers.isEmpty() || !input.hasAnyFact()) {
-            return ScoreReport(
-                state = ScoreState.NoData,
-                visibleScore = null,
-                baseScore = null,
-                goalBonus = 0,
-                progress = 0f,
-                layerScores = activeLayers.map {
-                    LayerScore(layerId = it.id, name = it.name, score = 0f, configured = false)
-                },
-                featureContributions = emptyList(),
-                gates = emptyList(),
-            )
+            return noDataReport(activeLayers)
         }
 
+        val weekStart = input.today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val weekDates = weekStart.datesUntilInclusive(input.today)
         val visibleActivities = input.activities
             .filter { it.active && !it.archived }
             .sortedBy { it.sortOrder }
-        val todayLogsByActivity = input.todayActivityLogs.associateBy { it.activityId }
-        val periodLogsByActivity = input.periodActivityLogs.groupBy { it.activityId }
-        val activeTracks = input.abstinenceTracks.filter { it.active }.sortedBy { it.sortOrder }
-        val todayLogsByTrack = input.todayAbstinenceLogs.associateBy { it.trackId }
+        val weeklyLogsByActivity = (input.periodActivityLogs + input.todayActivityLogs)
+            .filter { it.dateAsLocalDate()?.let { date -> date in weekDates } == true }
+            .distinctBy { "${it.activityId}:${it.date}" }
+            .groupBy { it.activityId }
+        val activeSobrietyTracks = input.abstinenceTracks.filter { it.active }.sortedBy { it.sortOrder }
+        val sobrietyScore = scoreSobriety(
+            tracks = activeSobrietyTracks,
+            allLogs = input.allAbstinenceLogs,
+            todayLogs = input.todayAbstinenceLogs,
+            weekDates = weekDates,
+            today = input.today,
+        )
         val sleepScore = input.sleepLog?.let(SleepScoring::score)
-        val sobrietyScore = scoreSobriety(activeTracks, todayLogsByTrack)
-        val completedTasks = input.tasks.filter { it.isScoringTaskCompletedOn(input.today) }
+        val completedTasksByLayer = input.tasks
+            .filter { it.isScoringTaskCompletedIn(weekStart, input.today) }
+            .groupBy { it.layerId.orEmpty() }
 
         val contributions = mutableListOf<FeatureContribution>()
-        val layerScores = activeLayers.map { layer ->
-            val layerActivities = visibleActivities.filter { it.layerId == layer.id && !it.isGoal() }
-            val primaryRatio = layerActivities
-                .filter { it.activityType == ActivitySurface.Anchor }
-                .weightedActivityRatio(todayLogsByActivity)
-            val secondaryRatio = layerActivities
-                .filter { it.activityType == ActivitySurface.Support }
-                .weightedActivityRatio(todayLogsByActivity)
-            val taskRatio = completedTasks
-                .filter { it.layerId == layer.id }
-                .weightedTaskRatio()
-            val hasPrimary = layerActivities.any { it.activityType == ActivitySurface.Anchor }
-            val hasSecondary = layerActivities.any { it.activityType == ActivitySurface.Support }
-            val hasTasks = input.tasks.any { it.layerId == layer.id && it.contributionRole != ContributionRole.Neutral }
-            val hasSleep = layer.id == BODY_LAYER_ID && sleepScore != null
-            val hasSobriety = layer.id == CONDUCT_LAYER_ID && activeTracks.isNotEmpty()
-
-            val score = when (layer.id) {
-                BODY_LAYER_ID -> {
-                    val primary = primaryRatio * 0.40f
-                    val secondary = secondaryRatio * 0.10f
-                    val tasks = taskRatio * 0.05f
-                    val sleep = (sleepScore ?: 0f) * 0.45f
-                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.40f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.10f, hasSecondary)
-                    addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.05f, hasTasks)
-                    addContribution(contributions, ScoreFeature.Sleep, layer, "Sueno", sleep, 0.45f, hasSleep)
-                    primary + secondary + tasks + sleep
-                }
-                CONDUCT_LAYER_ID -> {
-                    val primary = primaryRatio * 0.40f
-                    val secondary = secondaryRatio * 0.10f
-                    val tasks = taskRatio * 0.08f
-                    val sobriety = if (activeTracks.isEmpty()) {
-                        0.42f
-                    } else {
-                        (sobrietyScore ?: 0f) * 0.42f
-                    }
-                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.40f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.10f, hasSecondary)
-                    addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.08f, hasTasks)
-                    addContribution(contributions, ScoreFeature.Sobriety, layer, "Sobriedad", sobriety, 0.42f, hasSobriety)
-                    primary + secondary + tasks + sobriety
-                }
-                else -> {
-                    val primary = primaryRatio * 0.78f
-                    val secondary = secondaryRatio * 0.14f
-                    val tasks = taskRatio * 0.08f
-                    addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", primary, 0.78f, hasPrimary)
-                    addContribution(contributions, ScoreFeature.Support, layer, "Soportes", secondary, 0.14f, hasSecondary)
-                    addContribution(contributions, ScoreFeature.Task, layer, "Pendientes", tasks, 0.08f, hasTasks)
-                    primary + secondary + tasks
-                }
-            }
-
-            val configured = hasPrimary || hasSecondary || hasTasks || hasSleep || hasSobriety
-            LayerScore(
-                layerId = layer.id,
-                name = layer.name,
-                score = if (configured) score.coerceIn(0f, 1f) else 0.50f,
-                configured = configured,
+        val layerEvaluations = activeLayers.map { layer ->
+            evaluateLayer(
+                layer = layer,
+                activities = visibleActivities.filter { it.layerId == layer.id },
+                weeklyLogsByActivity = weeklyLogsByActivity,
+                weekDates = weekDates,
+                completedTasks = completedTasksByLayer[layer.id].orEmpty(),
+                sleepScore = if (layer.id == BODY_LAYER_ID) sleepScore else null,
+                sobrietyScore = if (layer.id == CONDUCT_LAYER_ID) sobrietyScore else null,
+                hasActiveSobriety = layer.id == CONDUCT_LAYER_ID && activeSobrietyTracks.isNotEmpty(),
+                contributions = contributions,
             )
         }
 
-        val layerAverage = layerScores.map { it.score }.averageOrZero()
-        val baseScore = (700 + layerAverage * 200).roundToInt().coerceIn(700, 900)
-        val goalBonus = calculateGoalBonus(
-            activities = visibleActivities.filter { it.isGoal() },
-            logsByActivity = periodLogsByActivity,
-            today = input.today,
-            contributions = contributions,
-        )
-        val rawScore = (baseScore + goalBonus).coerceIn(700, 1000)
-        val gates = buildGates(
-            sleepScore = sleepScore,
-            layerScores = layerScores,
-            activeTracks = activeTracks,
-            todayLogsByTrack = todayLogsByTrack,
-            allAbstinenceLogs = input.allAbstinenceLogs,
-            today = input.today,
-            goalBonus = goalBonus,
-        )
-        val maxAllowed = gates.filter { it.active }.minOfOrNull { it.maxScore } ?: 1000
-        val visibleScore = rawScore.coerceAtMost(maxAllowed).coerceAtLeast(700)
+        val averageLayerScore = layerEvaluations.map { it.rawScore }.averageOrZero()
+        val worstLayer = layerEvaluations.minByOrNull { it.baseScore }
+        val worstLayerScore = worstLayer?.baseScore ?: 0f
+        val weeklyBaseScore = (
+            WEEKLY_AVERAGE_WEIGHT * averageLayerScore +
+                WEEKLY_WORST_WEIGHT * worstLayerScore
+            ).coerceAtLeast(0f)
+        val visibleScore = weeklyBaseScore.toVisibleScore()
         val state = visibleScore.toScoreState()
 
         return ScoreReport(
             state = state,
             visibleScore = visibleScore,
-            baseScore = baseScore,
-            goalBonus = goalBonus,
+            baseScore = visibleScore,
+            goalBonus = 0,
             progress = visibleScore / 1000f,
-            layerScores = layerScores,
+            layerScores = layerEvaluations.map { it.toLayerScore() },
             featureContributions = contributions,
-            gates = gates,
+            gates = emptyList(),
+            weeklyBaseScore = weeklyBaseScore,
+            weeklyScore = weeklyBaseScore,
+            averageLayerScore = averageLayerScore,
+            worstLayerScore = worstLayerScore,
+            worstLayerId = worstLayer?.layerId,
+            reasons = buildReasons(layerEvaluations, activeSobrietyTracks.isNotEmpty(), sleepScore),
         )
     }
 
-    private fun ScoreInput.hasAnyFact(): Boolean {
-        val hasActivityFact = todayActivityLogs.isNotEmpty() || periodActivityLogs.isNotEmpty()
-        val activeTrackIds = abstinenceTracks
-            .filter { it.active }
-            .map { it.id }
+    private fun noDataReport(activeLayers: List<Layer>): ScoreReport =
+        ScoreReport(
+            state = ScoreState.NoData,
+            visibleScore = null,
+            baseScore = null,
+            goalBonus = 0,
+            progress = 0f,
+            layerScores = activeLayers.map {
+                LayerScore(layerId = it.id, name = it.name, score = 0f, configured = false)
+            },
+            featureContributions = emptyList(),
+            gates = emptyList(),
+        )
+
+    private fun evaluateLayer(
+        layer: Layer,
+        activities: List<ActivityDefinition>,
+        weeklyLogsByActivity: Map<String, List<ActivityLog>>,
+        weekDates: List<LocalDate>,
+        completedTasks: List<Task>,
+        sleepScore: Float?,
+        sobrietyScore: Float?,
+        hasActiveSobriety: Boolean,
+        contributions: MutableList<FeatureContribution>,
+    ): LayerEvaluation {
+        val anchors = activities.filter { it.activityType == ActivitySurface.Anchor }
+        val supports = activities.filter { it.activityType == ActivitySurface.Support }
+        val anchorEvaluations = anchors.map { activity ->
+            evaluateAnchor(activity, weeklyLogsByActivity[activity.id].orEmpty())
+        }
+        val anchorLayerScore = anchorEvaluations.map { it.baseScore }.averageOrNull()
+        val anchorSurplusBonus = anchorEvaluations.map { it.surplusBonus }.averageOrZero()
+        val supportLayerScore = evaluateSupports(supports, weeklyLogsByActivity, weekDates)
+        val baseWithoutSpecial = when {
+            anchorLayerScore == null && supportLayerScore == null -> 0f
+            supportLayerScore == null -> anchorLayerScore ?: 0f
+            else -> ANCHOR_WITH_SUPPORT_WEIGHT * (anchorLayerScore ?: 0f) + SUPPORT_WEIGHT * supportLayerScore
+        }.coerceIn(0f, 1f)
+        val taskMomentumBonus = taskMomentumBonus(completedTasks.size)
+        val baseWithPositiveMargin = (baseWithoutSpecial + anchorSurplusBonus + taskMomentumBonus)
+            .coerceIn(0f, 1.20f)
+
+        val layerBase = when {
+            layer.id == BODY_LAYER_ID -> {
+                val sleep = sleepScore ?: 0f
+                (1f - SLEEP_WEIGHT_IN_BODY) * baseWithoutSpecial + SLEEP_WEIGHT_IN_BODY * sleep
+            }
+            layer.id == CONDUCT_LAYER_ID && hasActiveSobriety -> {
+                val sobriety = sobrietyScore ?: 0f
+                (1f - SOBRIETY_WEIGHT_IN_CONDUCT) * baseWithoutSpecial +
+                    SOBRIETY_WEIGHT_IN_CONDUCT * sobriety
+            }
+            else -> baseWithoutSpecial
+        }.coerceIn(0f, 1f)
+
+        val rawLayerScore = when {
+            layer.id == BODY_LAYER_ID -> {
+                val sleep = sleepScore ?: 0f
+                ((1f - SLEEP_WEIGHT_IN_BODY) * baseWithPositiveMargin + SLEEP_WEIGHT_IN_BODY * sleep)
+                    .coerceIn(0f, 1.20f)
+            }
+            layer.id == CONDUCT_LAYER_ID && hasActiveSobriety -> {
+                val sobriety = sobrietyScore ?: 0f
+                ((1f - SOBRIETY_WEIGHT_IN_CONDUCT) * baseWithPositiveMargin +
+                    SOBRIETY_WEIGHT_IN_CONDUCT * sobriety)
+                    .coerceIn(0f, 1.20f)
+            }
+            else -> baseWithPositiveMargin
+        }
+
+        val configured = anchors.isNotEmpty() ||
+            supports.isNotEmpty() ||
+            completedTasks.isNotEmpty() ||
+            sleepScore != null ||
+            hasActiveSobriety
+
+        addContribution(contributions, ScoreFeature.Anchor, layer, "Anclas", anchorLayerScore, anchors.isNotEmpty())
+        addContribution(contributions, ScoreFeature.Support, layer, "Soportes", supportLayerScore, supports.isNotEmpty())
+        addContribution(
+            contributions = contributions,
+            feature = ScoreFeature.Task,
+            layer = layer,
+            label = "Pendientes",
+            value = taskMomentumBonus,
+            enabled = completedTasks.isNotEmpty(),
+            maxValue = TASK_MOMENTUM_MAX,
+        )
+        addContribution(contributions, ScoreFeature.Sleep, layer, "Sueno", sleepScore, layer.id == BODY_LAYER_ID && sleepScore != null)
+        addContribution(
+            contributions = contributions,
+            feature = ScoreFeature.Sobriety,
+            layer = layer,
+            label = "Sobriedad",
+            value = sobrietyScore,
+            enabled = layer.id == CONDUCT_LAYER_ID && hasActiveSobriety,
+        )
+
+        return LayerEvaluation(
+            layerId = layer.id,
+            name = layer.name,
+            configured = configured,
+            baseScore = layerBase,
+            rawScore = rawLayerScore,
+            anchorScore = anchorLayerScore,
+            supportScore = supportLayerScore,
+            anchorSurplusBonus = anchorSurplusBonus,
+            taskMomentumBonus = taskMomentumBonus,
+            sleepScore = sleepScore,
+            sobrietyScore = sobrietyScore,
+        )
+    }
+
+    private fun evaluateAnchor(activity: ActivityDefinition, logs: List<ActivityLog>): AnchorEvaluation {
+        val targetDays = activity.targetDays()
+        val targetDailyValue = activity.targetDailyValue()
+        val targetWeeklyValue = (targetDays * targetDailyValue).coerceAtLeast(1)
+        val doneDates = logs
+            .filter { it.countsAsDone() }
+            .mapNotNull { it.dateAsLocalDate() }
             .toSet()
+        val actualValue = logs.sumOf { log ->
+            val fallback = if (log.countsAsDone()) targetDailyValue else 0
+            (log.actualValue ?: fallback).coerceAtLeast(0)
+        }
+        val frequencyRatio = doneDates.size.toFloat() / targetDays.toFloat()
+        val valueRatio = actualValue.toFloat() / targetWeeklyValue.toFloat()
+        val frequencyScore = frequencyRatio.coerceIn(0f, 1f)
+        val valueScore = valueRatio.coerceIn(0f, 1f)
+        val baseScore = ANCHOR_FREQUENCY_WEIGHT * frequencyScore + ANCHOR_VALUE_WEIGHT * valueScore
+        val frequencySurplusBonus = surplusBonus(frequencyRatio - 1f)
+        val valueSurplusBonus = surplusBonus(valueRatio - 1f)
+        val surplusBonus = ANCHOR_FREQUENCY_WEIGHT * frequencySurplusBonus + ANCHOR_VALUE_WEIGHT * valueSurplusBonus
+        return AnchorEvaluation(
+            baseScore = baseScore.coerceIn(0f, 1f),
+            surplusBonus = surplusBonus.coerceIn(0f, ANCHOR_SURPLUS_MAX),
+        )
+    }
+
+    private fun evaluateSupports(
+        supports: List<ActivityDefinition>,
+        weeklyLogsByActivity: Map<String, List<ActivityLog>>,
+        weekDates: List<LocalDate>,
+    ): Float? {
+        if (supports.isEmpty()) return null
+        val expectedSupportDays = supports.size * weekDates.size
+        if (expectedSupportDays <= 0) return 1f
+        val omittedSupportDays = supports.sumOf { support ->
+            weeklyLogsByActivity[support.id].orEmpty()
+                .filter { it.countsAsDone() }
+                .mapNotNull { it.dateAsLocalDate() }
+                .distinct()
+                .count()
+        }
+        return (1f - omittedSupportDays.toFloat() / expectedSupportDays.toFloat()).coerceIn(0f, 1f)
+    }
+
+    private fun scoreSobriety(
+        tracks: List<AbstinenceTrack>,
+        allLogs: List<AbstinenceLog>,
+        todayLogs: List<AbstinenceLog>,
+        weekDates: List<LocalDate>,
+        today: LocalDate,
+    ): Float? {
+        if (tracks.isEmpty() || weekDates.isEmpty()) return null
+        val todayOverrides = todayLogs.associateBy { it.trackId to it.date }
+        val allLogsByTrackAndDate = allLogs
+            .associateBy { it.trackId to it.date }
+            .let { logs -> logs + todayOverrides }
+
+        val trackScores = tracks.map { track ->
+            val evaluableDays = weekDates.size.toFloat()
+            var confirmedCleanDays = 0f
+            var pendingDays = 0f
+            var relapseDays = 0f
+
+            weekDates.forEach { date ->
+                when (allLogsByTrackAndDate[track.id to date.toString()]?.status) {
+                    AbstinenceStatus.Clean -> confirmedCleanDays += 1f
+                    AbstinenceStatus.Relapse -> relapseDays += 1f
+                    AbstinenceStatus.Unknown,
+                    null -> {
+                        val age = ChronoUnit.DAYS.between(date, today)
+                        if (age <= SOBRIETY_FORGIVENESS_WINDOW_DAYS) {
+                            pendingDays += 1f
+                        } else {
+                            relapseDays += 1f
+                        }
+                    }
+                }
+            }
+
+            val cleanCoverage = ((confirmedCleanDays + SOBRIETY_PENDING_CLEAN_VALUE * pendingDays) / evaluableDays)
+                .coerceIn(0f, 1f)
+            val relapseProtection = exp(-(relapseDays / SOBRIETY_RELAPSE_DECAY)).coerceIn(0f, 1f)
+            val trackingConfidence = (1f - SOBRIETY_PENDING_CONFIDENCE_PENALTY * (pendingDays / evaluableDays))
+                .coerceIn(0f, 1f)
+            (cleanCoverage * relapseProtection * trackingConfidence).coerceIn(0f, 1f)
+        }
+
+        return (0.70f * trackScores.averageOrZero() + 0.30f * (trackScores.minOrNull() ?: 0f))
+            .coerceIn(0f, 1f)
+    }
+
+    private fun ScoreInput.hasAnyFact(): Boolean {
+        val activeTrackIds = abstinenceTracks.filter { it.active }.map { it.id }.toSet()
         val hasAbstinenceFact = (todayAbstinenceLogs + allAbstinenceLogs).any { log ->
             log.trackId in activeTrackIds && log.status != AbstinenceStatus.Unknown
         }
-        val hasTaskFact = tasks.any { it.status == TaskStatus.Done }
-        return hasActivityFact || hasAbstinenceFact || hasTaskFact || sleepLog != null
+        val hasTaskFact = tasks.any { it.status == TaskStatus.Done && it.layerId != null }
+        return todayActivityLogs.isNotEmpty() ||
+            periodActivityLogs.isNotEmpty() ||
+            hasAbstinenceFact ||
+            hasTaskFact ||
+            sleepLog != null
+    }
+
+    private fun buildReasons(
+        layerEvaluations: List<LayerEvaluation>,
+        hasActiveSobriety: Boolean,
+        sleepScore: Float?,
+    ): List<String> {
+        val reasons = mutableListOf<String>()
+        val weakestLayer = layerEvaluations.minByOrNull { it.baseScore }
+        if (weakestLayer != null && weakestLayer.baseScore < 0.60f) {
+            reasons += "La capa mas baja es ${weakestLayer.name}."
+        }
+        if (sleepScore != null && sleepScore < 0.70f) {
+            reasons += "El descanso bajo esta afectando Cuerpo."
+        }
+        val conduct = layerEvaluations.firstOrNull { it.layerId == CONDUCT_LAYER_ID }
+        if (hasActiveSobriety && conduct?.sobrietyScore != null && conduct.sobrietyScore < 0.70f) {
+            reasons += "Sobriedad esta reduciendo Conducta esta semana."
+        }
+        return reasons
     }
 
     private fun addContribution(
@@ -243,11 +433,11 @@ object ScoreEngine {
         feature: ScoreFeature,
         layer: Layer,
         label: String,
-        value: Float,
-        maxValue: Float,
+        value: Float?,
         enabled: Boolean,
+        maxValue: Float = 1f,
     ) {
-        if (!enabled || maxValue <= 0f) return
+        if (!enabled || value == null || maxValue <= 0f) return
         contributions += FeatureContribution(
             feature = feature,
             layerId = layer.id,
@@ -256,195 +446,116 @@ object ScoreEngine {
             maxValue = maxValue,
         )
     }
+}
 
-    private fun calculateGoalBonus(
-        activities: List<ActivityDefinition>,
-        logsByActivity: Map<String, List<ActivityLog>>,
-        today: LocalDate,
-        contributions: MutableList<FeatureContribution>,
-    ): Int {
-        if (activities.isEmpty()) return 0
-
-        val progressValues = activities.map { activity ->
-            val logs = logsByActivity[activity.id].orEmpty().filter { log ->
-                val date = runCatching { LocalDate.parse(log.date) }.getOrNull() ?: return@filter false
-                when (activity.targetPeriod) {
-                    TargetPeriod.Month -> date.month == today.month && date.year == today.year
-                    else -> date >= today.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)) && date <= today
-                }
-            }
-            activity.goalProgress(logs)
-        }
-        val ratio = progressValues.averageOrZero().coerceIn(0f, 1f)
-        contributions += FeatureContribution(
-            feature = ScoreFeature.Goal,
-            layerId = null,
-            label = "Metas de anclas",
-            value = ratio,
-            maxValue = 1f,
+private data class LayerEvaluation(
+    val layerId: String,
+    val name: String,
+    val configured: Boolean,
+    val baseScore: Float,
+    val rawScore: Float,
+    val anchorScore: Float?,
+    val supportScore: Float?,
+    val anchorSurplusBonus: Float,
+    val taskMomentumBonus: Float,
+    val sleepScore: Float?,
+    val sobrietyScore: Float?,
+) {
+    fun toLayerScore(): LayerScore =
+        LayerScore(
+            layerId = layerId,
+            name = name,
+            score = rawScore.coerceIn(0f, 1f),
+            configured = configured,
+            baseScore = baseScore,
+            rawScore = rawScore,
+            anchorScore = anchorScore,
+            supportScore = supportScore,
+            anchorSurplusBonus = anchorSurplusBonus,
+            taskMomentumBonus = taskMomentumBonus,
+            sleepScore = sleepScore,
+            sobrietyScore = sobrietyScore,
         )
-        return (ratio * 100).roundToInt().coerceIn(0, 100)
+}
+
+private data class AnchorEvaluation(
+    val baseScore: Float,
+    val surplusBonus: Float,
+)
+
+private fun ActivityDefinition.targetDays(): Int {
+    val fallback = when (cadence) {
+        ActivityCadence.Daily -> 7
+        ActivityCadence.Weekly -> 1
+        ActivityCadence.Monthly -> 1
+        ActivityCadence.Custom,
+        ActivityCadence.EventBased,
+        null -> 1
     }
-
-    private fun buildGates(
-        sleepScore: Float?,
-        layerScores: List<LayerScore>,
-        activeTracks: List<AbstinenceTrack>,
-        todayLogsByTrack: Map<String, AbstinenceLog>,
-        allAbstinenceLogs: List<AbstinenceLog>,
-        today: LocalDate,
-        goalBonus: Int,
-    ): List<ScoreGate> {
-        val criticalRelapseToday = activeTracks.any { track ->
-            track.severity == AbstinenceSeverity.Critical &&
-                todayLogsByTrack[track.id]?.status == AbstinenceStatus.Relapse
-        }
-        val anyRelapseToday = activeTracks.any { todayLogsByTrack[it.id]?.status == AbstinenceStatus.Relapse }
-        val minCleanStreak = activeTracks
-            .map { track -> streakDays(track.id, allAbstinenceLogs, today, todayLogsByTrack[track.id]) }
-            .minOrNull()
-        val lowFoundation = layerScores.any {
-            (it.layerId == BODY_LAYER_ID || it.layerId == CONDUCT_LAYER_ID) && it.score < 0.45f
-        }
-
-        return listOf(
-            ScoreGate(
-                kind = ScoreGateKind.RelapseToday,
-                active = criticalRelapseToday,
-                maxScore = RESTORATION_MAX,
-                message = "Recaida critica registrada hoy.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.RelapseToday,
-                active = anyRelapseToday && !criticalRelapseToday,
-                maxScore = ATTENTION_MAX,
-                message = "Recaida registrada hoy.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.SleepMissing,
-                active = sleepScore == null,
-                maxScore = MOTION_MAX,
-                message = "Falta registrar sueno.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.SleepLow,
-                active = sleepScore != null && sleepScore < 0.55f,
-                maxScore = MOTION_MAX,
-                message = "El descanso esta bajo.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.FoundationLayerLow,
-                active = lowFoundation,
-                maxScore = MOTION_MAX,
-                message = "Cuerpo o Conducta todavia estan bajos.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.CleanStreak,
-                active = minCleanStreak != null && minCleanStreak < 7,
-                maxScore = MOTION_MAX,
-                message = "La racha limpia aun esta reconstruyendose.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.CleanStreak,
-                active = minCleanStreak != null && minCleanStreak in 7..13,
-                maxScore = PLENITUDE_MAX,
-                message = "La racha sostiene Plenitud, pero aun no Inquebrantable.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.GoalMissing,
-                active = goalBonus <= 0,
-                maxScore = MOTION_MAX,
-                message = "Faltan metas de anclas para estados altos.",
-            ),
-            ScoreGate(
-                kind = ScoreGateKind.GoalPartial,
-                active = goalBonus in 1..74,
-                maxScore = PLENITUDE_MAX,
-                message = "Las metas de anclas aun no alcanzan para Inquebrantable.",
-            ),
-        )
-    }
+    return (weeklyFrequencyTarget ?: targetCount ?: fallback).coerceIn(1, 7)
 }
 
-private fun List<ActivityDefinition>.weightedActivityRatio(logsByActivity: Map<String, ActivityLog>): Float {
-    if (isEmpty()) return 0f
-    val max = sumOf { it.importanceWeight().toDouble() }.toFloat()
-    if (max <= 0f) return 0f
-    val actual = sumOf { activity ->
-        (activity.progressFor(logsByActivity[activity.id]) * activity.importanceWeight()).toDouble()
-    }.toFloat()
-    return (actual / max).coerceIn(0f, 1f)
+private fun ActivityDefinition.targetDailyValue(): Int =
+    when (unit) {
+        ActivityUnit.Boolean,
+        ActivityUnit.Text -> 1
+        ActivityUnit.Minutes,
+        ActivityUnit.Count,
+        ActivityUnit.Time -> sessionTargetMinutes ?: targetValue ?: minimumValue ?: 1
+    }.coerceAtLeast(1)
+
+private fun ActivityLog.countsAsDone(): Boolean {
+    if (completed) return true
+    return (actualValue ?: 0) > 0
 }
 
-private fun List<Task>.weightedTaskRatio(): Float {
-    if (isEmpty()) return 0f
-    val max = sumOf { it.importanceWeight().toDouble() }.toFloat()
-    val actual = sumOf { it.importanceWeight().toDouble() }.toFloat()
-    return if (max <= 0f) 0f else (actual / max).coerceIn(0f, 1f)
-}
+private fun ActivityLog.dateAsLocalDate(): LocalDate? =
+    runCatching { LocalDate.parse(date) }.getOrNull()
 
-private fun Task.importanceWeight(): Float =
-    importanceTier.importanceWeight()
-
-private fun Task.isScoringTaskCompletedOn(today: LocalDate): Boolean {
+private fun Task.isScoringTaskCompletedIn(weekStart: LocalDate, today: LocalDate): Boolean {
     if (status != TaskStatus.Done || layerId == null || contributionRole == ContributionRole.Neutral) return false
     val completed = completedAt ?: return false
     val completedDate = Instant.ofEpochMilli(completed)
         .atZone(ZoneId.systemDefault())
         .toLocalDate()
-    return completedDate == today
+    return completedDate in weekStart..today
 }
 
-private fun scoreSobriety(
-    activeTracks: List<AbstinenceTrack>,
-    todayLogsByTrack: Map<String, AbstinenceLog>,
-): Float? {
-    if (activeTracks.isEmpty()) return null
-    return activeTracks.map { track ->
-        when (todayLogsByTrack[track.id]?.status) {
-            AbstinenceStatus.Clean -> 1f
-            AbstinenceStatus.Relapse -> if (track.severity == AbstinenceSeverity.Critical) 0f else 0.20f
-            AbstinenceStatus.Unknown,
-            null -> 0.45f
-        }
-    }.averageOrZero()
+private fun taskMomentumBonus(completedLayerTasks: Int): Float {
+    if (completedLayerTasks <= 0) return 0f
+    return (TASK_MOMENTUM_MAX_FOR_HELPERS * (1f - exp(-completedLayerTasks.toFloat() / 2f)))
+        .coerceIn(0f, TASK_MOMENTUM_MAX_FOR_HELPERS)
 }
 
-private fun streakDays(
-    trackId: String,
-    allLogs: List<AbstinenceLog>,
-    today: LocalDate,
-    todayLog: AbstinenceLog?,
-): Int {
-    val logsByDate = allLogs
-        .filter { it.trackId == trackId }
-        .mapNotNull { log ->
-            runCatching { LocalDate.parse(log.date) }.getOrNull()?.let { date -> date to log }
-        }
-        .toMap()
-        .let { logs ->
-            if (todayLog == null) logs else logs + (today to todayLog)
-        }
+private const val TASK_MOMENTUM_MAX_FOR_HELPERS = 0.050f
 
-    var cursor = today
-    var days = 0
-    while (logsByDate[cursor]?.status == AbstinenceStatus.Clean) {
-        days += 1
-        cursor = cursor.minusDays(1)
-    }
-    return days
+private fun surplusBonus(surplusMagnitude: Float): Float {
+    if (surplusMagnitude <= 0f) return 0f
+    return (0.100f * (1f - exp(-surplusMagnitude / 2f))).coerceIn(0f, 0.100f)
 }
+
+private fun LocalDate.datesUntilInclusive(end: LocalDate): List<LocalDate> {
+    val days = ChronoUnit.DAYS.between(this, end).coerceAtLeast(0)
+    return (0..days).map { plusDays(it) }
+}
+
+private fun Iterable<Float>.averageOrZero(): Float {
+    val values = toList()
+    return if (values.isEmpty()) 0f else values.sum() / values.size
+}
+
+private fun Iterable<Float>.averageOrNull(): Float? {
+    val values = toList()
+    return if (values.isEmpty()) null else values.sum() / values.size
+}
+
+private fun Float.toVisibleScore(): Int =
+    (700 + coerceIn(0f, 1f) * 300f).roundToInt().coerceIn(700, 1000)
 
 private fun Int.toScoreState(): ScoreState =
     when {
         this < 750 -> ScoreState.Restoration
         this < 800 -> ScoreState.Attention
         this < 900 -> ScoreState.Motion
-        this < 950 -> ScoreState.Plenitude
-        else -> ScoreState.Unbreakable
+        else -> ScoreState.Plenitude
     }
-
-private fun Iterable<Float>.averageOrZero(): Float {
-    val values = toList()
-    return if (values.isEmpty()) 0f else values.sum() / values.size
-}

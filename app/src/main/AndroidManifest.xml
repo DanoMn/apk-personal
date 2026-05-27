@@ -10,6 +10,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AutonomiaSinLimites">
+        <receiver
+            android:name=".sleep.SleepDeviceAdminReceiver"
+            android:description="@string/sleep_device_admin_explanation"
+            android:exported="true"
+            android:label="@string/sleep_device_admin_label"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/sleep_device_admin" />
+
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

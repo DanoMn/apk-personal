@@ -6,9 +6,12 @@ import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.AnchorPhrase
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.RiskEvent
+import dev.panopt.autonomia.SleepConfig
 import dev.panopt.autonomia.SleepLog
+import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import java.time.LocalDate
 
 internal object DashboardEngine {
@@ -26,6 +29,8 @@ internal object DashboardEngine {
         tasks: List<Task>,
         anchorPhrases: List<AnchorPhrase>,
         sleepLog: SleepLog?,
+        sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
+        sleepSession: SleepSessionState? = null,
         focusSignalActivityId: String?,
         today: LocalDate,
     ): DashboardState =
@@ -43,6 +48,8 @@ internal object DashboardEngine {
             tasks = tasks,
             anchorPhrases = anchorPhrases,
             sleepLog = sleepLog,
+            sleepConfig = sleepConfig,
+            sleepSession = sleepSession,
             focusSignalActivityId = focusSignalActivityId,
             today = today,
         )

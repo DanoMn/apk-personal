@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,7 +61,9 @@ internal fun AnchorConfigPanel(
             activity = anchorBeingEdited,
             palette = palette,
             mode = AnchorEditorMode.Edit,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp),
             compactInfo = true,
             useNavigationBarPadding = false,
             onConfirm = { sessionTargetMinutes, weeklyFrequencyTarget, commitmentDurationMonths ->
@@ -107,7 +110,7 @@ internal fun AnchorConfigPanel(
 
         Column(
             modifier = Modifier
-                .weight(1f, fill = false)
+                .heightIn(max = 420.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

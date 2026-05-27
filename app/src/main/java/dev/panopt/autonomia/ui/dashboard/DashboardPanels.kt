@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardCheckItemState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
@@ -89,7 +88,10 @@ internal fun DashboardSheetHost(
     onSwitchSheet: (DashboardSheet) -> Unit,
     onToggleActivity: (String, Boolean) -> Unit,
     onSaveActivityValue: (String, Int) -> Unit,
-    onSaveSleep: (String, String, String, String, SleepQuality, String) -> Unit,
+    isSleepLockActive: Boolean,
+    onRequestSleepLockPermission: () -> Unit,
+    onStartSleepSession: () -> Unit,
+    onFinishSleepSession: (String) -> Unit,
     onToggleRelapse: (String, Boolean) -> Unit,
     onCreateActivity: (String, String, Int, Boolean, Int?, Int?) -> Unit,
     onSetFocusSignal: (String) -> Unit,
@@ -97,6 +99,7 @@ internal fun DashboardSheetHost(
     onRemoveAnchor: (String) -> Unit,
     onNavigateToAnchorConfig: () -> Unit,
     onNavigateToSobriety: () -> Unit,
+    onNavigateToSleepConfig: () -> Unit,
     onAddSupport: (String) -> Unit = {},
     onRemoveSupport: (String) -> Unit = {},
     onOpenFullSupportsConfig: () -> Unit = {},
@@ -161,7 +164,25 @@ internal fun DashboardSheetHost(
         ) {
             when (sheet) {
                 DashboardSheet.EntryMenu -> EntryMenuPanel(
+                    sleep = state.sleep,
+                    isSleepLockActive = isSleepLockActive,
                     palette = palette,
+                    onSleepAction = {
+                        when {
+                            !isSleepLockActive -> {
+                                onDismiss()
+                                onRequestSleepLockPermission()
+                            }
+                            state.sleep.isSessionOpen -> {
+                                onFinishSleepSession("")
+                                onDismiss()
+                            }
+                            else -> {
+                                onStartSleepSession()
+                                onDismiss()
+                            }
+                        }
+                    },
                     onOpenAnchors = { onSwitchSheet(DashboardSheet.AnchorConfig) },
                     onOpenSupports = { onSwitchSheet(DashboardSheet.SupportsConfig) },
                     onOpenActivities = { onSwitchSheet(DashboardSheet.Activities) },
@@ -195,11 +216,18 @@ internal fun DashboardSheetHost(
                 )
                 DashboardSheet.Sleep -> SleepPanel(
                     sleep = state.sleep,
+                    isSleepLockActive = isSleepLockActive,
                     palette = palette,
-                    onSave = { plannedSleepAt, plannedWakeAt, sleptAt, wokeAt, quality, note ->
-                        onSaveSleep(plannedSleepAt, plannedWakeAt, sleptAt, wokeAt, quality, note)
+                    onStartSleep = {
+                        onStartSleepSession()
                         onDismiss()
                     },
+                    onRequestSleepLockPermission = onRequestSleepLockPermission,
+                    onFinishSleep = { note ->
+                        onFinishSleepSession(note)
+                        onDismiss()
+                    },
+                    onConfigure = onNavigateToSleepConfig,
                 )
                 DashboardSheet.Activities -> ActivitySettingsPanel(
                     state = state,
@@ -251,7 +279,9 @@ private fun AnchorPanel(
     SheetTitle(title = title, note = "hechos de hoy", palette = palette)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items.forEach { item ->
@@ -285,15 +315,31 @@ private fun AnchorPanel(
 
 @Composable
 private fun EntryMenuPanel(
+    sleep: DashboardSleepState,
+    isSleepLockActive: Boolean,
     palette: DashboardPalette,
+    onSleepAction: () -> Unit,
     onOpenAnchors: () -> Unit,
     onOpenSupports: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenRelapse: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val sleepActionLabel = when {
+        !isSleepLockActive -> "Activar bloqueo"
+        sleep.isSessionOpen -> "Desperte"
+        else -> "Ir a dormir"
+    }
+    val sleepActionDescription = when {
+        !isSleepLockActive -> "Permitir bloqueo del telefono"
+        sleep.isSessionOpen -> "Registrar despertar"
+        else -> "Bloquear telefono y dormir"
+    }
+
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
     ) {
         SheetTitle(title = "Configuración rápida", note = "hechos y registro", palette = palette)
         Spacer(modifier = Modifier.height(16.dp))
@@ -301,6 +347,14 @@ private fun EntryMenuPanel(
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            EntryGridCard(
+                palette = palette,
+                icon = { MoonIcon(color = it, modifier = Modifier.size(28.dp)) },
+                label = sleepActionLabel,
+                description = sleepActionDescription,
+                onClick = onSleepAction,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -444,44 +498,121 @@ private fun ActivityValueRow(
 @Composable
 private fun SleepPanel(
     sleep: DashboardSleepState,
+    isSleepLockActive: Boolean,
     palette: DashboardPalette,
-    onSave: (String, String, String, String, SleepQuality, String) -> Unit,
+    onStartSleep: () -> Unit,
+    onRequestSleepLockPermission: () -> Unit,
+    onFinishSleep: (String) -> Unit,
+    onConfigure: () -> Unit,
 ) {
-    var plannedSleepAt by remember(sleep.plannedSleepAt) { mutableStateOf(sleep.plannedSleepAt) }
-    var plannedWakeAt by remember(sleep.plannedWakeAt) { mutableStateOf(sleep.plannedWakeAt) }
-    var sleptAt by remember(sleep.sleptAt) { mutableStateOf(sleep.sleptAt.ifBlank { "00:00" }) }
-    var wokeAt by remember(sleep.wokeAt) { mutableStateOf(sleep.wokeAt.ifBlank { "07:00" }) }
-    var quality by remember(sleep.quality) { mutableStateOf(sleep.quality) }
     var note by remember(sleep.note) { mutableStateOf(sleep.note) }
 
     SheetTitle(title = "Sueno", note = "senal de descanso", palette = palette)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SheetSubtitle(text = "Plan", palette = palette)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PanelField("Dormir", plannedSleepAt, { plannedSleepAt = it.take(5) }, palette, Modifier.weight(1f))
-            PanelField("Despertar", plannedWakeAt, { plannedWakeAt = it.take(5) }, palette, Modifier.weight(1f))
+        SleepPlanSummary(sleep = sleep, palette = palette)
+        if (sleep.isSessionOpen) {
+            SheetSubtitle(text = "Descanso iniciado", palette = palette)
+            Text(
+                text = sleep.pendingStartedAt,
+                color = palette.colorCardboard,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+            )
+            PanelField("Nota", note, { note = it.take(160) }, palette, Modifier.fillMaxWidth())
+            SheetButton(
+                text = "Desperte",
+                palette = palette,
+                primary = true,
+                onClick = { onFinishSleep(note) },
+            )
+        } else {
+            if (sleep.sleptAt.isNotBlank() && sleep.wokeAt.isNotBlank()) {
+                SheetSubtitle(text = "Ultimo registro", palette = palette)
+                Text(
+                    text = "${sleep.sleptAt} - ${sleep.wokeAt}",
+                    color = palette.textMuted,
+                    fontFamily = DashboardSans,
+                    fontSize = 13.5.sp,
+                )
+            }
+            if (isSleepLockActive) {
+                SheetButton(
+                    text = "Ir a dormir",
+                    palette = palette,
+                    primary = true,
+                    onClick = onStartSleep,
+                )
+            } else {
+                SleepLockPermissionNotice(palette = palette)
+                SheetButton(
+                    text = "Activar bloqueo",
+                    palette = palette,
+                    primary = true,
+                    onClick = onRequestSleepLockPermission,
+                )
+            }
         }
-        SheetSubtitle(text = "Registro", palette = palette)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PanelField("Dormi", sleptAt, { sleptAt = it.take(5) }, palette, Modifier.weight(1f))
-            PanelField("Desperte", wokeAt, { wokeAt = it.take(5) }, palette, Modifier.weight(1f))
-        }
-        SheetSubtitle(text = "Calidad", palette = palette)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            QualityChip("Baja", SleepQuality.Low, quality, palette, Modifier.weight(1f)) { quality = it }
-            QualityChip("Aceptable", SleepQuality.Acceptable, quality, palette, Modifier.weight(1f)) { quality = it }
-            QualityChip("Buena", SleepQuality.Good, quality, palette, Modifier.weight(1f)) { quality = it }
-        }
-        PanelField("Nota", note, { note = it.take(160) }, palette, Modifier.fillMaxWidth())
         SheetButton(
-            text = "Guardar sueno",
+            text = "Configurar sueno",
             palette = palette,
-            primary = true,
-            onClick = { onSave(plannedSleepAt, plannedWakeAt, sleptAt, wokeAt, quality, note) },
+            primary = false,
+            onClick = onConfigure,
+        )
+    }
+}
+
+@Composable
+private fun SleepLockPermissionNotice(
+    palette: DashboardPalette,
+) {
+    Text(
+        text = "Activa el bloqueo asistido para que Ir a dormir bloquee la pantalla.",
+        color = palette.textMuted,
+        fontFamily = DashboardSans,
+        fontSize = 13.5.sp,
+        lineHeight = 18.sp,
+    )
+}
+
+@Composable
+private fun SleepPlanSummary(
+    sleep: DashboardSleepState,
+    palette: DashboardPalette,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(palette.bgSurface)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = "Objetivo ${sleep.targetSleepAt} - ${sleep.targetWakeAt}",
+            color = palette.textMain,
+            fontFamily = DashboardSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.5.sp,
+        )
+        Text(
+            text = buildString {
+                append("${sleep.targetMinutes / 60}h")
+                val rest = sleep.targetMinutes % 60
+                if (rest > 0) append(" ${rest}m")
+                if (sleep.digitalWindDownMinutes > 0) {
+                    append(" - ${sleep.digitalWindDownMinutes} min sin telefono")
+                }
+            },
+            color = palette.textMuted,
+            fontFamily = DashboardSans,
+            fontSize = 12.5.sp,
         )
     }
 }
@@ -503,7 +634,9 @@ private fun ActivitySettingsPanel(
     SheetTitle(title = "Actividades", note = "anclas, soportes y senales", palette = palette)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         SheetSubtitle(text = "Senal destacada", palette = palette)
@@ -635,7 +768,9 @@ private fun RelapsePanel(
     SheetTitle(title = "Recaidas", note = "sobriedad definida", palette = palette)
 
     Column(
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        modifier = Modifier
+            .heightIn(max = 560.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (tracks.isEmpty()) {
@@ -795,34 +930,6 @@ private fun PanelTextField(
             .background(palette.bgSurface2)
             .padding(horizontal = 4.dp, vertical = 12.dp),
     )
-}
-
-@Composable
-private fun QualityChip(
-    text: String,
-    value: SleepQuality,
-    selected: SleepQuality,
-    palette: DashboardPalette,
-    modifier: Modifier,
-    onClick: (SleepQuality) -> Unit,
-) {
-    val active = value == selected
-    Box(
-        modifier = modifier
-            .height(42.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (active) mix(palette.colorCoral, 0.2f, palette.bgSurface2) else palette.bgSurface2)
-            .clickable { onClick(value) },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = if (active) Color(0xFFEFAA9C) else palette.textMuted,
-            fontFamily = DashboardSans,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
-        )
-    }
 }
 
 @Composable

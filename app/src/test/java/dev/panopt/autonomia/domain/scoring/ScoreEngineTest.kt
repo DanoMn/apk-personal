@@ -23,304 +23,260 @@ import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScoreEngineTest {
-    private val today: LocalDate = LocalDate.of(2026, 5, 21)
-    private val coreLayers = listOf(
-        layer("layer_interior", "Interior", 10),
-        layer("layer_cuerpo", "Cuerpo", 20),
-        layer("layer_conducta", "Conducta", 30),
-        layer("layer_vinculos", "Vinculos", 40),
-        layer("layer_proyecto", "Proyecto", 50),
-    )
-    private val track = abstinenceTrack("trk_alcohol", AbstinenceSeverity.Critical)
+    private val today = LocalDate.of(2026, 5, 21)
+    private val weekDates = (0L..3L).map { LocalDate.of(2026, 5, 18).plusDays(it) }
 
     @Test
     fun noDataReturnsNoDataWithoutVisibleScore() {
-        val report = ScoreEngine.calculate(
-            baseInput(
-                activities = coreActivities(),
-                todayActivityLogs = emptyList(),
-                periodActivityLogs = emptyList(),
-                abstinenceTracks = listOf(track),
-                todayAbstinenceLogs = emptyList(),
-                allAbstinenceLogs = emptyList(),
-                sleepLog = null,
-            ),
+        val report = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(anchor("act_meditation", "layer_interior")),
         )
 
         assertEquals(ScoreState.NoData, report.state)
-        assertEquals(null, report.visibleScore)
+        assertNull(report.visibleScore)
+        assertEquals(0f, report.weeklyBaseScore, 0.001f)
     }
 
     @Test
-    fun visibleScoreUsesDefinedRanges() {
-        val plenitude = fullBaseReport(goalActual = 50)
-        val unbreakable = fullBaseReport(goalActual = 100)
-
-        assertEquals(ScoreState.Plenitude, plenitude.state)
-        assertTrue(plenitude.visibleScore in 900..949)
-        assertEquals(ScoreState.Unbreakable, unbreakable.state)
-        assertTrue(unbreakable.visibleScore in 950..1000)
-    }
-
-    @Test
-    fun lowSleepPreventsHighStates() {
-        val report = fullBaseReport(
-            goalActual = 100,
-            sleepLog = sleep("03:00", "07:00", SleepQuality.Low),
+    fun anchorsUseSeventyPercentFrequencyAndThirtyPercentValue() {
+        val activity = anchor("act_meditation", "layer_interior")
+        val report = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(activity),
+            activityLogs = weekDates.take(2).map { log(activity.id, it, actualValue = 20) },
         )
 
-        assertEquals(ScoreState.Motion, report.state)
-        assertTrue(report.visibleScore in 800..899)
+        val layer = report.layerScores.single()
+        assertEquals(0.50f, layer.anchorScore ?: 0f, 0.001f)
+        assertEquals(0.50f, report.weeklyBaseScore, 0.001f)
+        assertEquals(850, report.visibleScore)
     }
 
     @Test
-    fun relapseTodayCapsStateAndScore() {
-        val report = fullBaseReport(
-            goalActual = 100,
-            todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
-            allAbstinenceLogs = cleanLogs(track.id, 14),
+    fun anchorSurplusAddsCappedPositiveMarginWithoutChangingBase() {
+        val sunday = LocalDate.of(2026, 5, 24)
+        val dates = (0L..5L).map { LocalDate.of(2026, 5, 18).plusDays(it) }
+        val activity = anchor("act_meditation", "layer_interior")
+        val report = calculate(
+            today = sunday,
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(activity),
+            activityLogs = dates.map { log(activity.id, it, actualValue = 50) },
         )
 
-        assertEquals(ScoreState.Restoration, report.state)
-        assertTrue(report.visibleScore in 700..749)
+        val layer = report.layerScores.single()
+        assertEquals(1.0f, layer.baseScore, 0.001f)
+        assertTrue(layer.anchorSurplusBonus > 0.03f)
+        assertTrue(layer.rawScore > 1.0f)
+        assertEquals(1000, report.visibleScore)
     }
 
     @Test
-    fun shortCleanStreakBlocksHighStates() {
-        val report = fullBaseReport(
-            goalActual = 100,
-            todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Clean)),
-            allAbstinenceLogs = cleanLogs(track.id, 3),
+    fun supportsAreOptInAndOnlyReduceTheirConfiguredLayerWhenOmitted() {
+        val anchor = anchor("act_meditation", "layer_interior")
+        val support = support("sup_phone", "layer_interior")
+        val fullAnchorLogs = weekDates.map { log(anchor.id, it, actualValue = 20) }
+        val withoutSupports = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(anchor),
+            activityLogs = fullAnchorLogs,
+        )
+        val withOneOmission = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(anchor, support),
+            activityLogs = fullAnchorLogs + log(support.id, weekDates.first(), actualValue = 1),
         )
 
-        assertEquals(ScoreState.Motion, report.state)
-        assertTrue(report.visibleScore in 800..899)
+        assertEquals(1.0f, withoutSupports.layerScores.single().baseScore, 0.001f)
+        assertEquals(0.75f, withOneOmission.layerScores.single().supportScore ?: 0f, 0.001f)
+        assertEquals(0.95f, withOneOmission.layerScores.single().baseScore, 0.001f)
     }
 
     @Test
-    fun inactiveAbstinenceDoesNotLimitStateOrScore() {
-        val inactiveTrack = track.copy(active = false)
-        val report = fullBaseReport(
-            goalActual = 100,
-            todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
-            allAbstinenceLogs = emptyList(),
-        ).let {
-            ScoreEngine.calculate(
-                baseInput(
-                    activities = coreActivities() + goalActivity("act_goal", "layer_proyecto"),
-                    todayActivityLogs = coreActivities().map { activity -> log(activity.id) },
-                    periodActivityLogs = coreActivities().map { activity -> log(activity.id) } + log("act_goal", actualValue = 100),
-                    abstinenceTracks = listOf(inactiveTrack),
-                    todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
-                    allAbstinenceLogs = emptyList(),
-                    sleepLog = sleep("23:30", "07:30", SleepQuality.Good),
-                ),
-            )
+    fun completedLayerTasksAddMomentumButPendingAndNeutralTasksDoNot() {
+        val activity = anchor("act_meditation", "layer_interior")
+        val logs = weekDates.map { log(activity.id, it, actualValue = 20) }
+        val neutral = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(activity),
+            activityLogs = logs,
+            tasks = listOf(task("task_neutral", "layer_interior", ContributionRole.Neutral, TaskStatus.Done)),
+        )
+        val pending = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(activity),
+            activityLogs = logs,
+            tasks = listOf(task("task_pending", "layer_interior", ContributionRole.Support, TaskStatus.Pending)),
+        )
+        val completed = calculate(
+            layers = listOf(layer("layer_interior", "Interior")),
+            activities = listOf(activity),
+            activityLogs = logs,
+            tasks = listOf(task("task_done", "layer_interior", ContributionRole.Support, TaskStatus.Done)),
+        )
+
+        assertEquals(0f, neutral.layerScores.single().taskMomentumBonus, 0.001f)
+        assertEquals(0f, pending.layerScores.single().taskMomentumBonus, 0.001f)
+        assertTrue(completed.layerScores.single().taskMomentumBonus > 0.0f)
+        assertTrue(completed.layerScores.single().rawScore > neutral.layerScores.single().rawScore)
+    }
+
+    @Test
+    fun bodyLayerUsesSleepAsThirtyPercentOfTheLayer() {
+        val activity = anchor("act_body", "layer_cuerpo")
+        val logs = weekDates.map { log(activity.id, it, actualValue = 20) }
+        val noSleep = calculate(
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
+            activities = listOf(activity),
+            activityLogs = logs,
+        )
+        val withSleep = calculate(
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
+            activities = listOf(activity),
+            activityLogs = logs,
+            sleepLog = sleep(),
+        )
+
+        assertEquals(0.70f, noSleep.layerScores.single().baseScore, 0.001f)
+        assertEquals(1.0f, withSleep.layerScores.single().baseScore, 0.001f)
+    }
+
+    @Test
+    fun inactiveSobrietyDoesNotAffectConduct() {
+        val activity = anchor("act_conduct", "layer_conducta")
+        val inactiveTrack = abstinenceTrack(active = false)
+        val report = calculate(
+            layers = listOf(layer("layer_conducta", "Conducta")),
+            activities = listOf(activity),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            abstinenceTracks = listOf(inactiveTrack),
+            abstinenceLogs = listOf(abstinenceLog(inactiveTrack.id, today, AbstinenceStatus.Relapse)),
+        )
+
+        assertEquals(1.0f, report.layerScores.single().baseScore, 0.001f)
+        assertNull(report.layerScores.single().sobrietyScore)
+    }
+
+    @Test
+    fun activeSobrietyEntersConductAsThirtyPercentAndRelapseLowersIt() {
+        val activity = anchor("act_conduct", "layer_conducta")
+        val track = abstinenceTrack()
+        val cleanReport = calculate(
+            layers = listOf(layer("layer_conducta", "Conducta")),
+            activities = listOf(activity),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
+        )
+        val relapseReport = calculate(
+            layers = listOf(layer("layer_conducta", "Conducta")),
+            activities = listOf(activity),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = weekDates.take(3).map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) } +
+                abstinenceLog(track.id, today, AbstinenceStatus.Relapse),
+        )
+
+        assertEquals(1.0f, cleanReport.layerScores.single().baseScore, 0.001f)
+        assertTrue((relapseReport.layerScores.single().sobrietyScore ?: 1f) < 0.40f)
+        assertTrue(relapseReport.layerScores.single().baseScore < cleanReport.layerScores.single().baseScore)
+    }
+
+    @Test
+    fun pendingSobrietyWithinFiveDaysCountsAsDampenedContext() {
+        val activity = anchor("act_conduct", "layer_conducta")
+        val track = abstinenceTrack()
+        val report = calculate(
+            layers = listOf(layer("layer_conducta", "Conducta")),
+            activities = listOf(activity),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            abstinenceTracks = listOf(track),
+        )
+
+        assertEquals(0.425f, report.layerScores.single().sobrietyScore ?: 0f, 0.001f)
+        assertEquals(0.8275f, report.layerScores.single().baseScore, 0.001f)
+    }
+
+    @Test
+    fun worstLayerDragsWeeklyScoreByTwentyFivePercent() {
+        val strong = anchor("act_interior", "layer_interior")
+        val weak = anchor("act_project", "layer_proyecto")
+        val report = calculate(
+            layers = listOf(layer("layer_interior", "Interior"), layer("layer_proyecto", "Proyecto")),
+            activities = listOf(strong, weak),
+            activityLogs = weekDates.map { log(strong.id, it, actualValue = 20) },
+        )
+
+        assertEquals("layer_proyecto", report.worstLayerId)
+        assertEquals(0.375f, report.weeklyBaseScore, 0.001f)
+        assertEquals(813, report.visibleScore)
+    }
+
+    @Test
+    fun perfectSingleWeekDoesNotBecomeUnbreakableWithoutTemporalMemory() {
+        val layers = coreLayers()
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
+        val logs = activities.flatMap { activity ->
+            weekDates.map { date -> log(activity.id, date, actualValue = 20) }
         }
-
-        assertEquals(ScoreState.Unbreakable, report.state)
-        assertTrue(checkNotNull(report.visibleScore) >= 950)
-    }
-
-    @Test
-    fun inactiveAbstinenceLogsDoNotCreateScoreByThemselves() {
-        val inactiveTrack = track.copy(active = false)
-        val report = ScoreEngine.calculate(
-            ScoreInput(
-                layers = coreLayers,
-                activities = emptyList(),
-                todayActivityLogs = emptyList(),
-                periodActivityLogs = emptyList(),
-                abstinenceTracks = listOf(inactiveTrack),
-                todayAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
-                allAbstinenceLogs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse)),
-                tasks = emptyList(),
-                sleepLog = null,
-                today = today,
-            ),
-        )
-
-        assertEquals(ScoreState.NoData, report.state)
-        assertEquals(null, report.visibleScore)
-    }
-
-    @Test
-    fun moderateRelapseTodayCapsStateAtAttention() {
-        val moderateTrack = abstinenceTrack("trk_substances", AbstinenceSeverity.Moderate)
-        val activities = coreActivities() + goalActivity("act_goal", "layer_proyecto")
-        val todayLogs = coreActivities().map { log(it.id) }
-        val periodLogs = todayLogs + log("act_goal", actualValue = 100)
-
-        val report = ScoreEngine.calculate(
-            baseInput(
-                activities = activities,
-                todayActivityLogs = todayLogs,
-                periodActivityLogs = periodLogs,
-                abstinenceTracks = listOf(moderateTrack),
-                todayAbstinenceLogs = listOf(abstinenceLog(moderateTrack.id, today, AbstinenceStatus.Relapse)),
-                allAbstinenceLogs = cleanLogs(moderateTrack.id, 14),
-                sleepLog = sleep("23:30", "07:30", SleepQuality.Good),
-            ),
-        )
-
-        assertEquals(ScoreState.Attention, report.state)
-        assertTrue(checkNotNull(report.visibleScore) <= 799)
-    }
-
-    @Test
-    fun primaryChecklistWeighsMoreThanSecondaryAndTasks() {
-        val primary = singleLayerReport(
-            activity = activity("act_primary", "layer_interior", ActivitySurface.Anchor),
-            activityLog = log("act_primary"),
-        )
-        val secondary = singleLayerReport(
-            activity = activity("act_secondary", "layer_interior", ActivitySurface.Support),
-            activityLog = log("act_secondary"),
-        )
-        val task = singleLayerReport(
-            tasks = listOf(task("task_support", "layer_interior", ContributionRole.Support)),
-        )
-
-        assertTrue(checkNotNull(primary.visibleScore) > checkNotNull(secondary.visibleScore))
-        assertTrue(checkNotNull(secondary.visibleScore) > checkNotNull(task.visibleScore))
-    }
-
-    @Test
-    fun neutralTasksDoNotAddScore() {
-        val blockingActivity = activity("act_primary", "layer_interior", ActivitySurface.Anchor)
-        val neutral = singleLayerReport(
-            activity = blockingActivity,
-            tasks = listOf(task("task_neutral", "layer_interior", ContributionRole.Neutral)),
-        )
-        val support = singleLayerReport(
-            activity = blockingActivity,
-            tasks = listOf(task("task_support", "layer_interior", ContributionRole.Support)),
-        )
-
-        assertTrue(checkNotNull(support.visibleScore) > checkNotNull(neutral.visibleScore))
-    }
-
-    @Test
-    fun goalsElevateFromMotionToUnbreakable() {
-        val withoutGoals = fullBaseReport(goalActual = 0)
-        val withGoals = fullBaseReport(goalActual = 100)
-
-        assertNotEquals(ScoreState.Unbreakable, withoutGoals.state)
-        assertEquals(ScoreState.Unbreakable, withGoals.state)
-    }
-
-    @Test
-    fun goalsDoNotFillLayerBaseByThemselves() {
-        val goal = goalActivity("act_goal", "layer_proyecto")
-        val report = ScoreEngine.calculate(
-            ScoreInput(
-                layers = listOf(layer("layer_proyecto", "Proyecto", 10)),
-                activities = listOf(goal),
-                todayActivityLogs = listOf(log(goal.id, actualValue = 100)),
-                periodActivityLogs = listOf(log(goal.id, actualValue = 100)),
-                abstinenceTracks = emptyList(),
-                todayAbstinenceLogs = emptyList(),
-                allAbstinenceLogs = emptyList(),
-                tasks = emptyList(),
-                sleepLog = null,
-                today = today,
-            ),
-        )
-
-        assertEquals(100, report.goalBonus)
-        assertTrue(checkNotNull(report.layerScores.firstOrNull()).score < 0.80f)
-        assertTrue(checkNotNull(report.visibleScore) <= 899)
-    }
-
-    private fun fullBaseReport(
-        goalActual: Int,
-        sleepLog: SleepLog = sleep("23:30", "07:30", SleepQuality.Good),
-        todayAbstinenceLogs: List<AbstinenceLog> = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Clean)),
-        allAbstinenceLogs: List<AbstinenceLog> = cleanLogs(track.id, 14),
-    ): ScoreReport {
-        val activities = coreActivities() + goalActivity("act_goal", "layer_proyecto")
-        val todayLogs = coreActivities().map { log(it.id) }
-        val periodLogs = todayLogs + log("act_goal", actualValue = goalActual)
-        return ScoreEngine.calculate(
-            baseInput(
-                activities = activities,
-                todayActivityLogs = todayLogs,
-                periodActivityLogs = periodLogs,
-                abstinenceTracks = listOf(track),
-                todayAbstinenceLogs = todayAbstinenceLogs,
-                allAbstinenceLogs = allAbstinenceLogs,
-                sleepLog = sleepLog,
-            ),
-        )
-    }
-
-    private fun singleLayerReport(
-        activity: ActivityDefinition? = null,
-        activityLog: ActivityLog? = null,
-        tasks: List<Task> = emptyList(),
-    ): ScoreReport {
-        val activities = listOfNotNull(activity)
-        val logs = listOfNotNull(activityLog)
-        return ScoreEngine.calculate(
-            ScoreInput(
-                layers = listOf(layer("layer_interior", "Interior", 10)),
-                activities = activities,
-                todayActivityLogs = logs,
-                periodActivityLogs = logs,
-                abstinenceTracks = emptyList(),
-                todayAbstinenceLogs = emptyList(),
-                allAbstinenceLogs = emptyList(),
-                tasks = tasks,
-                sleepLog = null,
-                today = today,
-            ),
-        )
-    }
-
-    private fun baseInput(
-        activities: List<ActivityDefinition>,
-        todayActivityLogs: List<ActivityLog>,
-        periodActivityLogs: List<ActivityLog>,
-        abstinenceTracks: List<AbstinenceTrack>,
-        todayAbstinenceLogs: List<AbstinenceLog>,
-        allAbstinenceLogs: List<AbstinenceLog>,
-        sleepLog: SleepLog?,
-    ): ScoreInput =
-        ScoreInput(
-            layers = coreLayers,
+        val track = abstinenceTrack()
+        val report = calculate(
+            layers = layers,
             activities = activities,
-            todayActivityLogs = todayActivityLogs,
-            periodActivityLogs = periodActivityLogs,
-            abstinenceTracks = abstinenceTracks,
-            todayAbstinenceLogs = todayAbstinenceLogs,
-            allAbstinenceLogs = allAbstinenceLogs,
-            tasks = emptyList(),
-            sleepLog = sleepLog,
-            today = today,
+            activityLogs = logs,
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
+            sleepLog = sleep(),
         )
 
-    private fun coreActivities(): List<ActivityDefinition> =
+        assertEquals(1000, report.visibleScore)
+        assertEquals(ScoreState.Plenitude, report.state)
+    }
+
+    private fun calculate(
+        today: LocalDate = this.today,
+        layers: List<Layer>,
+        activities: List<ActivityDefinition> = emptyList(),
+        activityLogs: List<ActivityLog> = emptyList(),
+        abstinenceTracks: List<AbstinenceTrack> = emptyList(),
+        abstinenceLogs: List<AbstinenceLog> = emptyList(),
+        tasks: List<Task> = emptyList(),
+        sleepLog: SleepLog? = null,
+    ): ScoreReport =
+        ScoreEngine.calculate(
+            ScoreInput(
+                layers = layers,
+                activities = activities,
+                todayActivityLogs = activityLogs.filter { it.date == today.toString() },
+                periodActivityLogs = activityLogs,
+                abstinenceTracks = abstinenceTracks,
+                todayAbstinenceLogs = abstinenceLogs.filter { it.date == today.toString() },
+                allAbstinenceLogs = abstinenceLogs,
+                tasks = tasks,
+                sleepLog = sleepLog,
+                today = today,
+            ),
+        )
+
+    private fun coreLayers(): List<Layer> =
         listOf(
-            activity("act_interior", "layer_interior", ActivitySurface.Anchor),
-            activity("act_body", "layer_cuerpo", ActivitySurface.Anchor),
-            activity("act_conduct", "layer_conducta", ActivitySurface.Anchor),
-            activity("act_vinculos", "layer_vinculos", ActivitySurface.Anchor),
-            activity("act_project", "layer_proyecto", ActivitySurface.Anchor),
+            layer("layer_interior", "Interior", 10),
+            layer("layer_cuerpo", "Cuerpo", 20),
+            layer("layer_conducta", "Conducta", 30),
+            layer("layer_vinculos", "Vinculos", 40),
+            layer("layer_proyecto", "Proyecto", 50),
         )
 
-    private fun layer(id: String, name: String, sortOrder: Int): Layer =
+    private fun layer(id: String, name: String, sortOrder: Int = 10): Layer =
         Layer(id = id, name = name, description = "", sortOrder = sortOrder)
 
-    private fun activity(
-        id: String,
-        layerId: String,
-        activityType: ActivitySurface,
-    ): ActivityDefinition =
+    private fun anchor(id: String, layerId: String): ActivityDefinition =
         ActivityDefinition(
             id = id,
             layerId = layerId,
@@ -328,51 +284,50 @@ class ScoreEngineTest {
             description = "",
             type = ActivityType.Time,
             role = ActivityRole.Practice,
-            activityType = activityType,
-            contributionRole = if (activityType == ActivitySurface.Anchor) {
-                ContributionRole.Core
-            } else {
-                ContributionRole.Support
-            },
+            activityType = ActivitySurface.Anchor,
+            contributionRole = ContributionRole.Core,
             importanceTier = ImportanceTier.Medium,
             cadence = ActivityCadence.Daily,
-            targetValue = 30,
+            targetValue = null,
             minimumValue = 1,
             targetCount = null,
-            targetPeriod = TargetPeriod.Day,
+            targetPeriod = TargetPeriod.Week,
+            weeklyFrequencyTarget = 4,
+            sessionTargetMinutes = 20,
             unit = ActivityUnit.Minutes,
             sortOrder = 10,
         )
 
-    private fun goalActivity(id: String, layerId: String): ActivityDefinition =
-        activity(id, layerId, ActivitySurface.Anchor).copy(
-            cadence = ActivityCadence.Weekly,
-            targetValue = 100,
-            targetCount = 1,
-            targetPeriod = TargetPeriod.Week,
-            importanceTier = ImportanceTier.High,
+    private fun support(id: String, layerId: String): ActivityDefinition =
+        anchor(id, layerId).copy(
+            activityType = ActivitySurface.Support,
+            contributionRole = ContributionRole.Support,
+            unit = ActivityUnit.Boolean,
+            sessionTargetMinutes = null,
+            targetValue = 1,
         )
 
-    private fun log(
-        activityId: String,
-        actualValue: Int = 30,
-    ): ActivityLog =
+    private fun log(activityId: String, date: LocalDate, actualValue: Int): ActivityLog =
         ActivityLog(
             activityId = activityId,
-            date = today.toString(),
+            date = date.toString(),
             completed = true,
             actualValue = actualValue,
             updatedAt = 0L,
         )
 
-    private fun abstinenceTrack(id: String, severity: AbstinenceSeverity): AbstinenceTrack =
+    private fun abstinenceTrack(
+        id: String = "trk_alcohol",
+        active: Boolean = true,
+    ): AbstinenceTrack =
         AbstinenceTrack(
             id = id,
             name = id,
             substanceLabel = id,
-            severity = severity,
+            severity = AbstinenceSeverity.Critical,
             contributionRole = ContributionRole.Protective,
             importanceTier = ImportanceTier.Critical,
+            active = active,
             sortOrder = 10,
         )
 
@@ -388,38 +343,38 @@ class ScoreEngineTest {
             updatedAt = 0L,
         )
 
-    private fun cleanLogs(trackId: String, days: Int): List<AbstinenceLog> =
-        (0 until days).map { offset ->
-            abstinenceLog(trackId, today.minusDays(offset.toLong()), AbstinenceStatus.Clean)
-        }
-
-    private fun sleep(
-        sleptAt: String,
-        wokeAt: String,
-        quality: SleepQuality,
-    ): SleepLog =
-        SleepLog(
-            date = today.toString(),
-            plannedSleepAt = "23:30",
-            plannedWakeAt = "07:30",
-            sleptAt = sleptAt,
-            wokeAt = wokeAt,
-            quality = quality,
-        )
-
-    private fun task(id: String, layerId: String, contributionRole: ContributionRole): Task =
+    private fun task(
+        id: String,
+        layerId: String?,
+        contributionRole: ContributionRole,
+        status: TaskStatus,
+    ): Task =
         Task(
             id = id,
             title = id,
             description = "",
             layerId = layerId,
             projectId = null,
-            status = TaskStatus.Done,
+            status = status,
             contributionRole = contributionRole,
             importanceTier = ImportanceTier.Medium,
             dueDate = today.toString(),
-            completedAt = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            completedAt = if (status == TaskStatus.Done) {
+                today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            } else {
+                null
+            },
             createdAt = 0L,
             updatedAt = 0L,
+        )
+
+    private fun sleep(): SleepLog =
+        SleepLog(
+            date = today.toString(),
+            plannedSleepAt = "23:30",
+            plannedWakeAt = "07:30",
+            sleptAt = "23:30",
+            wokeAt = "07:30",
+            quality = SleepQuality.Good,
         )
 }

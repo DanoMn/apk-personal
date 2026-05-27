@@ -17,8 +17,10 @@ import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.PhraseFamily
 import dev.panopt.autonomia.RiskEvent
+import dev.panopt.autonomia.SleepConfig
 import dev.panopt.autonomia.SleepLog
 import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
@@ -29,7 +31,9 @@ import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AnchorPhraseEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.RiskEventEntity
+import dev.panopt.autonomia.data.SleepConfigEntity
 import dev.panopt.autonomia.data.SleepLogEntity
+import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
@@ -188,5 +192,22 @@ internal fun SleepLogEntity.toDomain(): SleepLog =
         wokeAt = wokeAt,
         quality = runCatching { SleepQuality.valueOf(quality) }.getOrDefault(SleepQuality.Acceptable),
         note = note,
+        updatedAt = updatedAt,
+    )
+
+internal fun SleepConfigEntity.toDomain(): SleepConfig =
+    SleepConfig(
+        id = id,
+        targetSleepAt = targetSleepAt,
+        targetWakeAt = targetWakeAt,
+        digitalWindDownMinutes = digitalWindDownMinutes,
+        updatedAt = updatedAt,
+    )
+
+internal fun SleepSessionStateEntity.toDomain(): SleepSessionState =
+    SleepSessionState(
+        id = id,
+        date = date,
+        startedAt = startedAt,
         updatedAt = updatedAt,
     )

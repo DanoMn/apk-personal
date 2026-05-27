@@ -13,6 +13,9 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
+import dev.panopt.autonomia.SleepLog
+import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
@@ -399,7 +402,76 @@ class DashboardProjectionTest {
         assertEquals(2, state.sobrietyTracks.single().days)
     }
 
+    @Test
+    fun `sleep signal asks to register when there is no log`() {
+        val state = emptyDashboardState(sleepLog = null)
+        val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
+
+        assertEquals("--", signal.value)
+        assertEquals("toca registrar", signal.meta)
+        assertEquals(DashboardDimensionStatus.Unknown, signal.status)
+    }
+
+    @Test
+    fun `sleep signal shows real duration against target`() {
+        val state = emptyDashboardState(
+            sleepLog = sleepLog(sleptAt = "00:00", wokeAt = "06:20", quality = SleepQuality.Low),
+        )
+        val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
+
+        assertEquals("6h 20m de 8h", signal.value)
+        assertEquals("descanso bajo", signal.meta)
+    }
+
+    @Test
+    fun `sleep signal marks enough sleep without quality labels`() {
+        val state = emptyDashboardState(
+            sleepLog = sleepLog(sleptAt = "23:30", wokeAt = "07:30", quality = SleepQuality.Good),
+        )
+        val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
+
+        assertEquals("8h de 8h", signal.value)
+        assertEquals("base cubierta", signal.meta)
+        assertEquals(DashboardDimensionStatus.Stable, signal.status)
+    }
+
+    @Test
+    fun `sleep signal shows open sleep session`() {
+        val state = emptyDashboardState(
+            sleepLog = null,
+            sleepSession = SleepSessionState(date = dateKey, startedAt = "23:10"),
+        )
+        val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
+
+        assertEquals("desde 23:10", signal.value)
+        assertEquals("en descanso", signal.meta)
+        assertEquals(DashboardDimensionStatus.Motion, signal.status)
+        assertEquals(true, state.sleep.isSessionOpen)
+    }
+
     // --- helpers ---
+
+    private fun emptyDashboardState(
+        sleepLog: SleepLog?,
+        sleepSession: SleepSessionState? = null,
+    ): DashboardState =
+        buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = emptyList(),
+            todayAbstinenceLogs = emptyList(),
+            allAbstinenceLogs = emptyList(),
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = emptyList(),
+            sleepLog = sleepLog,
+            sleepSession = sleepSession,
+            focusSignalActivityId = null,
+            today = today,
+        )
 
     private fun defaultLayers(): List<Layer> = listOf(
         Layer("layer_interior", "Interior", "", 10),
@@ -490,4 +562,18 @@ class DashboardProjectionTest {
         status = status,
         updatedAt = 0L,
     )
+
+    private fun sleepLog(
+        sleptAt: String,
+        wokeAt: String,
+        quality: SleepQuality,
+    ): SleepLog =
+        SleepLog(
+            date = dateKey,
+            plannedSleepAt = "23:30",
+            plannedWakeAt = "07:30",
+            sleptAt = sleptAt,
+            wokeAt = wokeAt,
+            quality = quality,
+        )
 }

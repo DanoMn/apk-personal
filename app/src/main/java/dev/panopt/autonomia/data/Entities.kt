@@ -200,6 +200,23 @@ data class UserActivityConfigEntity(
     val updatedAt: Long,
 )
 
+@Entity(tableName = "sleep_config")
+data class SleepConfigEntity(
+    @PrimaryKey val id: String,
+    val targetSleepAt: String,
+    val targetWakeAt: String,
+    val digitalWindDownMinutes: Int,
+    val updatedAt: Long,
+)
+
+@Entity(tableName = "sleep_session_state")
+data class SleepSessionStateEntity(
+    @PrimaryKey val id: String,
+    val date: String,
+    val startedAt: String,
+    val updatedAt: Long,
+)
+
 @Entity(tableName = "sleep_logs")
 data class SleepLogEntity(
     @PrimaryKey val date: String,
@@ -210,4 +227,35 @@ data class SleepLogEntity(
     val quality: String,
     val note: String = "",
     val updatedAt: Long,
+)
+
+@Entity(tableName = "daily_closures")
+data class DailyClosureEntity(
+    @PrimaryKey val date: String,
+    val timezoneId: String,
+    val closedAt: Long,
+    val source: String,
+    val closureVersion: Int,
+)
+
+@Entity(
+    tableName = "weekly_score_snapshots",
+    primaryKeys = ["weekStart", "scoringVersion"],
+    indices = [Index("weekEnd"), Index("calculatedAt")],
+)
+data class WeeklyScoreSnapshotEntity(
+    val weekStart: String,
+    val weekEnd: String,
+    val scoringVersion: String,
+    val calculatedAt: Long,
+    val configHash: String,
+    val factsHash: String,
+    val weeklyBaseScore: Float,
+    val weeklyScore: Float,
+    val stabilityScore: Float?,
+    val state: String,
+    val visibleScore: Int,
+    val worstLayerId: String?,
+    val layerSummariesJson: String,
+    val reasonsJson: String,
 )
