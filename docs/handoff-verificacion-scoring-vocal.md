@@ -1,171 +1,182 @@
-# Handoff — Verificación del sistema de scoring (próxima sesión SDD)
+# Handoff — Verificación del sistema de scoring (próximas sesiones SDD)
 
 Fecha: 2026-05-29
 Proyecto: apk-personal (Vocal / Autonomía sin límites)
 Rama actual: `sdd/scoring-state-alignment`
-Estado: handoff para una sesión SDD nueva. Cargar este doc + recuperar memoria de Engram.
+Estado: handoff para sesiones SDD nuevas. Cargar este doc + recuperar memoria de Engram.
 
 ---
 
-## 1. Objetivo de la próxima sesión
+## 0. Secuencia correcta (leer esto primero)
 
-Verificar que el **sistema de scoring funciona correctamente de punta a punta**, no solo
-en las fórmulas aisladas. La lección que motiva esto: tenemos 104 tests unitarios en
-verde, pero el crash de migración demostró que **"en verde" ≠ "funciona en la app real"**.
+El objetivo grande es **confiar en que el scoring funciona bien**. Pero NO se arranca por los
+tests. Se arranca por **entender y depurar la implementación real de cada feature**. No se
+pueden escribir tests con valores esperados confiables si todavía no se entendió ni se limpió
+cómo cada feature configura y procesa sus datos.
 
-NO es objetivo de esta sesión implementar features nuevas. Es **verificar** lo que ya existe.
+```
+FASE A (primero, 1+ sesiones)  →  FASE B (después)
+Revisar + depurar la lógica de      Verificar con tests
+configuración y procesamiento       (integración + escenario en device)
+de datos, feature por feature
+```
+
+Este handoff cubre **ambas fases**, pero la próxima sesión es la **FASE A**.
 
 ---
 
-## 2. Estado actual (de dónde partís)
+## 1. Estado actual (de dónde partís)
 
 - **Slice 1 hecho** (rama `sdd/scoring-state-alignment`): `BaseStatePolicy` reescrito para
   evaluar estados sobre `weeklyBaseScore` (bandas 0.40 / 0.70 / 0.85), escalera de peor capa
   (`<0.30` colapso → Restauración, `<0.55` tope Atención, `≥0.75` Plenitud, `≥0.80`
   Inquebrantable), histéresis 0.03. Asimetría `rawScore`/`baseScore` ratificada (solo docs).
 - **Crash de migración resuelto** (commit `6d5ba17`): en dev se usa
-  `fallbackToDestructiveMigration(dropAllTables = true)`. La app abre OK con instalación
-  o reinstalación.
-- **Tests actuales**: 104 unitarios, **solo dominio puro**. NO hay:
-  - test de integración del pipeline completo (Room → input builder → motor → proyección);
-  - test de migraciones reales (`MigrationTestHelper`);
-  - test con simulación temporal de varias semanas más allá de lo mínimo de estabilidad.
+  `fallbackToDestructiveMigration(dropAllTables = true)`. La app abre OK.
+- **Tests actuales**: 104 unitarios, **solo dominio puro** (fórmulas aisladas). NO hay test de
+  integración del pipeline, ni `MigrationTestHelper`, ni escenarios temporales realistas.
 - La app **abre y el seed de actividades está** (verificado en device por el usuario).
 
-### Pipeline a verificar (cómo fluye el scoring)
+### Pipeline completo (lo que hay que entender en Fase A)
 
 ```
-Hechos Room (daily_activity_logs, sleep, abstinence, configs, weekly snapshots)
-  → ScoreInputSource / BuildScoreInputUseCase   (arma ScoreInput)
-  → ScoreEngine.calculate(ScoreInput): ScoreReport   (dominio PURO, sin Room/Compose)
-  → DashboardProjection                          (mapea a estado de UI)
-  → DashboardScreen (resumen) / ScoringScreen "Estado Base" (detalle)
+Config de usuario (UI) ─┐
+                        ├→ Room (daily_activity_logs, sleep, abstinence, configs, snapshots)
+Registro diario (UI) ───┘        │
+                                 → ScoreInputSource / BuildScoreInputUseCase  (arma ScoreInput)
+                                 → ScoreEngine.calculate(ScoreInput): ScoreReport  (dominio PURO)
+                                 → DashboardProjection  (mapea a estado de UI)
+                                 → DashboardScreen (resumen) / ScoringScreen "Estado Base"
 ```
-
-Archivos clave: `domain/scoring/ScoreEngine.kt`, `domain/scoring/BuildScoreInputUseCase.kt`,
-`domain/scoring/ScoreInputSource.kt`, `domain/dashboard/DashboardProjection.kt`.
 
 ---
 
-## 3. La duda central resuelta: ¿cómo se testea lo diario/semanal?
+## 2. FASE A — Revisión y depuración por feature (PRÓXIMA SESIÓN)
 
-El usuario preguntó, con razón: "el scoring requiere tracking diario y semanal, ¿cómo lo
-hago en un solo test?". Respuesta importante que define el enfoque:
+Objetivo: para **cada feature**, entender de punta a punta cómo se **configura** y cómo se
+**procesan sus datos** hasta el scoring; encontrar y depurar inconsistencias. Recién con esto
+claro y confiable se pasa a Fase B (tests).
 
-**El `ScoreEngine` es PURO: recibe un `ScoreInput` ya construido y devuelve un `ScoreReport`.**
-No espera tiempo real, no lee Room. Por lo tanto:
+Para cada feature, responder y dejar documentado:
 
-- **En un test (unitario o de integración):** se *fabrica* una semana de hechos con **fechas
-  fijas** (`LocalDate` sintéticas) — p. ej. 7 días de `DailyActivityLog` para una ancla, un
-  `SleepLog`/sesiones, logs de sobriedad, etc. Un test = una semana completa simulada. Para
-  cubrir lo **semanal/temporal** (estabilidad, histéresis, Inquebrantable) se inyecta
-  `weeklyHistory` con snapshots de semanas previas, también con fechas fijas. **No hace falta
-  esperar días reales.** Esto ya se hace parcialmente en `ScoreEngineTest` y
-  `BuildScoreInputUseCaseTest`; falta llevarlo a escenarios realistas completos.
+1. **Configuración**: ¿qué pantalla la configura? ¿qué entidad/targets/límites guarda? ¿hay
+   validación de rangos? ¿qué pasa con valores borde o vacíos?
+2. **Persistencia**: ¿qué hecho se escribe, dónde y con qué semántica? (estados
+   `Done/NotDone/Omitted`, logs de sueño/sobriedad, etc.)
+3. **Procesamiento**: ¿cómo lo lee `BuildScoreInputUseCase` + `WeeklyScoringContextBuilder` y
+   qué policy lo convierte en score? ¿coincide con el árbol de fórmulas?
+4. **Depuración**: anotar y arreglar lo que esté inconsistente o roto.
 
-- **En end-to-end sobre el dispositivo (lo que el usuario prefiere):** acá SÍ el tracking
-  diario/semanal es **tiempo de calendario real** y no se puede adelantar desde la app. Esto
-  es la fricción principal. Opciones a decidir (ver §6):
-  1. Verificar en device solo lo **diario inmediato** (configurar, registrar hoy, ver que el
-     estado/score del día reacciona) + dejar lo semanal/temporal a tests de integración.
-  2. Agregar un **camino de debug** (oculto) para inyectar una semana sintética de hechos en
-     Room y así poder ver el reporte semanal real en pantalla.
-  3. Híbrido (recomendado): integración para la lógica temporal/semanal + device para
-     confirmar el cableado y la UI con datos de un día/parciales.
+### Mapa de archivos por feature
 
-**Conclusión:** "end-to-end puro en device" NO cubre bien lo semanal sin un inyector de datos.
-La estrategia más honesta es híbrida. Decidir esto es lo primero de la próxima sesión.
+| Feature | Config (UI) | Persistencia | Procesamiento / scoring |
+|---------|-------------|--------------|-------------------------|
+| **Anclas** | `ui/anchors/*` | `UserActivityConfigEntity` + `daily_activity_logs` | `AnchorScoringPolicy`, `AnchorTargets`, `domain/activity/*` |
+| **Soportes** | `ui/supports/*` | `daily_activity_logs` (semántica inversa: `Omitted`) | `SupportScoringPolicy` (opt-in, 80/20) |
+| **Sueño** | `ui/sleep/SleepConfigScreen` | `SleepConfigEntity`, `SleepLogEntity` | `SleepScoring` (⚠ usa 2 de 4 componentes), `SpecialLayerScoringPolicy` (30% Cuerpo) |
+| **Sobriedad** | `ui/sobriety/*` | `AbstinenceTrack/Log/RelapseEvent` | `SobrietyScoringPolicy`, `AbstinenceRelapseMaterializationPolicy` (30% Conducta) |
+| **Tasks** | `ui/tasks/TasksScreen` | `TaskEntity` | `TaskMomentumPolicy`, `domain/task/*` (bonus ≤5%, no penaliza) |
+
+### Issues conocidos a vigilar durante la depuración (de la auditoría #574)
+
+- **Sueño**: `SleepScoring` usa `0.70 duración + 0.30 horario` (2 de 4 componentes); el árbol
+  pide `0.40/0.25/0.20/0.15` (Duration/Continuity/ScheduleAlignment/DigitalInterruption). Y es
+  por día, no por sesiones. (Slice 2 lo arregla, pero entender el estado actual.)
+- **Sobriedad**: faltan range queries (`observeAbstinenceLogsBetween`,
+  `observeRelapseEventsOverlapping`); el writer hace full-scan. `PendingConfirmation` no está
+  en el enum (usa `Unknown`).
+- **Cierre diario**: `closeElapsedActivityDays` solo cierra la semana actual, no días de
+  semanas anteriores.
+- **Mínimo-3**: hoy con <3 capas se calcula score igual (silenciosamente incorrecto); decidido
+  contrato opción 3 (Engram `#589`) pero NO implementado.
+- **Tasks/momentum**: confirmar que solo cuentan tasks **con capa** completadas.
+
+Sugerencia: hacer Fase A **una feature a la vez**, cada una como su propia exploración SDD
+(`sdd-explore`) que produce un doc de "cómo funciona X + bugs encontrados". No mezclar todas.
 
 ---
 
-## 4. Las combinaciones de features (el "quilombo")
+## 3. FASE B — Verificación con tests (DESPUÉS de Fase A)
 
-El scoring cambia según qué features estén activas. Recordatorio de cómo pesan (ver
-`docs/arbol-scoring-vocal-v1.md` y `plan-tecnico-scoring-vocal.md` §7):
+Solo cuando la implementación de cada feature esté entendida y depurada.
 
-- **Sueño** solo afecta la capa **Cuerpo** (30% de Cuerpo).
-- **Sobriedad** solo afecta la capa **Conducta** (30% de Conducta), y solo si hay track activo.
-- **Soportes**: si una capa tiene soportes → base de capa = 80% anclas + 20% soportes; si no
-  tiene → anclas 100%.
-- **Tasks** con capa completadas → `TaskMomentumBonus` (hasta 5%), nunca penalizan.
+### 3.1 La duda del tracking diario/semanal, resuelta
 
-Variantes que el usuario listó (NO hay que probarlas todas, pero la matriz debe ser consciente):
+El `ScoreEngine` es **PURO**: recibe un `ScoreInput` ya armado y devuelve un `ScoreReport`. No
+espera tiempo real ni lee Room. Por lo tanto:
+
+- **En tests**: se *fabrica* una semana con **fechas fijas** (`LocalDate` sintéticas) — 7 días
+  de logs, sueño, sobriedad, etc. Un test = una semana simulada. Lo **semanal/temporal**
+  (estabilidad, histéresis, Inquebrantable) se inyecta vía `weeklyHistory` con snapshots de
+  semanas previas. **No hace falta esperar días reales.**
+- **End-to-end en device**: acá el tracking SÍ es tiempo de calendario real y no se puede
+  adelantar. Por eso el end-to-end puro **no cubre bien lo semanal** sin un inyector de datos.
+  → Enfoque recomendado **híbrido**: integración para lo temporal/semanal + device para
+  confirmar cableado y UI con datos de un día/parciales. (Decidir al inicio de Fase B.)
+
+### 3.2 Combinaciones de features (cómo pesan)
+
+- **Sueño** → solo capa **Cuerpo** (30%). **Sobriedad** → solo capa **Conducta** (30%, si hay
+  track activo). **Soportes** → 80/20 si la capa tiene; si no, anclas 100%. **Tasks** →
+  `TaskMomentumBonus` (≤5%), nunca penalizan.
 
 | # | Combinación | Qué ejercita |
 |---|-------------|--------------|
 | 1 | 3 anclas + sueño | Base mínima + sueño en Cuerpo |
-| 2 | anclas + sueño + soportes | + ponderación 80/20 de soportes |
-| 3 | anclas + sueño + soportes + sobriedad | + sobriedad en Conducta (caso completo) |
-| 4 | anclas + sueño + sobriedad | sobriedad sin soportes |
-| 5 | cualquiera + tasks | + TaskMomentum |
+| 2 | + soportes | Ponderación 80/20 |
+| 3 | + sobriedad | Caso completo (Conducta) |
+| 4 | anclas + sueño + sobriedad | Sobriedad sin soportes |
+| 5 | + tasks | TaskMomentum |
 
-**Propuesta de matriz mínima (a validar):** caso 1 (base), caso 3 (todo junto), y un caso de
-borde por feature (peor capa baja, recaída de sobriedad, superávit/superhabit, semana perfecta
-sin historial → Plenitud no Inquebrantable). No permutación exhaustiva; cobertura por
-*responsabilidad*, no por combinatoria.
+Matriz mínima propuesta (a validar): caso 1, caso 3, y un borde por feature (peor capa baja,
+recaída, superávit, semana perfecta sin historial → Plenitud no Inquebrantable). Cobertura por
+**responsabilidad**, no por permutación exhaustiva.
 
----
+### 3.3 Entregables de Fase B
 
-## 5. Enfoque recomendado para la sesión
-
-1. **Decidir la estrategia de verificación** (§3 / §6): híbrido es lo recomendado.
-2. **Test de integración del pipeline** (`BuildScoreInput → ScoreEngine → DashboardProjection`)
-   con 2-3 escenarios realistas de semana completa (fechas fijas), comparando contra valores
-   **calculados a mano** desde las fórmulas. Esto cierra el hueco "tests no reflejan la app".
-3. **Escenario(s) de device**: el agente calcula a mano estado + score esperado para una
-   config concreta; el usuario la reproduce y compara. Para lo semanal, definir si se usa
-   inyector de debug.
-4. (Opcional, relacionado) `MigrationTestHelper` para blindar el bug de migración (#587) — es
-   parte de "verificar que no se rompe en device", aunque es su propio cambio.
-
-Hacerlo dentro del **flujo SDD** (como el slice 1): explorar → proponer → spec → tasks → apply
-→ verify. Artifact store: **openspec**. Strict TDD: **enabled**.
+1. Test(s) de integración del pipeline (`BuildScoreInput → ScoreEngine → DashboardProjection`)
+   con escenarios de semana completa, comparando contra valores **calculados a mano**.
+2. Escenario(s) de device: el agente calcula a mano estado + score esperados; el usuario
+   reproduce y compara.
+3. (Opcional) `MigrationTestHelper` para blindar el bug de migración `#587`.
 
 ---
 
-## 6. Preguntas abiertas a resolver al inicio de la sesión
+## 4. Preguntas abiertas
 
-1. ¿Estrategia de verificación? (device-only diario / inyector de debug / **híbrido** recomendado)
-2. ¿Qué casos entran en la matriz mínima? (propuesta en §4)
-3. ¿Los valores esperados se calculan a mano y se hardcodean como ground-truth, o se documenta
-   el cálculo en el spec?
-4. ¿Se incluye el `MigrationTestHelper` en este mismo esfuerzo o se deja como cambio aparte?
+- (Fase A) ¿Cada feature como exploración SDD separada, o una pasada conjunta?
+- (Fase B) ¿Estrategia? (device-only diario / inyector de debug / **híbrido** recomendado)
+- (Fase B) ¿Valores esperados hardcodeados como ground-truth o cálculo documentado en el spec?
 
 ---
 
-## 7. Contexto a recuperar (Engram + repo)
+## 5. Contexto a recuperar (Engram + repo)
 
-Al arrancar la sesión nueva, recuperar de Engram (proyecto `apk-personal`, buscar por
-topic_key exacto):
+Engram (proyecto `apk-personal`, buscar por topic_key EXACTO):
 
 - `#574` — Auditoría scoring: estado real vs plan-técnico.
 - `#578` — Decisiones D1 (alinear estados) y D2 (ratificar asimetría).
-- `#587` — BUG migraciones Room (`idx_*` vs `index_*` + defaults espurios) — pendiente fix real.
+- `#587` — BUG migraciones Room (`idx_*` vs `index_*` + defaults) — fix real pendiente.
 - `#588` — Regla "mínimo 3" NO implementada; comportamiento bajo el mínimo indefinido.
-- `#589` — Decisión: bajo mínimo-3 = "base en construcción" (NoData) + bloquear borrado (opción 3).
+- `#589` — Decisión bajo mínimo-3 = "base en construcción" + bloquear borrado (opción 3).
 
-Artefactos SDD en `openspec/changes/scoring-audit-remediation/` (exploration, proposal,
-spec/base-state-policy, design, tasks).
+Artefactos SDD: `openspec/changes/scoring-audit-remediation/`.
 
 Commits de esta sesión (rama `sdd/scoring-state-alignment`, NO pusheada):
 `388503b` CLAUDE.md · `1fdd36b` scoring thresholds · `01bf418` dev-phase · `6d5ba17` db
-fallback destructivo · `e3227b7` carve-out del seed.
+fallback destructivo · `e3227b7` carve-out del seed · `adf9ec1`/`(este)` handoff.
 
 ---
 
-## 8. Cola de trabajo posterior a la verificación (no para esta sesión)
+## 6. Cola de trabajo posterior (no para estas sesiones)
 
-En orden de prioridad acordado con el usuario:
+En orden de prioridad acordado:
 
-1. **Tutorial de bienvenida / onboarding** (parcialmente definido en docs — buscar en
-   documentación de producto).
-2. **Regla mínimo-3** (slice 3 `base-config-infra`): `BaseConfigurationEntity` +
-   "base en construcción" en dominio + bloqueo de borrado bajo 3 + amortización primera semana.
-   Contrato ya decidido (opción 3, ver `#589`).
+1. **Tutorial de bienvenida / onboarding** (parcial en docs de producto).
+2. **Regla mínimo-3** (slice 3 `base-config-infra`): `BaseConfigurationEntity` + "base en
+   construcción" en dominio + bloqueo de borrado bajo 3 + amortización. Contrato decidido (`#589`).
 3. **Documento de actividades pendientes (backlog)** — crear y mantener.
-4. Slices restantes del plan: 2 (sleep-sessions telemetría), 4 (dao-range-queries),
-   5 (abstinence PendingConfirmation), 6 (legacy-cleanup + fix migraciones #587), Fase 8 (UI
-   explicativa).
+4. Slices 2 (sleep telemetría), 4 (dao-range-queries), 5 (PendingConfirmation), 6 (legacy +
+   fix migraciones #587), Fase 8 (UI explicativa).
 
-> Nota: el slice 1 (alineación de estados) queda **sin archivar** (`sdd-archive` pendiente)
-> por si se quiere revisar el diff antes de cerrarlo.
+> Slice 1 queda **sin archivar** (`sdd-archive` pendiente) por si se revisa el diff antes.
