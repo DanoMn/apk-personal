@@ -82,8 +82,12 @@ sesiones de desarrollo.
 
 ### ✅ Actual
 
-- Panel de registro desde dashboard (SleepPanel)
-- SleepLog con campos: plannedSleepAt, plannedWakeAt, sleptAt, wokeAt, quality, note
+- `SleepConfigScreen` creada como pagina profunda de configuracion.
+- `sleep_config` guarda la fila unica `default` con hora objetivo de dormir, hora objetivo de despertar y descanso digital.
+- `sleep_session_state` guarda la sesion nocturna pendiente iniciada con `Ir a dormir`.
+- Dashboard y configuracion rapida exponen `Ir a dormir` / `Desperte` como acciones automaticas; no se escriben horas manualmente en el panel rapido.
+- `SleepScoring` ya no usa calidad subjetiva; `SleepLogEntity.quality` queda temporalmente por compatibilidad.
+- Nota 2026-05-26: D1, D2 y D4 quedaron implementadas en Sueno v1 - Configuracion Primero.
 
 ### 🔲 Pendiente — Configuración
 

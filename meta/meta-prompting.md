@@ -126,3 +126,10 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Presets opt-in**: Alcohol, Sustancias y Conducta sexual existen como presets inactivos. Solo tracks activos aparecen en dashboard, pesan en Conducta y pueden limitar estado.
 * **Backend local-first**: configuracion activa/desactiva/crea tracks; Room guarda hechos; `DashboardProjection` separa `sobrietyTracks` activas de `sobrietyOptions`; `ScoreEngine` ignora logs de tracks inactivos.
 * **V1 deliberada**: recaida simple del dia actual. Olvido de 2-3 dias y duracion multi-dia quedan fuera.
+
+### Sueno V1 - Configuracion Primero (26/05/2026)
+
+* **Configuracion antes que registro**: `SleepConfigEntity` define los limites nocturnos; `SleepLogEntity` guarda hechos con snapshot de esa configuracion.
+* **Friccion minima**: el dashboard ya no pide calidad, objetivo ni horas manuales. `Ir a dormir` abre `SleepSessionState` con la hora actual; `Desperte` cierra la sesion y crea el `SleepLog`.
+* **Compatibilidad temporal**: `SleepLogEntity.quality` sigue existiendo por migracion pendiente, pero el repositorio guarda `Acceptable` y el dominio no lo usa para scoring.
+* **Futuro invasivo separado**: bloqueo real, alarmas y compromiso asistido quedan fuera de v1; se construyen despues sobre `sleep_config`.
