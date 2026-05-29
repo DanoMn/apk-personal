@@ -46,17 +46,21 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     AutonomiaDatabase::class.java,
                     "autonomia_db"
                 )
-                    .addMigrations(
-                        MIGRATION_1_2,
-                        MIGRATION_2_3,
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6,
-                        MIGRATION_6_7,
-                        MIGRATION_7_8,
-                        MIGRATION_8_9,
-                        MIGRATION_9_10,
-                    )
+                    // Development phase (AGENTS.md #29, CLAUDE.md): dev data is
+                    // disposable, so any schema/migration mismatch recreates the DB
+                    // instead of crashing the app on open.
+                    //
+                    // The hand-written MIGRATION_* below have known schema-mismatch
+                    // bugs (index names `idx_*` and spurious column DEFAULTs that do
+                    // not match the Room-generated entity schema — engram bug #587).
+                    // They are intentionally NOT registered while in dev so Room takes
+                    // the destructive-recreate path on version changes.
+                    //
+                    // BEFORE RELEASE: fix the MIGRATION_* SQL to match the entities,
+                    // re-enable addMigrations(...), remove this destructive fallback,
+                    // and add MigrationTestHelper coverage (domain `gradlew test` does
+                    // NOT exercise real Room migrations).
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
                 instance
