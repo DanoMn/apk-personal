@@ -294,4 +294,29 @@ interface AutonomiaDao {
 
     @Query("DELETE FROM weekly_score_snapshots WHERE weekStart = :weekStart AND scoringVersion = :scoringVersion")
     suspend fun deleteWeeklyScoreSnapshot(weekStart: String, scoringVersion: String)
+
+    // -- Device telemetry (raw device activity facts) --
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDeviceActivityEvents(events: List<DeviceActivityEventEntity>)
+
+    @Query("SELECT * FROM device_activity_events WHERE timestamp >= :from AND timestamp < :to ORDER BY timestamp ASC")
+    suspend fun getDeviceActivityEventsInRange(from: Long, to: Long): List<DeviceActivityEventEntity>
+
+    @Query("SELECT MAX(timestamp) FROM device_activity_events")
+    suspend fun latestDeviceActivityEventTimestamp(): Long?
+
+    @Query("DELETE FROM device_activity_events WHERE timestamp < :threshold")
+    suspend fun deleteDeviceActivityEventsOlderThan(threshold: Long)
+
+    // -- Telemetry collection leases (opt-in gating; opaque consumer keys) --
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertTelemetryLease(lease: TelemetryCollectionLeaseEntity)
+
+    @Query("DELETE FROM telemetry_collection_lease WHERE consumerKey = :consumerKey")
+    suspend fun deleteTelemetryLease(consumerKey: String)
+
+    @Query("SELECT COUNT(*) FROM telemetry_collection_lease")
+    suspend fun countActiveTelemetryLeases(): Int
 }

@@ -28,8 +28,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SleepLogEntity::class,
         DailyClosureEntity::class,
         WeeklyScoreSnapshotEntity::class,
+        DeviceActivityEventEntity::class,
+        TelemetryCollectionLeaseEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
@@ -332,6 +334,18 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             }
         }
 
+        // NOTE: like the other MIGRATION_* above, this is intentionally NOT
+        // registered while in the development phase (destructive recreate handles
+        // version bumps). It is written with the CORRECT Room index naming
+        // (`index_<table>_<col>`, not `idx_*`) so it is ready to register before
+        // release together with MigrationTestHelper coverage.
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                createDeviceActivityEventsTable(db)
+                createTelemetryLeaseTable(db)
+            }
+        }
+
         private fun createSleepSessionStateTable(db: SupportSQLiteDatabase) {
             db.execSQL(
                 """
@@ -387,6 +401,33 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_trackId ON abstinence_relapse_events(trackId)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_startDate ON abstinence_relapse_events(startDate)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_abstinence_relapse_events_endDate ON abstinence_relapse_events(endDate)")
+        }
+
+        private fun createDeviceActivityEventsTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS device_activity_events (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    eventType TEXT NOT NULL,
+                    packageName TEXT,
+                    timestamp INTEGER NOT NULL,
+                    source TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_device_activity_events_timestamp ON device_activity_events(timestamp)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_device_activity_events_eventType ON device_activity_events(eventType)")
+        }
+
+        private fun createTelemetryLeaseTable(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS telemetry_collection_lease (
+                    consumerKey TEXT NOT NULL PRIMARY KEY
+                )
+                """.trimIndent(),
+            )
         }
     }
 }

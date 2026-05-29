@@ -293,3 +293,21 @@ data class WeeklyScoreSnapshotEntity(
     val layerSummariesJson: String,
     val reasonsJson: String,
 )
+
+@Entity(
+    tableName = "device_activity_events",
+    indices = [Index("timestamp"), Index("eventType")],
+)
+data class DeviceActivityEventEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val eventType: String,
+    val packageName: String?,
+    val timestamp: Long,
+    val source: String,
+    val createdAt: Long,
+)
+
+@Entity(tableName = "telemetry_collection_lease")
+data class TelemetryCollectionLeaseEntity(
+    @PrimaryKey val consumerKey: String,
+)
