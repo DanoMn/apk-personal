@@ -12,6 +12,30 @@ archivo. Si una regla cambia, se edita en `AGENTS.md`, no acá.
 
 @AGENTS.md
 
+## Fase de desarrollo — sin usuarios reales
+
+El proyecto está en **desarrollo activo**. No hay usuarios reales ni datos de
+producción. La base local Room (`autonomia.db`) es **descartable** (decisión #29
+de `AGENTS.md`). Trabajá sin miedo a romper datos de dev:
+
+- Para probar tras un cambio de esquema, preferí **instalación limpia**
+  (`adb uninstall dev.panopt.autonomia` y luego `adb install ...`) en vez de
+  pelear con migraciones sobre la DB vieja. Un crash de migración al hacer
+  `install -r` casi siempre es esto: reinstalá limpio y listo.
+- Está OK borrar/resetear la DB local; no hay que preservar registros legacy de
+  dev ni escribir migraciones defensivas para datos viejos.
+
+Pero esto **NO** te exime de la corrección de migraciones para el eventual
+release:
+
+- Las migraciones igual deben quedar correctas. Los `gradlew test` de dominio
+  **NO** ejercen migraciones reales de Room — un esquema mal migrado pasa los
+  tests en verde y recién crashea en el dispositivo al actualizar.
+- Si tocás entidades o migraciones Room, agregá cobertura con
+  `MigrationTestHelper`. Patrón conocido a vigilar: los índices de migración
+  deben llamarse `index_<tabla>_<col>` (no `idx_*`) para coincidir con los que
+  Room genera desde `Index(...)` en las entidades.
+
 ## Build & test
 
 App Android (Kotlin + Jetpack Compose + Room), build con Gradle (Kotlin DSL). El
