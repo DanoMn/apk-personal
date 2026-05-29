@@ -28,12 +28,18 @@ object ScoreEngine {
             history = input.weeklyHistory,
         )
 
+        val previousState = input.weeklyHistory
+            .filter { it.scoringVersion == WeeklyScoreSnapshotConstants.SCORING_VERSION &&
+                      it.weekStart != context.weekStart.toString() }
+            .maxByOrNull { it.weekStart }
+            ?.state
+
         return ScoreReport(
             state = BaseStatePolicy.stateFor(
-                visibleScore = visibleScore,
                 weeklyBaseScore = weeklySummary.weeklyBaseScore,
                 worstLayerScore = weeklySummary.worstLayerScore,
                 stability = stability,
+                previousState = previousState,
             ),
             visibleScore = visibleScore,
             baseScore = visibleScore,

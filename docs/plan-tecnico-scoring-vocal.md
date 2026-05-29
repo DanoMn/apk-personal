@@ -117,7 +117,7 @@ implementacion.
 | Superhabit separado en magnitud visible y bonus capado | Decision aprobada. |
 | Recomendacion de metas: 7 dias tiempo/cantidad, 14 dias frecuencia | Decision aprobada. |
 | Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | Decision aprobada. |
-| Politica de estados y umbrales v1 | Implementada v0, calibrable con historial real. |
+| Politica de estados y umbrales v1 | Sellada. Bandas, collapse, ladder, histeresis e Inquebrantable resueltos en scoring-audit-remediation slice 1. |
 | `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard y WorkManager periodico a medianoche local. |
 | `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad, DAO, escritura v0 y `stabilityScore` v0 creados. |
 
@@ -1107,43 +1107,82 @@ VisibleScore =
 700 + round(clamp(WeeklyBaseScore, 0.000, 1.000) * 300)
 ```
 
-### 7.1 Politica de estados sin gates duros (v0 implementada, calibrable)
+### 7.1 Politica de estados sin gates duros (sellada en scoring-audit-remediation slice 1)
 
 Los estados se calculan con score, peor capa, estabilidad y presion de
 penalizaciones. No se usan bloqueos binarios.
 
-Propuesta v1 para discutir antes de cerrar contrato:
+Los parametros y el orden de precedencia estan sellados. Ya no son "propuesta a
+discutir". Cualquier cambio requiere un nuevo slice explicitamente aprobado.
+
+#### Bandas sobre WeeklyBaseScore (lower-inclusive / upper-exclusive)
 
 | Estado | Criterio base |
 | --- | --- |
 | `Sin datos` | No hay configuracion minima o no hay hechos suficientes para lectura. |
-| `Restauracion` | `WeeklyBaseScore < 0.40` o peor capa en colapso fuerte. |
-| `Atencion` | `0.40 <= WeeklyBaseScore < 0.70` o peor capa bajo margen minimo. |
-| `En marcha` | `0.70 <= WeeklyBaseScore < 0.85` con base operativa suficiente. |
-| `Plenitud` | `WeeklyBaseScore >= 0.85`, peor capa suficientemente alta y penalizaciones bajas. |
-| `Inquebrantable` | `WeeklyBaseScore >= 0.90`, `stabilityScore >= 0.90`, peor capa alta y memoria temporal suficiente. |
+| `Restauracion` | `WeeklyBaseScore < 0.40` o peor capa con colapso duro (`< 0.30`). |
+| `Atencion` | `0.40 <= WeeklyBaseScore < 0.70` (o cap por peor capa `< 0.55`). |
+| `En marcha` | `0.70 <= WeeklyBaseScore < 0.85` (con peor capa `>= 0.55`). |
+| `Plenitud` | `WeeklyBaseScore >= 0.85` y peor capa `>= 0.75`. |
+| `Inquebrantable` | `WeeklyBaseScore >= 0.90`, peor capa `>= 0.80`, `StabilityScore >= 0.90` y memoria temporal. |
 
-Parametros v1:
+#### Constantes selladas
 
-```text
-worstLayerCollapse = 0.30
-worstLayerMinimumForMotion = 0.55
-worstLayerMinimumForPlenitude = 0.75
-worstLayerMinimumForUnbreakable = 0.80
-minimumWeeksForUnbreakable = 6
-stateHysteresisMargin = 0.03
+```kotlin
+STATE_RESTORATION_THRESHOLD      = 0.40f
+STATE_ATTENTION_THRESHOLD         = 0.70f
+STATE_PLENITUDE_THRESHOLD         = 0.85f
+WORST_LAYER_COLLAPSE              = 0.30f
+WORST_LAYER_MIN_FOR_MOTION        = 0.55f
+WORST_LAYER_MIN_FOR_PLENITUDE     = 0.75f
+WORST_LAYER_MIN_FOR_UNBREAKABLE   = 0.80f
+STATE_HYSTERESIS_MARGIN           = 0.03f
+UNBREAKABLE_BASE_MIN              = 0.90f
+UNBREAKABLE_STABILITY_MIN         = 0.90f
 ```
 
-Notas:
+#### Orden de precedencia (determinisrico)
 
-- `stateHysteresisMargin` evita que el estado suba o baje por ruido minimo de
-  una semana a otra;
-- la histeresis no oculta razones ni score bruto;
-- recaidas, sueno bajo y capas caidas afectan el estado porque bajan sus
-  sub-scores, penalizaciones y peor capa, no porque exista un gate duro;
-- `Plenitud` puede aparecer antes que `Inquebrantable`, pero debe tener base
-  alta y equilibrio real;
-- `Inquebrantable` no aparece sin historial.
+1. `Sin datos` — resuelto antes de llamar a `BaseStatePolicy`.
+2. Colapso de peor capa — `worstLayerScore < 0.30` -> `Restauracion` (override duro, ignora histeresis).
+3. Banda cruda sobre `weeklyBaseScore` con histeresis aplicada (un escalon, solo descensos).
+4. Caps del ladder de peor capa.
+5. Puerta Inquebrantable.
+
+#### Histeresis (decision sellada)
+
+Suprime descensos de UN escalon cuando el score cae dentro de `0.03` del
+limite inferior del estado previo. Solo amortigua descensos, nunca bloquea
+ascensos. El colapso de peor capa (paso 2) ignora la histeresis siempre.
+
+`previousState` se deriva en `ScoreEngine` del `weeklyHistory` mas reciente con
+`scoringVersion == SCORING_VERSION && weekStart != currentWeekStart`.
+
+#### Asimetria rawScore / baseScore (decision sellada — no alterar)
+
+`WeeklyScorePolicy` usa `LayerBaseScore` (anclas puras + soportes) para calcular
+`weeklyBaseScore`. El `rawScore` puede superar `1.000` por superavit de anclas y
+`TaskMomentumBonus`, pero esos bonus solo afectan el margen visible de la capa;
+NO se propagan al `weeklyBaseScore` ni alteran la resolucion de estado.
+
+Razon: el superavit no compensa capas caidas. Una semana con un dia de superavit
+fuerte pero base semanal baja debe dar un estado bajo, no uno artificialmente
+elevado. Esta asimetria es intencional y no debe eliminarse en refactors futuros.
+
+Evidencia en codigo: `WeeklyScorePolicy.summarize` usa `rawScore` para el
+promedio pero `baseScore` para detectar la peor capa. `BaseStatePolicy.stateFor`
+opera sobre `weeklyBaseScore` derivado de los `baseScore`, no de los `rawScore`.
+
+#### Notas de implementacion
+
+- La histeresis no oculta razones ni score bruto.
+- Recaidas, sueno bajo y capas caidas afectan el estado porque bajan sus
+  sub-scores y la peor capa, no porque exista un gate duro.
+- `Plenitud` puede aparecer antes que `Inquebrantable`, pero necesita peor capa
+  suficientemente alta y equilibrio real.
+- `Inquebrantable` no aparece sin historial (minimo 5 semanas previas versionadas).
+- `VisibleScorePolicy.stateFor()` fue eliminado en este slice; `BaseStatePolicy`
+  es la unica fuente de verdad para resolver el estado vocal.
 
 ## 8. Arquitectura objetivo
 

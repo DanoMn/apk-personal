@@ -406,6 +406,51 @@ class ScoreEngineTest {
             quality = SleepQuality.Good,
         )
 
+    @Test
+    fun previousStateFromWeeklyHistoryPropagatesHysteresisDamping() {
+        // Single layer, 3 out of 4 days with actualValue=15 (target=20):
+        // frequencyRatio = 3/4 = 0.75, valueRatio = 45/80 = 0.5625
+        // anchorScore = 0.70*0.75 + 0.30*0.5625 = 0.69375
+        // weeklyBaseScore = 0.69375, worstLayerScore = 0.69375 (single layer, >= 0.55, no cap)
+        // Raw band = Attention (0.69375 < 0.70), margin = 0.70 - 0.69375 = 0.00625 <= 0.03.
+        // With previousState=Motion from history → hysteresis holds at Motion.
+        // Without previousState (no history) → falls to Attention (confirms derivation path).
+        val activity = anchor("act_motion", "layer_motion")
+
+        val prevWeekStart = today
+            .minusWeeks(1)
+            .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+
+        val historyEntry = WeeklyScoreHistoryEntry(
+            weekStart = prevWeekStart.toString(),
+            weekEnd = prevWeekStart.plusDays(6).toString(),
+            scoringVersion = WeeklyScoreSnapshotConstants.SCORING_VERSION,
+            weeklyBaseScore = 0.80f,
+            weeklyScore = 0.80f,
+            state = ScoreState.Motion,
+        )
+
+        val withHistory = calculate(
+            layers = listOf(layer("layer_motion", "Motion")),
+            activities = listOf(activity),
+            activityLogs = weekDates.take(3).map { log(activity.id, it, actualValue = 15) },
+            weeklyHistory = listOf(historyEntry),
+        )
+
+        val withoutHistory = calculate(
+            layers = listOf(layer("layer_motion", "Motion")),
+            activities = listOf(activity),
+            activityLogs = weekDates.take(3).map { log(activity.id, it, actualValue = 15) },
+            weeklyHistory = emptyList(),
+        )
+
+        // previousState=Motion from history + margin within 0.03 → hysteresis holds at Motion
+        assertEquals(ScoreState.Motion, withHistory.state)
+        assertEquals(0.69375f, withHistory.weeklyBaseScore, 0.001f)
+        // No history → no previousState → no damping → falls to Attention
+        assertEquals(ScoreState.Attention, withoutHistory.state)
+    }
+
     private fun highHistory(): List<WeeklyScoreHistoryEntry> =
         (1L..5L).map { index ->
             val weekStart = today

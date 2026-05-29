@@ -17,4 +17,22 @@ internal object ScoringConstants {
     const val SOBRIETY_PENDING_CONFIDENCE_PENALTY = 0.15f
     const val SOBRIETY_RELAPSE_DECAY = 1.5f
     const val SOBRIETY_FORGIVENESS_WINDOW_DAYS = 5L
+
+    // State band boundaries (lower-inclusive / upper-exclusive)
+    const val STATE_RESTORATION_THRESHOLD = 0.40f
+    const val STATE_ATTENTION_THRESHOLD = 0.70f
+    const val STATE_PLENITUDE_THRESHOLD = 0.85f
+
+    // Worst-layer collapse and ladder caps
+    const val WORST_LAYER_COLLAPSE = 0.30f
+    const val WORST_LAYER_MIN_FOR_MOTION = 0.55f
+    const val WORST_LAYER_MIN_FOR_PLENITUDE = 0.75f
+    const val WORST_LAYER_MIN_FOR_UNBREAKABLE = 0.80f
+
+    // Hysteresis
+    const val STATE_HYSTERESIS_MARGIN = 0.03f
+
+    // Inquebrantable gate
+    const val UNBREAKABLE_BASE_MIN = 0.90f
+    const val UNBREAKABLE_STABILITY_MIN = 0.90f
 }

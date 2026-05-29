@@ -56,7 +56,7 @@ No cubre:
 | Sobriedad: pending 0.5, recaida asumida como manual | Aprobado |
 | Sobriedad multi-track: promedio 70%, peor track 30% | Aprobado |
 | WeeklyBaseScore: promedio 75%, peor capa 25% | Aprobado |
-| Politica exacta de estados/umbrales | Pendiente de validacion |
+| Politica exacta de estados/umbrales | Aprobado — sellado en scoring-audit-remediation slice 1 |
 | Algoritmo exacto de cierre diario | Pendiente de validacion |
 | Formula final de StabilityScore | Pendiente de validacion |
 
@@ -563,18 +563,89 @@ No implementar esta formula como canon sin validacion explicita.
 
 ## 16. Estados
 
-La politica exacta de estados y umbrales queda pendiente de validacion.
+Los umbrales y el orden de precedencia estan sellados como contrato desde
+`scoring-audit-remediation slice 1`. No son propuesta a discutir.
 
 No usar gates duros.
 
-Entradas previstas:
+### 16.1 Bandas sobre WeeklyBaseScore (lower-inclusive / upper-exclusive)
+
+| Estado | Condicion |
+| --- | --- |
+| `Restauracion` | `WeeklyBaseScore < 0.40` |
+| `Atencion` | `0.40 <= WeeklyBaseScore < 0.70` |
+| `En marcha` | `0.70 <= WeeklyBaseScore < 0.85` |
+| `Plenitud` | `WeeklyBaseScore >= 0.85` |
+
+### 16.2 Ladder de peor capa (caps aplicados sobre la banda)
+
+| Condicion | Cap maximo |
+| --- | --- |
+| `WorstLayerScore < 0.30` | Fuerza `Restauracion` sin importar base (collapse override) |
+| `WorstLayerScore < 0.55` | Cap en `Atencion` |
+| `WorstLayerScore < 0.75` | Cap en `En marcha` |
+| `WorstLayerScore < 0.80` | Cap en `Plenitud` (bloquea `Inquebrantable`) |
+| `WorstLayerScore >= 0.80` | Sin cap (permite `Inquebrantable` si el resto lo habilita) |
+
+### 16.3 Histeresis de estado
+
+Suprime descensos de UN escalon cuando:
+
+```text
+lowerBoundary(estadoPrevio) - WeeklyBaseScore <= 0.03
+```
+
+Reglas:
+
+- solo amortigua descensos; nunca bloquea ascensos;
+- no suprime mas de un escalon;
+- `WeeklyBaseScore`, `visibleScore` y `reasons` se exponen crudos (sin alterar);
+- `previousState` se deriva del `weeklyHistory` filtrado por `scoringVersion` y `weekStart != actual`.
+
+### 16.4 Puerta Inquebrantable
+
+Requiere que se cumplan TODOS simultaniamente:
+
+1. `hasTemporalMemory = true` (minimo 5 semanas previas versionadas);
+2. `WeeklyBaseScore >= 0.90`;
+3. `WorstLayerScore >= 0.80`;
+4. `StabilityScore >= 0.90`.
+
+Una sola semana perfecta sin historial da como maximo `Plenitud`.
+
+### 16.5 Constantes selladas
+
+```kotlin
+STATE_RESTORATION_THRESHOLD      = 0.40f
+STATE_ATTENTION_THRESHOLD         = 0.70f
+STATE_PLENITUDE_THRESHOLD         = 0.85f
+WORST_LAYER_COLLAPSE              = 0.30f
+WORST_LAYER_MIN_FOR_MOTION        = 0.55f
+WORST_LAYER_MIN_FOR_PLENITUDE     = 0.75f
+WORST_LAYER_MIN_FOR_UNBREAKABLE   = 0.80f
+STATE_HYSTERESIS_MARGIN           = 0.03f
+UNBREAKABLE_BASE_MIN              = 0.90f
+UNBREAKABLE_STABILITY_MIN         = 0.90f
+```
+
+### 16.6 Asimetria rawScore / baseScore (decision sellada)
+
+El superavit de anclas puede llevar el `rawScore` de una capa por encima de `1.000`,
+pero el `weeklyBaseScore` usa solo los `baseScore` de capas. Los bonus de superavit
+y `TaskMomentum` mejoran el margen visible de la capa pero NO compensan una capa
+estructuralmente caida ni alteran la banda de estado.
+
+Razon: Vocal premia constancia, no acumulacion puntual. Un dia de superavit no
+rescata una capa con anclas incumplidas durante la semana.
+
+Esta asimetria es intencional y no debe eliminarse en refactors futuros.
+
+Entradas:
 
 - `WeeklyBaseScore`;
 - `WorstLayerScore`;
-- penalizaciones;
-- estabilidad temporal;
-- semanas de historial;
-- razones de sueno/sobriedad/capas.
+- `StabilityEvaluation` (hasTemporalMemory, stabilityScore);
+- `previousState` (desde historial, para histeresis).
 
 ## 17. Snapshots semanales
 
