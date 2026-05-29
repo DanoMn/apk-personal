@@ -23,7 +23,16 @@ de `AGENTS.md`). Trabajá sin miedo a romper datos de dev:
   pelear con migraciones sobre la DB vieja. Un crash de migración al hacer
   `install -r` casi siempre es esto: reinstalá limpio y listo.
 - Está OK borrar/resetear la DB local; no hay que preservar registros legacy de
-  dev ni escribir migraciones defensivas para datos viejos.
+  dev ni escribir migraciones defensivas para datos viejos. Wipear la DB es
+  inofensivo: al reabrir, la app la reconstruye y re-siembra desde el seed.
+- **PERO el seed de actividades NO es descartable.** El seed canónico de anclas y
+  soportes predeterminados (`data/local/seed/DefaultSeeds.kt`) y los catálogos
+  canónicos son **data predeterminada**, no datos de usuario. NO los borres ni los
+  vacíes: son la fuente que repuebla la DB tras cada wipe. Están respaldados por la
+  documentación (`docs/actividades-ancla-predeterminadas-v1.md`,
+  `docs/preset-soportes-v1.md`, `docs/presets-actividades-v1.md`) y deben
+  preservarse (`AGENTS.md` #21). "Romper datos de dev" = filas de usuario en la DB;
+  nunca = el seed/catálogo canónico.
 
 Pero esto **NO** te exime de la corrección de migraciones para el eventual
 release:
