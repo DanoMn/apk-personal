@@ -52,16 +52,29 @@ JDK sale del JBR de Android Studio. El repo vive en WSL pero compila a través d
 PowerShell de Windows (el Android SDK y el JBR están del lado Windows). Nunca
 encadenes con `&&` — usá `;` (regla de `AGENTS.md`).
 
+**Compilá para verificar/depurar.** Para cambios **NO triviales** (entidades o
+migraciones Room, lógica de negocio, queries, wiring/DI), el agente **DEBE** compilar
+con el comando de abajo y leer los errores — no asumir que compila. Esto **anula**
+cualquier regla global tipo "never build after changes": en este proyecto el build es
+la herramienta de verificación y depuración. (Para cambios triviales —strings, imports,
+ajustes de layout— no hace falta compilar.)
+
 - **APK debug (WSL → PowerShell):**
   ```powershell
   powershell.exe -Command "$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; Set-Location D:\APK-Personal; .\gradlew.bat assembleDebug --no-daemon"
   ```
+  > ⚠ **Gotcha al invocarlo desde la shell del agente (bash de WSL):** escapá el `$`
+  > como `\$env:JAVA_HOME`. Si no, bash expande `$env` (vacío) y el build falla con
+  > `JAVA_HOME is not set`. Tipeado directo en una terminal PowerShell va **sin** escapar.
 - **Todos los tests unitarios:** reemplazá `assembleDebug` por `test`.
-- **Un solo test (clase o método):**
+- **Un solo test (clase o método) — usá `testDebugUnitTest`, NO `test`:**
   ```powershell
-  powershell.exe -Command "$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; Set-Location D:\APK-Personal; .\gradlew.bat test --tests 'dev.panopt.autonomia.domain.scoring.ScoreEngineTest' --no-daemon"
+  powershell.exe -Command "$env:JAVA_HOME='C:\Program Files\Android\Android Studio\jbr'; Set-Location D:\APK-Personal; .\gradlew.bat testDebugUnitTest --tests 'dev.panopt.autonomia.domain.scoring.ScoreEngineTest' --no-daemon"
   ```
-  Agregá `.nombreDelMetodo` al `--tests` para correr un solo caso.
+  Agregá `.nombreDelMetodo` al `--tests` para correr un solo caso. **Ojo:** la tarea
+  agregada `test` NO acepta `--tests` (falla con "Unknown command-line option '--tests'");
+  el filtro `--tests` solo funciona sobre la tarea concreta `testDebugUnitTest`. También
+  acepta comodín: `--tests 'dev.panopt.autonomia.platform.telemetry.*'`.
 - Tests = JUnit 4, dominio puro JVM bajo `app/src/test/java/...`.
 - **No corras tests para cambios triviales** (strings, imports, ajustes de layout,
   limpieza de seeds). Solo cuando el cambio toca lógica de negocio o queries Room,
