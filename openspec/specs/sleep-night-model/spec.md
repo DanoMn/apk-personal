@@ -60,9 +60,9 @@ The migration MUST be validated with `MigrationTestHelper` before the change is 
 
 #### Scenario: Índice con nombre correcto
 
-- GIVEN the `SleepSegmentEntity` table needs an index on `wakeDate` (FK to header)
+- GIVEN the `SleepSegmentEntity` table needs an index on `nightDate` (FK to header)
 - WHEN the migration DDL is written
-- THEN the index is named `index_sleep_segments_wake_date` (not `idx_sleep_segments_wake_date`)
+- THEN the index is named `index_sleep_segments_nightDate` (not `idx_sleep_segments_nightDate`)
 
 #### Scenario: MigrationTestHelper valida v11→v12
 

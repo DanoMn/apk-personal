@@ -1,9 +1,14 @@
-# Delta for base-state-policy
+# Base State Policy Specification
 
-Change: `sleep-consumer`
-Source: `docs/decisiones-diseno-sueno-v1.md` §4.2 · `proposal.md` Modified Capabilities
+Source: `docs/decisiones-diseno-sueno-v1.md` §4.2 · Sleep Consumer Proposal Modified Capabilities
 
-## MODIFIED Requirements
+## Purpose
+
+Defines how the base state policy handles missing sleep data and integrates sleep scoring into body layer calculation. This spec was modified by the `sleep-consumer` change to fix the NoData handling bug.
+
+---
+
+## Requirements
 
 ### Requirement: Sin Datos (NoData State)
 
