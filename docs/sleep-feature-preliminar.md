@@ -1,11 +1,12 @@
 # Sueño — Documento preliminar (BORRADOR)
 
-> **Estado: BORRADOR / preliminar.** Captura lo que se ESPERA de la feature de
-> Sueño y los edge cases detectados, NO un diseño cerrado. Muchos detalles finos
-> quedan sin definir a propósito. Este doc se refina cuando se explore Sueño como
-> consumidor de `device-telemetry` (ver `docs/handoff-device-telemetry.md`).
+> **Estado: requisitos / edge cases (NO diseño cerrado).** Captura lo que se ESPERA
+> de la feature de Sueño y los edge cases detectados. **`device-telemetry` YA está
+> entregado** (en `main`), así que el prerrequisito está resuelto: este doc es ahora
+> el **apéndice de edge cases** del handoff de arranque
+> **`docs/handoff-sleep-consumer.md`** — empezá por ahí.
 >
-> Fecha: 2026-05-29 · Proyecto: apk-personal (Vocal) · Rama: `sdd/scoring-state-alignment`
+> Fecha: 2026-05-29 · Proyecto: apk-personal (Vocal)
 
 ---
 
@@ -20,7 +21,11 @@ feature a medias: hay un botón, pero NO la telemetría que se suponía que exis
 
 ## 1. Estado REAL hoy (verificado en código)
 
-No hay telemetría. Lo que existe es un flujo **manual de una sola sesión**:
+La **telemetría YA existe** (`device-telemetry`, en `main`): produce hechos crudos de
+actividad del dispositivo y se consume vía `TelemetryRepository` +
+`DeviceTelemetryWorkScheduler.register("sleep")` (ver `handoff-sleep-consumer.md` §1).
+Lo que falta es **conectar Sueño como consumidor**. El flujo de Sueño hoy sigue siendo
+**manual de una sola sesión** (la telemetría todavía no está cableada a Sueño):
 
 - `AutonomiaRepository.startSleepSession()` (`:443`) — al apretar "ir a dormir",
   escribe **una** `SleepSessionState` con `startedAt = ahora` y, opcionalmente,
@@ -129,11 +134,11 @@ El flujo correcto, con cada caja ignorando a la siguiente:
 
 ## 6. Dependencia y secuencia
 
-1. **Primero**: definir e implementar **`device-telemetry`** (infraestructura
-   genérica de captura). Ver `docs/handoff-device-telemetry.md`. Es otro scope.
-2. **Después**: explorar Sueño como **consumidor** de ese contrato de hechos,
-   resolver los edge cases de la §3, y recién ahí escribir tests con valores
-   esperados confiables.
+1. ✅ **HECHO**: `device-telemetry` (infraestructura genérica de captura) — entregado
+   en `main`, ciclo SDD completo (archive Engram #611). Ver `docs/handoff-device-telemetry.md`.
+2. **AHORA**: explorar Sueño como **consumidor** de ese contrato de hechos, resolver
+   los edge cases de la §3, y recién ahí escribir tests con valores esperados
+   confiables. Punto de arranque: **`docs/handoff-sleep-consumer.md`**.
 
 > No mezclar ambos scopes: si Sueño y telemetría se exploran juntos, se acopla el
 > productor al consumidor y se pierde la reutilización (tracking de proyecto futuro).
