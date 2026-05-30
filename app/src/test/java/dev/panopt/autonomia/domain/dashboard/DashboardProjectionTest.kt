@@ -13,8 +13,7 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
-import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
@@ -71,7 +70,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -113,7 +112,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -143,7 +142,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -210,7 +209,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -252,7 +251,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = listOf(pendingTask, doneTask),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -281,7 +280,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = listOf(doneTask),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -312,7 +311,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = listOf(neutralTask),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -337,7 +336,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -362,7 +361,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -394,7 +393,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
             focusSignalActivityId = null,
             today = today,
         )
@@ -403,8 +402,8 @@ class DashboardProjectionTest {
     }
 
     @Test
-    fun `sleep signal asks to register when there is no log`() {
-        val state = emptyDashboardState(sleepLog = null)
+    fun `sleep signal asks to register when there is no night`() {
+        val state = emptyDashboardState(sleepNight = null)
         val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
 
         assertEquals("--", signal.value)
@@ -413,24 +412,25 @@ class DashboardProjectionTest {
     }
 
     @Test
-    fun `sleep signal shows real duration against target`() {
+    fun `sleep signal shows low sleep score as bajo`() {
+        // SleepNight with scored sleepScore below 0.70 → Attention + "descanso bajo"
         val state = emptyDashboardState(
-            sleepLog = sleepLog(sleptAt = "00:00", wokeAt = "06:20", quality = SleepQuality.Low),
+            sleepNight = sleepNightWithScore(sleepScore = 0.55f),
         )
         val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
 
-        assertEquals("6h 20m de 8h", signal.value)
         assertEquals("descanso bajo", signal.meta)
+        assertEquals(DashboardDimensionStatus.Attention, signal.status)
     }
 
     @Test
-    fun `sleep signal marks enough sleep without quality labels`() {
+    fun `sleep signal marks high score as base cubierta`() {
+        // SleepNight with sleepScore >= 0.90 → Stable + "base cubierta"
         val state = emptyDashboardState(
-            sleepLog = sleepLog(sleptAt = "23:30", wokeAt = "07:30", quality = SleepQuality.Good),
+            sleepNight = sleepNightWithScore(sleepScore = 0.95f),
         )
         val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
 
-        assertEquals("8h de 8h", signal.value)
         assertEquals("base cubierta", signal.meta)
         assertEquals(DashboardDimensionStatus.Stable, signal.status)
     }
@@ -438,7 +438,7 @@ class DashboardProjectionTest {
     @Test
     fun `sleep signal shows open sleep session`() {
         val state = emptyDashboardState(
-            sleepLog = null,
+            sleepNight = null,
             sleepSession = SleepSessionState(date = dateKey, startedAt = "23:10"),
         )
         val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
@@ -452,7 +452,7 @@ class DashboardProjectionTest {
     // --- helpers ---
 
     private fun emptyDashboardState(
-        sleepLog: SleepLog?,
+        sleepNight: SleepNight? = null,
         sleepSession: SleepSessionState? = null,
     ): DashboardState =
         buildDashboardState(
@@ -467,7 +467,7 @@ class DashboardProjectionTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = sleepLog,
+            sleepNight = sleepNight,
             sleepSession = sleepSession,
             focusSignalActivityId = null,
             today = today,
@@ -563,17 +563,20 @@ class DashboardProjectionTest {
         updatedAt = 0L,
     )
 
-    private fun sleepLog(
-        sleptAt: String,
-        wokeAt: String,
-        quality: SleepQuality,
-    ): SleepLog =
-        SleepLog(
-            date = dateKey,
-            plannedSleepAt = "23:30",
-            plannedWakeAt = "07:30",
-            sleptAt = sleptAt,
-            wokeAt = wokeAt,
-            quality = quality,
+    private fun sleepNightWithScore(sleepScore: Float): SleepNight =
+        SleepNight(
+            nightDate = dateKey,
+            targetSleepAt = "23:30",
+            targetWakeAt = "07:30",
+            sleepOnsetAt = null,
+            definitiveWakeAt = null,
+            confidenceLevel = "High",
+            durationScore = sleepScore,
+            continuityScore = sleepScore,
+            alignmentScore = sleepScore,
+            digitalInterruptionScore = sleepScore,
+            sleepScore = sleepScore,
+            note = "",
+            source = "auto",
         )
 }

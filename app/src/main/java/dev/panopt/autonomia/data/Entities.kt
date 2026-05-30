@@ -251,16 +251,56 @@ data class SleepSessionStateEntity(
     val updatedAt: Long,
 )
 
-@Entity(tableName = "sleep_logs")
-data class SleepLogEntity(
-    @PrimaryKey val date: String,
-    val plannedSleepAt: String,
-    val plannedWakeAt: String,
-    val sleptAt: String,
-    val wokeAt: String,
-    val quality: String,
+// Legacy entity kept for reference only — table sleep_logs is DROPped in MIGRATION_11_12.
+// This class is no longer registered in @Database. Do not use after v12.
+// @Entity(tableName = "sleep_logs")
+// data class SleepLogEntity(...)
+
+/**
+ * Header for a sleep night (v12+). PK = date of the wake-up (ISO yyyy-MM-dd).
+ * Source of truth: either "auto" (telemetry pipeline) or "manual" (user-entered pair).
+ * Sub-scores are cached (derivable from sleep_segments) and null when confidence=NoData.
+ * quality field removed (bug §10) — scoring uses the 4-component pipeline instead.
+ */
+@Entity(tableName = "sleep_nights")
+data class SleepNightEntity(
+    @PrimaryKey val nightDate: String,          // ISO yyyy-MM-dd, date of waking up
+    val targetSleepAt: String,                  // target sleep time string, e.g. "23:30"
+    val targetWakeAt: String,                   // target wake time string, e.g. "07:30"
+    val sleepOnsetAt: Long?,                    // epoch millis; null if NoData
+    val definitiveWakeAt: Long?,                // epoch millis; null if NoData
+    val confidenceLevel: String,                // SleepConfidence.name
+    val durationScore: Float?,                  // cached sub-score (recalculable); null=NoData
+    val continuityScore: Float?,
+    val alignmentScore: Float?,
+    val digitalInterruptionScore: Float?,
+    val sleepScore: Float?,                     // null when NoData
     val note: String = "",
+    val source: String,                         // "auto" | "manual"
     val updatedAt: Long,
+)
+
+/**
+ * A sleep segment (AwakeUse or Asleep period). Primary durable fact — persisted because
+ * telemetry is purged in days. Allows recalculating scores when InterpretationParams change.
+ * Index name MUST be index_sleep_segments_nightDate (Room naming: index_<table>_<col>).
+ */
+@Entity(
+    tableName = "sleep_segments",
+    foreignKeys = [ForeignKey(
+        entity = SleepNightEntity::class,
+        parentColumns = ["nightDate"],
+        childColumns = ["nightDate"],
+        onDelete = ForeignKey.CASCADE,
+    )],
+    indices = [Index("nightDate")],  // generates: index_sleep_segments_nightDate
+)
+data class SleepSegmentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val nightDate: String,           // FK → sleep_nights.nightDate
+    val startAt: Long,               // epoch millis
+    val endAt: Long,                 // epoch millis
+    val kind: String,                // SleepSegmentKind.name: "Asleep" | "AwakeUse"
 )
 
 @Entity(tableName = "daily_closures")

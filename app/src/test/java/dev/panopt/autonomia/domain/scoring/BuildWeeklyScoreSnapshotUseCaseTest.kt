@@ -83,7 +83,7 @@ class BuildWeeklyScoreSnapshotUseCaseTest {
             todayAbstinenceLogs = emptyList(),
             allAbstinenceLogs = emptyList(),
             tasks = emptyList(),
-            sleepLog = null,
+            sleepNights = emptyList(),
             today = weekEnd,
         )
 

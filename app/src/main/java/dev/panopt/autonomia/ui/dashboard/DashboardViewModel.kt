@@ -22,6 +22,7 @@ import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.weekStartKey
+import dev.panopt.autonomia.domain.sleep.SleepAutoModeResult
 import dev.panopt.autonomia.todayKey
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -63,14 +64,16 @@ internal class DashboardViewModel(
 
     private val sleepSnapshot =
         combine(
-            repository.sleepLogForDateFlow(dateKey),
+            repository.sleepNightForDateFlow(dateKey),
             repository.sleepConfigFlow(),
             repository.sleepSessionStateFlow(),
-        ) { sleepLog, sleepConfig, sleepSession ->
-            DashboardSleepSnapshot(log = sleepLog, config = sleepConfig, session = sleepSession)
+        ) { sleepNight, sleepConfig, sleepSession ->
+            DashboardSleepSnapshot(night = sleepNight, config = sleepConfig, session = sleepSession)
         }
 
     val isDarkMode: StateFlow<Boolean> = repository.isDarkModeFlow()
+
+    val isSleepAutoModeEnabled: StateFlow<Boolean> = repository.isSleepAutoModeEnabledFlow()
 
     val dashboardState: StateFlow<DashboardState> =
         combine(
@@ -128,7 +131,7 @@ internal class DashboardViewModel(
                     riskEvents = facts.riskEvents,
                     tasks = facts.tasks,
                     anchorPhrases = anchorPhrases,
-                    sleepLog = sleepSnapshot.log,
+                    sleepNight = sleepSnapshot.night,
                     sleepConfig = sleepSnapshot.config,
                     sleepSession = sleepSnapshot.session,
                     weeklyHistory = facts.weeklyHistory,
@@ -147,6 +150,8 @@ internal class DashboardViewModel(
             repository.ensureSeeded()
             repository.materializeAssumedAbstinenceRelapses(today = today)
             repository.closeElapsedActivityDays(today = today)
+            // WU-6: guarantee — materialize sleep night on app open (idempotent)
+            repository.materializeSleepNight(nightDate = today)
             repository.refreshCurrentWeeklyScoreSnapshot(today = today)
         }
     }
@@ -240,6 +245,21 @@ internal class DashboardViewModel(
                 targetWakeAt = targetWakeAt,
                 digitalWindDownMinutes = digitalWindDownMinutes,
             )
+        }
+    }
+
+    /**
+     * Toggle the automatic sleep detection mode (design §7, WU-7).
+     * If [enabled] and permission is missing, [onPermissionRequired] is invoked so
+     * the UI can show the compassionate permission prompt (no crash, no silent fail).
+     * Manual mode (startSleepSession/finishSleepSession) is unaffected.
+     */
+    fun toggleSleepAutoMode(enabled: Boolean, onPermissionRequired: () -> Unit) {
+        viewModelScope.launch {
+            when (repository.toggleSleepAutoMode(enabled)) {
+                is SleepAutoModeResult.PermissionRequired -> onPermissionRequired()
+                is SleepAutoModeResult.Success -> { /* isSleepAutoModeEnabled flow updated */ }
+            }
         }
     }
 
@@ -457,7 +477,7 @@ private data class DashboardActivityLogSnapshot(
 )
 
 private data class DashboardSleepSnapshot(
-    val log: dev.panopt.autonomia.SleepLog?,
+    val night: dev.panopt.autonomia.SleepNight?,
     val config: dev.panopt.autonomia.SleepConfig,
     val session: dev.panopt.autonomia.SleepSessionState?,
 )

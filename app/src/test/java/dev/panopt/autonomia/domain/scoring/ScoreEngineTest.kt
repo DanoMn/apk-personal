@@ -14,12 +14,12 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
-import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
@@ -128,7 +128,10 @@ class ScoreEngineTest {
     }
 
     @Test
-    fun bodyLayerUsesSleepAsThirtyPercentOfTheLayer() {
+    fun bodyLayerUsesSleepAsThirtyPercentOfTheLayerWhenDataPresent() {
+        // ADR-3 fix: when sleep is absent (NoData), Cuerpo = anchorBase (re-normalized, NOT 0.70*base).
+        // When sleep score = 1.0, Cuerpo = 0.70*anchorBase + 0.30*1.0.
+        // With 4/4 days + value=20, anchorBase ≈ 1.0 → both cases produce 1.0.
         val activity = anchor("act_body", "layer_cuerpo")
         val logs = weekDates.map { log(activity.id, it, actualValue = 20) }
         val noSleep = calculate(
@@ -140,11 +143,25 @@ class ScoreEngineTest {
             layers = listOf(layer("layer_cuerpo", "Cuerpo")),
             activities = listOf(activity),
             activityLogs = logs,
-            sleepLog = sleep(),
+            sleepNights = listOf(sleepNight(score = 1.0f)),
+        )
+        val withPoorSleep = calculate(
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
+            activities = listOf(activity),
+            activityLogs = logs,
+            sleepNights = listOf(sleepNight(score = 0.0f)),
         )
 
-        assertEquals(0.70f, noSleep.layerScores.single().baseScore, 0.001f)
-        assertEquals(1.0f, withSleep.layerScores.single().baseScore, 0.001f)
+        // NoData: Cuerpo = anchorBase (not penalized — ADR-3)
+        // Perfect sleep: same (formula: 0.70*1.0 + 0.30*1.0 = 1.0)
+        assertEquals(noSleep.layerScores.single().baseScore, withSleep.layerScores.single().baseScore, 0.001f)
+        // Poor sleep (0.0): Cuerpo = 0.70*1.0 + 0.30*0.0 = 0.70 — LOWER than NoData
+        assertEquals(0.70f, withPoorSleep.layerScores.single().baseScore, 0.001f)
+        // NoData (1.0) is strictly better than poor sleep (0.70): absence ≠ poor sleep
+        assertTrue(
+            "NoData Cuerpo should be > poor-sleep Cuerpo",
+            noSleep.layerScores.single().baseScore > withPoorSleep.layerScores.single().baseScore,
+        )
     }
 
     @Test
@@ -232,7 +249,7 @@ class ScoreEngineTest {
             activityLogs = logs,
             abstinenceTracks = listOf(track),
             abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
-            sleepLog = sleep(),
+            sleepNights = listOf(sleepNight(score = 1.0f)),
         )
 
         assertEquals(1000, report.visibleScore)
@@ -255,7 +272,7 @@ class ScoreEngineTest {
             activityLogs = logs,
             abstinenceTracks = listOf(track),
             abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
-            sleepLog = sleep(),
+            sleepNights = listOf(sleepNight(score = 1.0f)),
             weeklyHistory = highHistory(),
         )
 
@@ -273,7 +290,7 @@ class ScoreEngineTest {
         abstinenceTracks: List<AbstinenceTrack> = emptyList(),
         abstinenceLogs: List<AbstinenceLog> = emptyList(),
         tasks: List<Task> = emptyList(),
-        sleepLog: SleepLog? = null,
+        sleepNights: List<SleepNightScore> = emptyList(),
         weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
     ): ScoreReport =
         ScoreEngine.calculate(
@@ -286,7 +303,7 @@ class ScoreEngineTest {
                 todayAbstinenceLogs = abstinenceLogs.filter { it.date == today.toString() },
                 allAbstinenceLogs = abstinenceLogs,
                 tasks = tasks,
-                sleepLog = sleepLog,
+                sleepNights = sleepNights,
                 today = today,
                 weeklyHistory = weeklyHistory,
             ),
@@ -396,14 +413,14 @@ class ScoreEngineTest {
             updatedAt = 0L,
         )
 
-    private fun sleep(): SleepLog =
-        SleepLog(
-            date = today.toString(),
-            plannedSleepAt = "23:30",
-            plannedWakeAt = "07:30",
-            sleptAt = "23:30",
-            wokeAt = "07:30",
-            quality = SleepQuality.Good,
+    private fun sleepNight(score: Float = 1.0f): SleepNightScore =
+        SleepNightScore(
+            duration = score,
+            continuity = score,
+            alignment = score,
+            digitalInterruption = score,
+            sleepScore = score,
+            confidence = SleepConfidence.High,
         )
 
     @Test

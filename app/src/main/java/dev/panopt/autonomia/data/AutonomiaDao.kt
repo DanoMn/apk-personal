@@ -144,14 +144,28 @@ interface AutonomiaDao {
     @Query("SELECT * FROM anchor_phrase_daily_slots WHERE date = :date AND dayPhase = :dayPhase LIMIT 1")
     suspend fun getAnchorPhraseDailySlot(date: String, dayPhase: String): AnchorPhraseDailySlotEntity?
 
-    @Query("SELECT * FROM sleep_logs WHERE date = :date LIMIT 1")
-    fun observeSleepLogForDate(date: String): Flow<SleepLogEntity?>
-
-    @Query("SELECT * FROM sleep_logs WHERE date = :date LIMIT 1")
-    suspend fun getSleepLogForDate(date: String): SleepLogEntity?
+    // --- Sleep (v12+: sleep_nights + sleep_segments) ---
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertSleepLog(log: SleepLogEntity)
+    suspend fun upsertSleepNight(night: SleepNightEntity)
+
+    @Query("SELECT * FROM sleep_nights WHERE nightDate = :date LIMIT 1")
+    suspend fun getSleepNight(date: String): SleepNightEntity?
+
+    @Query("SELECT * FROM sleep_nights WHERE nightDate BETWEEN :from AND :to ORDER BY nightDate")
+    suspend fun getSleepNightsInRange(from: String, to: String): List<SleepNightEntity>
+
+    @Query("SELECT * FROM sleep_nights WHERE nightDate = :date LIMIT 1")
+    fun observeSleepNightForDate(date: String): Flow<SleepNightEntity?>
+
+    @Query("SELECT * FROM sleep_segments WHERE nightDate = :date ORDER BY startAt")
+    suspend fun getSleepSegments(date: String): List<SleepSegmentEntity>
+
+    @Query("DELETE FROM sleep_segments WHERE nightDate = :date")
+    suspend fun deleteSleepSegmentsForNight(date: String)
+
+    @Insert
+    suspend fun insertSleepSegments(segments: List<SleepSegmentEntity>)
 
     @Query("SELECT * FROM sleep_config WHERE id = :id LIMIT 1")
     fun observeSleepConfig(id: String): Flow<SleepConfigEntity?>
@@ -263,8 +277,8 @@ interface AutonomiaDao {
     @Query("DELETE FROM activity_definitions")
     suspend fun clearAllActivityDefinitions()
 
-    @Query("DELETE FROM sleep_logs")
-    suspend fun clearAllSleepLogs()
+    @Query("DELETE FROM sleep_nights")
+    suspend fun clearAllSleepNights()
 
     // --- Single-entity fetch queries (suspend, non-Flow) ---
 

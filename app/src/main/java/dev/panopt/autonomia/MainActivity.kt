@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
             )
             val dashboardState by dashboardViewModel.dashboardState.collectAsStateWithLifecycle()
             val isDarkMode by dashboardViewModel.isDarkMode.collectAsStateWithLifecycle()
+            val isSleepAutoModeEnabled by dashboardViewModel.isSleepAutoModeEnabled.collectAsStateWithLifecycle()
             val palette = dashboardPalette(isDarkMode)
 
             var currentScreen by remember { mutableStateOf(AppScreen.Dashboard) }
@@ -188,8 +189,17 @@ class MainActivity : ComponentActivity() {
                 AppScreen.SleepConfig -> SleepConfigScreen(
                     sleep = dashboardState.sleep,
                     isSleepLockActive = isSleepLockActive,
+                    isAutoModeEnabled = isSleepAutoModeEnabled,
                     palette = palette,
                     onRequestSleepLockPermission = requestSleepLockPermission,
+                    onToggleAutoMode = { enabled, onPermissionRequired ->
+                        dashboardViewModel.toggleSleepAutoMode(enabled, onPermissionRequired)
+                    },
+                    onOpenTelemetrySettings = {
+                        startActivity(
+                            dev.panopt.autonomia.platform.telemetry.TelemetryPermission.settingsIntent(),
+                        )
+                    },
                     onSave = dashboardViewModel::saveSleepConfig,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )

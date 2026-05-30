@@ -19,7 +19,7 @@ object BuildScoreInputUseCase {
             todayAbstinenceLogs = source.todayAbstinenceLogs,
             allAbstinenceLogs = source.allAbstinenceLogs,
             tasks = source.tasks,
-            sleepLog = source.sleepLog,
+            sleepNights = source.sleepNights,
             today = source.today,
             weeklyHistory = source.weeklyHistory,
         )

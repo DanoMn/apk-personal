@@ -12,8 +12,7 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
-import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import java.time.LocalDate
@@ -28,7 +27,7 @@ class DashboardEngineTest {
         val state = state(
             activities = emptyList(),
             todayActivityLogs = emptyList(),
-            sleepLog = null,
+            sleepNight = null,
         )
 
         assertEquals(ScoreState.NoData, state.status.scoreState)
@@ -51,7 +50,7 @@ class DashboardEngineTest {
         val state = state(
             activities = listOf(project, focus),
             todayActivityLogs = listOf(log(project.id, 40), log(focus.id, 12)),
-            sleepLog = sleep(),
+            sleepNight = sleepNight(),
             focusSignalActivityId = focus.id,
         )
 
@@ -64,7 +63,7 @@ class DashboardEngineTest {
     private fun state(
         activities: List<ActivityDefinition>,
         todayActivityLogs: List<ActivityLog>,
-        sleepLog: SleepLog?,
+        sleepNight: SleepNight?,
         focusSignalActivityId: String? = null,
         abstinenceTracks: List<AbstinenceTrack> = emptyList(),
         abstinenceLogs: List<AbstinenceLog> = emptyList(),
@@ -81,7 +80,7 @@ class DashboardEngineTest {
             riskEvents = emptyList(),
             tasks = emptyList(),
             anchorPhrases = emptyList(),
-            sleepLog = sleepLog,
+            sleepNight = sleepNight,
             focusSignalActivityId = focusSignalActivityId,
             today = today,
         )
@@ -128,13 +127,20 @@ class DashboardEngineTest {
             updatedAt = 0L,
         )
 
-    private fun sleep(): SleepLog =
-        SleepLog(
-            date = today.toString(),
-            plannedSleepAt = "23:30",
-            plannedWakeAt = "07:30",
-            sleptAt = "23:30",
-            wokeAt = "07:30",
-            quality = SleepQuality.Good,
+    private fun sleepNight(): SleepNight =
+        SleepNight(
+            nightDate = today.toString(),
+            targetSleepAt = "23:30",
+            targetWakeAt = "07:30",
+            sleepOnsetAt = null,
+            definitiveWakeAt = null,
+            confidenceLevel = "NoData",
+            durationScore = null,
+            continuityScore = null,
+            alignmentScore = null,
+            digitalInterruptionScore = null,
+            sleepScore = null,
+            note = "",
+            source = "manual",
         )
 }

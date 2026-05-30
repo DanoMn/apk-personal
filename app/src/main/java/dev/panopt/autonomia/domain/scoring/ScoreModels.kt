@@ -5,9 +5,9 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
-import dev.panopt.autonomia.SleepLog
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import java.time.LocalDate
 
 data class ScoreInput(
@@ -19,7 +19,14 @@ data class ScoreInput(
     val todayAbstinenceLogs: List<AbstinenceLog>,
     val allAbstinenceLogs: List<AbstinenceLog>,
     val tasks: List<Task>,
-    val sleepLog: SleepLog?,
+    /**
+     * Sleep nights for the current week (already scored).
+     * NoData nights are excluded — only nights with a computed sleepScore are relevant.
+     * Weekly sleep score = average of nights with data. Empty → null (no sleep data this week).
+     *
+     * Replaces the deprecated single `sleepLog: SleepLog?` (WU-5 / design §5).
+     */
+    val sleepNights: List<SleepNightScore> = emptyList(),
     val today: LocalDate = LocalDate.now(),
     val weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
 )

@@ -12,8 +12,11 @@ import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class BuildScoreInputUseCaseTest {
@@ -41,7 +44,7 @@ class BuildScoreInputUseCaseTest {
                 todayAbstinenceLogs = emptyList(),
                 allAbstinenceLogs = emptyList(),
                 tasks = emptyList(),
-                sleepLog = null,
+                sleepNights = emptyList(),
                 today = today,
             ),
         )

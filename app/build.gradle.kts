@@ -37,5 +37,10 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
 
+    // androidTest dependencies for MigrationTestHelper (SleepMigration11To12Test)
+    androidTestImplementation("androidx.room:room-testing:2.8.4")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

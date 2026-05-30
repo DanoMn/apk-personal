@@ -2,7 +2,6 @@ package dev.panopt.autonomia.domain.scoring
 
 import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.TaskStatus
-import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
 import java.time.temporal.TemporalAdjusters
 
@@ -22,6 +21,12 @@ internal object WeeklyScoringContextBuilder {
             .filter { it.active }
             .sortedBy { it.sortOrder }
 
+        // Weekly sleep score: average of nights WITH data only (NoData nights excluded).
+        // Design §5: cobertura suave — una noche sin dato NO entra como 0.
+        val nightsWithData = input.sleepNights.mapNotNull { it.sleepScore }
+        val weeklySleepScore: Float? = if (nightsWithData.isEmpty()) null
+        else nightsWithData.average().toFloat()
+
         return WeeklyScoringContext(
             weekStart = weekStart,
             weekDates = weekDates,
@@ -29,7 +34,7 @@ internal object WeeklyScoringContextBuilder {
             visibleActivities = visibleActivities,
             weeklyLogsByActivity = weeklyLogsByActivity,
             activeSobrietyTracks = activeSobrietyTracks,
-            sleepScore = input.sleepLog?.let(SleepScoring::score),
+            sleepScore = weeklySleepScore,
             sobrietyScore = SobrietyScoringPolicy.score(
                 tracks = activeSobrietyTracks,
                 allLogs = input.allAbstinenceLogs,
@@ -49,10 +54,12 @@ internal object WeeklyScoringContextBuilder {
             log.trackId in activeTrackIds && log.status != AbstinenceStatus.Unknown
         }
         val hasTaskFact = input.tasks.any { it.status == TaskStatus.Done && it.layerId != null }
+        // 5.6: any night with sleep data (not NoData) counts as a fact
+        val hasSleepFact = input.sleepNights.any { it.sleepScore != null }
         return input.todayActivityLogs.isNotEmpty() ||
             input.periodActivityLogs.isNotEmpty() ||
             hasAbstinenceFact ||
             hasTaskFact ||
-            input.sleepLog != null
+            hasSleepFact
     }
 }

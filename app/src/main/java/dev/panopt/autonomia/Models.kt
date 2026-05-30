@@ -82,6 +82,31 @@ data class AnchorPhrase(
     val updatedAt: Long,
 )
 
+/**
+ * Sleep night header (v12+). PK conceptual = nightDate (date of waking up).
+ * Replaces SleepLog in the data and scoring layers. SleepQuality removed (bug §10).
+ * Sub-scores are cached (recalculable from segments) and null when confidence = NoData.
+ */
+data class SleepNight(
+    val nightDate: String,               // ISO yyyy-MM-dd, day the user woke up
+    val targetSleepAt: String,
+    val targetWakeAt: String,
+    val sleepOnsetAt: Long?,             // epoch millis; null if NoData
+    val definitiveWakeAt: Long?,
+    val confidenceLevel: String,         // SleepConfidence.name
+    val durationScore: Float?,
+    val continuityScore: Float?,
+    val alignmentScore: Float?,
+    val digitalInterruptionScore: Float?,
+    val sleepScore: Float?,              // null when NoData — do NOT coerce to 0
+    val note: String = "",
+    val source: String,                  // "auto" | "manual"
+    val updatedAt: Long = 0L,
+)
+
+// SleepLog kept for UI legacy references only. Do NOT use in scoring (bug §10).
+// Will be removed once all UI references are updated to SleepNight.
+@Deprecated("Use SleepNight (v12+). SleepLog maps to the dropped sleep_logs table.")
 data class SleepLog(
     val date: String,
     val plannedSleepAt: String,

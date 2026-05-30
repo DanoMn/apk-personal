@@ -10,7 +10,7 @@ import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.DailyClosureEntity
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepConfigEntity
-import dev.panopt.autonomia.data.SleepLogEntity
+import dev.panopt.autonomia.data.SleepNightEntity
 import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
@@ -25,8 +25,20 @@ import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.abstinence.AbstinenceRelapseMaterializationPolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.defaultActualValue
+import dev.panopt.autonomia.data.SleepSegmentEntity
+import dev.panopt.autonomia.data.repository.TelemetryRepository
+import dev.panopt.autonomia.platform.telemetry.DeviceTelemetryWorkScheduler
+import dev.panopt.autonomia.platform.telemetry.TelemetryPermissionState
+import dev.panopt.autonomia.domain.sleep.SleepAutoModeResult
 import dev.panopt.autonomia.domain.sleep.SleepConfigValidation
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
+import dev.panopt.autonomia.domain.sleep.SleepScoring
+import dev.panopt.autonomia.domain.sleep.SleepTargetWindow
+import dev.panopt.autonomia.domain.sleep.interpretation.InterpretationParams
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepInterpreter
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepSegmentKind
 import dev.panopt.autonomia.domain.task.TaskPolicy
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import kotlinx.coroutines.flow.Flow
@@ -50,14 +62,18 @@ class AutonomiaRepository(context: Context) {
     private val prefs = appContext.getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
     private val dao = AutonomiaDatabase.getInstance(appContext).autonomiaDao()
     private val weeklyScoreSnapshotWriter = WeeklyScoreSnapshotWriter(dao)
+    private val telemetryRepository = TelemetryRepository(appContext)
 
     private val _isDarkMode = MutableStateFlow(prefs.getBoolean("dark_mode", true))
     private val _focusSignalActivityId = MutableStateFlow(prefs.getString("focus_signal_activity_id", null))
     private val _isInitialConfigurationComplete = MutableStateFlow(
         prefs.getBoolean("initial_configuration_complete", false),
     )
+    private val _isSleepAutoModeEnabled = MutableStateFlow(prefs.getBoolean("sleep_auto_mode_enabled", false))
 
     fun isDarkModeFlow(): StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    fun isSleepAutoModeEnabledFlow(): StateFlow<Boolean> = _isSleepAutoModeEnabled.asStateFlow()
 
     fun focusSignalActivityIdFlow(): StateFlow<String?> = _focusSignalActivityId.asStateFlow()
 
@@ -109,8 +125,14 @@ class AutonomiaRepository(context: Context) {
     fun anchorPhrasesFlow(): Flow<List<AnchorPhrase>> =
         dao.observeAnchorPhrases().map { phrases -> phrases.map { it.toDomain() } }
 
-    fun sleepLogForDateFlow(date: String): Flow<SleepLog?> =
-        dao.observeSleepLogForDate(date).map { it?.toDomain() }
+    // v12+: uses sleep_nights table. Returns SleepNight (null if no night recorded).
+    fun sleepNightForDateFlow(date: String): Flow<SleepNight?> =
+        dao.observeSleepNightForDate(date).map { it?.toDomain() }
+
+    // Legacy alias kept for UI compatibility — maps SleepNight to SleepLog shape.
+    // TODO(WU-6): remove when all UI is updated to SleepNight.
+    @Deprecated("Use sleepNightForDateFlow — SleepLog maps to dropped sleep_logs table (v12).")
+    fun sleepLogForDateFlow(date: String): Flow<SleepLog?> = kotlinx.coroutines.flow.flowOf(null)
 
     fun sleepConfigFlow(): Flow<SleepConfig> =
         dao.observeSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID)
@@ -414,6 +436,96 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
+    /**
+     * Materializes the sleep night for [nightDate] by:
+     *   1. Reading telemetry events for the detection window (20:00 D-1 → 12:00 D).
+     *   2. Running [SleepInterpreter] → [NightTimeline].
+     *   3. Scoring via [SleepScoring.scoreNight] → [SleepNightScore?].
+     *   4. Persisting [SleepNightEntity] + [SleepSegmentEntity]s (idempotent: overwrites on re-run).
+     *
+     * Convivencia: if a night with source="manual" already exists, this method does NOT overwrite
+     * it — manual entries take precedence (design §6.3).
+     *
+     * @return true if the night was materialized (or already existed as manual), false on error.
+     */
+    suspend fun materializeSleepNight(
+        nightDate: LocalDate = LocalDate.now(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): Boolean {
+        // Convivencia: if manual night exists, skip auto materialization
+        val existing = dao.getSleepNight(nightDate.toString())
+        if (existing != null && existing.source == "manual") return true
+
+        // 1. Detection window: 20:00 of D-1 → 12:00 of D (epoch millis)
+        val from = nightDate.minusDays(1)
+            .atTime(20, 0)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+        val to = nightDate
+            .atTime(12, 0)
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+
+        // 2. Pull telemetry events
+        val events = telemetryRepository.eventsInRange(from, to)
+
+        // 3. Get sleep config for the target window
+        val config = currentSleepConfig()
+        val target = SleepTargetWindow(
+            targetSleepAt = config.targetSleepAt,
+            targetWakeAt = config.targetWakeAt,
+        )
+
+        // 4. Interpret timeline (pure)
+        val timeline = SleepInterpreter.interpret(events, target, InterpretationParams.DEFAULT)
+
+        // 5. Score the night (null for NoData)
+        val score: SleepNightScore? = SleepScoring.scoreNight(timeline, target)
+
+        val now = System.currentTimeMillis()
+
+        // 6. Persist night header (upsert — idempotent)
+        dao.upsertSleepNight(
+            SleepNightEntity(
+                nightDate = nightDate.toString(),
+                targetSleepAt = config.targetSleepAt,
+                targetWakeAt = config.targetWakeAt,
+                sleepOnsetAt = timeline.sleepOnsetAt?.toEpochMilli(),
+                definitiveWakeAt = timeline.definitiveWakeAt?.toEpochMilli(),
+                confidenceLevel = timeline.confidence.name,
+                durationScore = score?.duration,
+                continuityScore = score?.continuity,
+                alignmentScore = score?.alignment,
+                digitalInterruptionScore = score?.digitalInterruption,
+                sleepScore = score?.sleepScore,
+                note = "",
+                source = "auto",
+                updatedAt = now,
+            ),
+        )
+
+        // 7. Replace segments (delete + insert — idempotent)
+        dao.deleteSleepSegmentsForNight(nightDate.toString())
+        val segmentEntities = timeline.segments.map { seg ->
+            SleepSegmentEntity(
+                nightDate = nightDate.toString(),
+                startAt = seg.startAt.toEpochMilli(),
+                endAt = seg.endAt.toEpochMilli(),
+                kind = seg.kind.name,
+            )
+        }
+        if (segmentEntities.isNotEmpty()) {
+            dao.insertSleepSegments(segmentEntities)
+        }
+
+        return true
+    }
+
+    // v12+: writes a SleepNightEntity with source="manual" plus a single Asleep segment.
+    // SleepQuality.Acceptable removed (bug §10) — quality is not stored; scoring uses 4-component pipeline.
+    // Manual entries use a single Asleep segment spanning sleptAt→wokeAt (WU-7 completion).
     suspend fun saveSleepLog(
         sleptAt: String,
         wokeAt: String,
@@ -425,18 +537,45 @@ class AutonomiaRepository(context: Context) {
         val resolvedWokeAt = wokeAt.ifBlank { config.targetWakeAt }
         SleepPolicy.minutesBetween(resolvedSleptAt, resolvedWokeAt) ?: return false
 
-        dao.upsertSleepLog(
-            SleepLogEntity(
-                date = date,
-                plannedSleepAt = config.targetSleepAt,
-                plannedWakeAt = config.targetWakeAt,
-                sleptAt = resolvedSleptAt,
-                wokeAt = resolvedWokeAt,
-                quality = SleepQuality.Acceptable.name,
+        val now = System.currentTimeMillis()
+        dao.upsertSleepNight(
+            SleepNightEntity(
+                nightDate = date,
+                targetSleepAt = config.targetSleepAt,
+                targetWakeAt = config.targetWakeAt,
+                sleepOnsetAt = null,       // manual entry — no telemetry onset
+                definitiveWakeAt = null,   // manual entry — no telemetry wake detection
+                confidenceLevel = "NoData", // manual entry = no telemetry signal
+                durationScore = null,
+                continuityScore = null,
+                alignmentScore = null,
+                digitalInterruptionScore = null,
+                sleepScore = null,         // manual entries have no scored timeline
                 note = note,
-                updatedAt = System.currentTimeMillis(),
+                source = "manual",
+                updatedAt = now,
             ),
         )
+
+        // Write a single Asleep segment spanning sleptAt → wokeAt (design §6.3, WU-7).
+        // sleptAt/wokeAt are "HH:mm" strings — convert to epoch millis anchored to `date`.
+        val zone = ZoneId.systemDefault()
+        val sleepMillis = SleepPolicy.timeStringToEpochMillis(resolvedSleptAt, date, zone)
+        val wakeMillis = SleepPolicy.timeStringToEpochMillis(resolvedWokeAt, date, zone)
+        if (sleepMillis != null && wakeMillis != null) {
+            val wakeAdjusted = if (wakeMillis <= sleepMillis) wakeMillis + 86_400_000L else wakeMillis
+            dao.deleteSleepSegmentsForNight(date)
+            dao.insertSleepSegments(
+                listOf(
+                    SleepSegmentEntity(
+                        nightDate = date,
+                        startAt = sleepMillis,
+                        endAt = wakeAdjusted,
+                        kind = SleepSegmentKind.Asleep.name,
+                    ),
+                ),
+            )
+        }
         return true
     }
 
@@ -468,6 +607,32 @@ class AutonomiaRepository(context: Context) {
             dao.deleteSleepSessionState(SleepPolicy.DEFAULT_SESSION_ID)
         }
         return saved
+    }
+
+    /**
+     * Toggles the automatic sleep detection mode.
+     *
+     * When [enabled] = true:
+     *   - If permission is GRANTED → registers the "sleep" telemetry consumer (starts drain if needed).
+     *   - If permission is MISSING → returns [SleepAutoModeResult.PermissionRequired] without activating.
+     * When [enabled] = false → unregisters the "sleep" consumer (stops drain when no other consumers).
+     *
+     * The enabled state is persisted in SharedPreferences (survives app restart).
+     * Manual mode (startSleepSession/finishSleepSession) is unaffected by this toggle.
+     */
+    suspend fun toggleSleepAutoMode(enabled: Boolean): SleepAutoModeResult {
+        if (enabled) {
+            val permState = telemetryRepository.permissionState()
+            if (permState == TelemetryPermissionState.MISSING) {
+                return SleepAutoModeResult.PermissionRequired
+            }
+            DeviceTelemetryWorkScheduler.register(appContext, "sleep")
+        } else {
+            DeviceTelemetryWorkScheduler.unregister(appContext, "sleep")
+        }
+        prefs.edit().putBoolean("sleep_auto_mode_enabled", enabled).apply()
+        _isSleepAutoModeEnabled.value = enabled
+        return SleepAutoModeResult.Success(enabled)
     }
 
     suspend fun saveSleepConfig(

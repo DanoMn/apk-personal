@@ -1,7 +1,10 @@
 package dev.panopt.autonomia.domain.sleep
 
 import dev.panopt.autonomia.SleepConfig
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import kotlin.math.abs
 
 object SleepPolicy {
@@ -84,6 +87,21 @@ object SleepPolicy {
         val bMinutes = b.hour * 60 + b.minute
         val raw = abs(aMinutes - bMinutes)
         return minOf(raw, 24 * 60 - raw)
+    }
+
+    /**
+     * Converts a "HH:mm" time string to epoch millis anchored to [dateStr] (ISO yyyy-MM-dd)
+     * in [zone]. Sleep times can cross midnight: if the resulting millis falls more than
+     * 12 hours before the date's midnight, one day is added (e.g. "23:00" on date 2024-01-02
+     * → 2024-01-02T23:00, but "03:00" would be next day if used as wake-up time; the caller
+     * is responsible for the ±1 day adjustment using the raw returned value).
+     *
+     * Returns null if the time string or date string is unparseable.
+     */
+    fun timeStringToEpochMillis(timeStr: String, dateStr: String, zone: ZoneId): Long? {
+        val time = parseTime(timeStr) ?: return null
+        val date = runCatching { LocalDate.parse(dateStr) }.getOrNull() ?: return null
+        return LocalDateTime.of(date, time).atZone(zone).toInstant().toEpochMilli()
     }
 
     fun formatDuration(minutes: Int): String {

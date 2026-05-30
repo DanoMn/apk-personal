@@ -3,6 +3,7 @@ package dev.panopt.autonomia.data.scoring
 import dev.panopt.autonomia.data.AutonomiaDao
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.mapper.toDomain
+import dev.panopt.autonomia.data.local.mapper.toSleepNightScore
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.BuildWeeklyScoreSnapshotUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
@@ -33,7 +34,12 @@ class WeeklyScoreSnapshotWriter(
             todayAbstinenceLogs = allAbstinenceLogs.filter { it.date == dateKey },
             allAbstinenceLogs = allAbstinenceLogs,
             tasks = dao.getTasksSnapshot().map { it.toDomain() },
-            sleepLog = dao.getSleepLogForDate(dateKey)?.toDomain(),
+            // 5.8: weekly sleep — get all nights in range, map to SleepNightScore,
+            // filter out NoData (toSleepNightScore returns null for NoData nights).
+            sleepNights = dao.getSleepNightsInRange(
+                from = weekStart.toString(),
+                to = dateKey,
+            ).mapNotNull { it.toSleepNightScore() },
             today = today,
             weeklyHistory = weeklyHistory,
         )

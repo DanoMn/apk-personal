@@ -45,9 +45,12 @@ internal object ScoreSnapshotHashPolicy {
                 input.tasks.sortedBy { it.id }.forEach { task ->
                     add("task:${task.id}:${task.layerId}:${task.status.name}:${task.completedAt}:${task.updatedAt}")
                 }
-                input.sleepLog?.let { log ->
-                    add("sleep:${log.date}:${log.sleptAt}:${log.wokeAt}:${log.quality.name}:${log.updatedAt}")
-                }
+                // 5.7: hash each scored sleep night; NoData nights (sleepScore==null) still fingerprinted
+                input.sleepNights
+                    .sortedBy { it.confidence.name } // deterministic order (nightDate not available here)
+                    .forEach { night ->
+                        add("sleep:${night.confidence.name}:${night.sleepScore}:${night.duration}:${night.continuity}")
+                    }
             },
         )
 

@@ -25,14 +25,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AnchorPhraseDailySlotEntity::class,
         SleepConfigEntity::class,
         SleepSessionStateEntity::class,
-        SleepLogEntity::class,
+        SleepNightEntity::class,
+        SleepSegmentEntity::class,
         DailyClosureEntity::class,
         WeeklyScoreSnapshotEntity::class,
         DeviceActivityEventEntity::class,
         TelemetryCollectionLeaseEntity::class,
     ],
-    version = 11,
-    exportSchema = false
+    version = 12,
+    exportSchema = true
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
     abstract fun autonomiaDao(): AutonomiaDao
@@ -52,16 +53,12 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     // disposable, so any schema/migration mismatch recreates the DB
                     // instead of crashing the app on open.
                     //
-                    // The hand-written MIGRATION_* below have known schema-mismatch
-                    // bugs (index names `idx_*` and spurious column DEFAULTs that do
-                    // not match the Room-generated entity schema — engram bug #587).
-                    // They are intentionally NOT registered while in dev so Room takes
-                    // the destructive-recreate path on version changes.
-                    //
-                    // BEFORE RELEASE: fix the MIGRATION_* SQL to match the entities,
-                    // re-enable addMigrations(...), remove this destructive fallback,
-                    // and add MigrationTestHelper coverage (domain `gradlew test` does
-                    // NOT exercise real Room migrations).
+                    // MIGRATION_11_12 is registered and correctly written (index names
+                    // match Room's `index_<table>_<col>` convention, no spurious DEFAULTs).
+                    // MigrationTestHelper covers this migration (see SleepMigration11To12Test).
+                    // The destructive fallback remains active for other historical migrations
+                    // (1-10) that still carry the `idx_*` bug — those are dev-only paths.
+                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                 INSTANCE = instance
@@ -334,15 +331,63 @@ abstract class AutonomiaDatabase : RoomDatabase() {
             }
         }
 
-        // NOTE: like the other MIGRATION_* above, this is intentionally NOT
-        // registered while in the development phase (destructive recreate handles
-        // version bumps). It is written with the CORRECT Room index naming
-        // (`index_<table>_<col>`, not `idx_*`) so it is ready to register before
-        // release together with MigrationTestHelper coverage.
-        private val MIGRATION_10_11 = object : Migration(10, 11) {
+        // MIGRATION_10_11: written with correct Room index naming (`index_<table>_<col>`).
+        // Registered alongside MIGRATION_11_12 — see getInstance() above.
+        // Internal (not private) so MigrationTestHelper in androidTest can reference it.
+        internal val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 createDeviceActivityEventsTable(db)
                 createTelemetryLeaseTable(db)
+            }
+        }
+
+        // MIGRATION_11_12: introduces sleep_nights + sleep_segments; drops legacy sleep_logs.
+        // Index naming follows Room convention exactly (index_<table>_<col>) to match
+        // the Index("nightDate") annotation on SleepSegmentEntity.
+        // Covered by SleepMigration11To12Test (androidTest, MigrationTestHelper).
+        // Internal (not private) so MigrationTestHelper in androidTest can reference it.
+        internal val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 1. Sleep night header (replaces sleep_logs)
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sleep_nights (
+                        nightDate TEXT NOT NULL PRIMARY KEY,
+                        targetSleepAt TEXT NOT NULL,
+                        targetWakeAt TEXT NOT NULL,
+                        sleepOnsetAt INTEGER,
+                        definitiveWakeAt INTEGER,
+                        confidenceLevel TEXT NOT NULL,
+                        durationScore REAL,
+                        continuityScore REAL,
+                        alignmentScore REAL,
+                        digitalInterruptionScore REAL,
+                        sleepScore REAL,
+                        note TEXT NOT NULL DEFAULT '',
+                        source TEXT NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+                // 2. Sleep segments (FK CASCADE on nightDate)
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS sleep_segments (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        nightDate TEXT NOT NULL,
+                        startAt INTEGER NOT NULL,
+                        endAt INTEGER NOT NULL,
+                        kind TEXT NOT NULL,
+                        FOREIGN KEY(nightDate) REFERENCES sleep_nights(nightDate) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                // CRITICAL: index name MUST match Room's generated name: index_<table>_<col>
+                // The Index("nightDate") annotation on SleepSegmentEntity generates this exact name.
+                // Using idx_* here would cause MigrationTestHelper schema-mismatch failures.
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_sleep_segments_nightDate ON sleep_segments(nightDate)")
+                // 3. Drop legacy sleep_logs table (data is disposable, no backfill — ADR-5)
+                db.execSQL("DROP TABLE IF EXISTS sleep_logs")
             }
         }
 

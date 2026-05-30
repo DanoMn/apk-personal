@@ -19,8 +19,7 @@ import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.PhraseFamily
 import dev.panopt.autonomia.RiskEvent
 import dev.panopt.autonomia.SleepConfig
-import dev.panopt.autonomia.SleepLog
-import dev.panopt.autonomia.SleepQuality
+import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
@@ -34,11 +33,13 @@ import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.RiskEventEntity
 import dev.panopt.autonomia.data.SleepConfigEntity
-import dev.panopt.autonomia.data.SleepLogEntity
+import dev.panopt.autonomia.data.SleepNightEntity
 import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
+import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 
 internal fun LayerEntity.toDomain(): Layer =
     Layer(id = id, name = name, description = description, sortOrder = sortOrder, active = active)
@@ -203,15 +204,46 @@ internal fun AnchorPhraseEntity.toDomain(): AnchorPhrase =
         updatedAt = updatedAt,
     )
 
-internal fun SleepLogEntity.toDomain(): SleepLog =
-    SleepLog(
-        date = date,
-        plannedSleepAt = plannedSleepAt,
-        plannedWakeAt = plannedWakeAt,
-        sleptAt = sleptAt,
-        wokeAt = wokeAt,
-        quality = runCatching { SleepQuality.valueOf(quality) }.getOrDefault(SleepQuality.Acceptable),
+/**
+ * Maps a SleepNightEntity (v12+) to a [SleepNightScore] using the cached sub-scores.
+ * Returns null when the cached sleepScore is null (NoData nights have no computable score).
+ * The sub-scores were computed by SleepScoring.scoreNight and stored by materializeSleepNight.
+ */
+internal fun SleepNightEntity.toSleepNightScore(): SleepNightScore? {
+    // Sub-scores may all be null for manual entries (pre-WU-6 or source="manual" without scoring).
+    // If sleepScore is null, this night had NoData confidence — exclude from weekly average.
+    val score = sleepScore ?: return null
+    return SleepNightScore(
+        duration = durationScore ?: 0f,
+        continuity = continuityScore ?: 0f,
+        alignment = alignmentScore ?: 0f,
+        digitalInterruption = digitalInterruptionScore ?: 0f,
+        sleepScore = score,
+        confidence = runCatching {
+            SleepConfidence.valueOf(confidenceLevel)
+        }.getOrDefault(SleepConfidence.NoData),
+    )
+}
+
+/**
+ * Maps a SleepNightEntity (v12+) to the domain SleepNight model.
+ * quality field removed (bug §10) — scoring uses the 4-component pipeline.
+ */
+internal fun SleepNightEntity.toDomain(): SleepNight =
+    SleepNight(
+        nightDate = nightDate,
+        targetSleepAt = targetSleepAt,
+        targetWakeAt = targetWakeAt,
+        sleepOnsetAt = sleepOnsetAt,
+        definitiveWakeAt = definitiveWakeAt,
+        confidenceLevel = confidenceLevel,
+        durationScore = durationScore,
+        continuityScore = continuityScore,
+        alignmentScore = alignmentScore,
+        digitalInterruptionScore = digitalInterruptionScore,
+        sleepScore = sleepScore,
         note = note,
+        source = source,
         updatedAt = updatedAt,
     )
 

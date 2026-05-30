@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,8 +50,11 @@ import dev.panopt.autonomia.ui.dashboard.mix
 internal fun SleepConfigScreen(
     sleep: DashboardSleepState,
     isSleepLockActive: Boolean,
+    isAutoModeEnabled: Boolean = false,
     palette: DashboardPalette,
     onRequestSleepLockPermission: () -> Unit,
+    onToggleAutoMode: (enabled: Boolean, onPermissionRequired: () -> Unit) -> Unit = { _, _ -> },
+    onOpenTelemetrySettings: () -> Unit = {},
     onSave: (targetSleepAt: String, targetWakeAt: String, digitalWindDownMinutes: Int) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -61,6 +66,7 @@ internal fun SleepConfigScreen(
         mutableStateOf(sleep.digitalWindDownMinutes)
     }
     var error by remember { mutableStateOf<String?>(null) }
+    var showPermissionPrompt by remember { mutableStateOf(false) }
 
     val targetMinutes = SleepPolicy.minutesBetween(targetSleepAt, targetWakeAt)
     val validation = SleepPolicy.validateConfig(
@@ -124,6 +130,20 @@ internal fun SleepConfigScreen(
                 onRequestSleepLockPermission = onRequestSleepLockPermission,
             )
 
+            AutoModeCard(
+                isEnabled = isAutoModeEnabled,
+                showPermissionPrompt = showPermissionPrompt,
+                palette = palette,
+                onToggle = { wantEnabled ->
+                    showPermissionPrompt = false
+                    onToggleAutoMode(wantEnabled) { showPermissionPrompt = true }
+                },
+                onOpenSettings = {
+                    showPermissionPrompt = false
+                    onOpenTelemetrySettings()
+                },
+            )
+
             Text(
                 text = "Descanso digital",
                 color = palette.textMuted,
@@ -166,6 +186,108 @@ internal fun SleepConfigScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * Card for the automatic telemetry-based sleep detection mode (design §7, WU-7).
+ *
+ * - When OFF: toggle + explanation. User can activate.
+ * - When ON: toggle + active status. User can deactivate.
+ * - [showPermissionPrompt]: usage-access permission is required. Show compassionate prompt
+ *   with a direct link to the system settings screen (no crash, no silent fail).
+ *
+ * Tono: compasivo, adulto funcional (AGENTS.md).
+ */
+@Composable
+private fun AutoModeCard(
+    isEnabled: Boolean,
+    showPermissionPrompt: Boolean,
+    palette: DashboardPalette,
+    onToggle: (Boolean) -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(palette.bgSurface)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Deteccion automatica",
+                    color = palette.textMain,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.5.sp,
+                )
+                Text(
+                    text = if (isEnabled) {
+                        "El dispositivo infiere tu descanso en segundo plano."
+                    } else {
+                        "El telefono lee tu actividad nocturna para inferir el sueno."
+                    },
+                    color = palette.textMuted,
+                    fontFamily = DashboardSans,
+                    fontSize = 12.5.sp,
+                    lineHeight = 17.sp,
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = palette.bgBase,
+                    checkedTrackColor = palette.colorCardboard,
+                    uncheckedThumbColor = palette.textMuted,
+                    uncheckedTrackColor = palette.bgSurface2,
+                ),
+            )
+        }
+
+        if (showPermissionPrompt) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Falta el permiso de acceso a uso de apps.",
+                    color = palette.textMain,
+                    fontFamily = DashboardSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                )
+                Text(
+                    text = "Esta es una senal, no una condena. Podes concederlo en Ajustes del sistema. La app nunca comparte esos datos.",
+                    color = palette.textMuted,
+                    fontFamily = DashboardSans,
+                    fontSize = 12.5.sp,
+                    lineHeight = 17.sp,
+                )
+                Box(
+                    modifier = Modifier
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(palette.colorCardboard)
+                        .clickable(role = Role.Button, onClick = onOpenSettings)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Ir a Ajustes",
+                        color = palette.bgBase,
+                        fontFamily = DashboardSans,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.5.sp,
+                    )
+                }
+            }
+        }
     }
 }
 

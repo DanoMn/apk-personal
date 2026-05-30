@@ -14,7 +14,7 @@ import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.RiskEvent
 import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.SleepConfig
-import dev.panopt.autonomia.SleepLog
+import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
@@ -26,8 +26,8 @@ import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import java.util.Locale
+import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
-import dev.panopt.autonomia.domain.sleep.SleepScoring
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
@@ -46,7 +46,7 @@ internal fun buildDashboardState(
     riskEvents: List<RiskEvent>,
     tasks: List<Task>,
     anchorPhrases: List<AnchorPhrase>,
-    sleepLog: SleepLog?,
+    sleepNight: SleepNight?,
     sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
     sleepSession: SleepSessionState? = null,
     weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
@@ -104,7 +104,10 @@ internal fun buildDashboardState(
                 todayAbstinenceLogs = todayAbstinenceLogs,
                 allAbstinenceLogs = allAbstinenceLogs,
                 tasks = tasks,
-                sleepLog = sleepLog,
+                // WU-7: wire the today's SleepNight into the scoring path (design §7, PR3 carryover).
+                // If sleepNight has a cached sleepScore (auto-materialized), pass it as a single-night
+                // list. If null (NoData or manual entry), empty list → ADR-3: re-normalize Cuerpo.
+                sleepNights = listOfNotNull(sleepNight?.toSleepNightScore()),
                 today = today,
                 weeklyHistory = weeklyHistory,
             ),
@@ -155,7 +158,7 @@ internal fun buildDashboardState(
         signals = buildSignals(
             activities = timeActivities,
             logsByActivity = todayLogsByActivity,
-            sleepLog = sleepLog,
+            sleepNight = sleepNight,
             sleepConfig = sleepConfig,
             sleepSession = sleepSession,
             focusSignalActivityId = focusSignalActivityId,
@@ -189,7 +192,7 @@ internal fun buildDashboardState(
         },
         weekRows = weekRows,
         dimensions = dimensions,
-        sleep = sleepLog.toSleepState(sleepConfig, sleepSession),
+        sleep = sleepNight.toSleepState(sleepConfig, sleepSession),
         activityOptions = catalogActivities.map { activity ->
             val log = todayLogsByActivity[activity.id]
             val configured = configuredById[activity.id]
@@ -421,7 +424,7 @@ private fun buildDimensions(
 private fun buildSignals(
     activities: List<ActivityDefinition>,
     logsByActivity: Map<String, ActivityLog>,
-    sleepLog: SleepLog?,
+    sleepNight: SleepNight?,
     sleepConfig: SleepConfig,
     sleepSession: SleepSessionState?,
     focusSignalActivityId: String?,
@@ -440,9 +443,9 @@ private fun buildSignals(
         DashboardSignalState(
             kind = DashboardSignalKind.Sleep,
             label = "Sueno",
-            value = sleepLog.sleepValue(sleepConfig, sleepSession),
-            meta = sleepLog.sleepMeta(sleepConfig, sleepSession),
-            status = sleepLog.sleepStatus(sleepSession),
+            value = sleepNight.sleepValue(sleepConfig, sleepSession),
+            meta = sleepNight.sleepMeta(sleepConfig, sleepSession),
+            status = sleepNight.sleepStatus(sleepSession),
         ),
         DashboardSignalState(
             kind = DashboardSignalKind.Project,
@@ -461,35 +464,55 @@ private fun buildSignals(
     )
 }
 
-private fun SleepLog?.sleepValue(
+private fun SleepNight?.sleepValue(
     sleepConfig: SleepConfig,
     sleepSession: SleepSessionState?,
 ): String {
     if (sleepSession != null) return "desde ${sleepSession.startedAt}"
-    val log = this ?: return "--"
-    val minutes = SleepPolicy.minutesBetween(log.sleptAt, log.wokeAt) ?: return "--"
-    val target = sleepConfig.targetMinutes()
-    return "${SleepPolicy.formatDuration(minutes)} de ${SleepPolicy.formatDuration(target)}"
+    val night = this ?: return "--"
+    // For auto-mode nights: use onset→wake epoch millis if available.
+    val onsetMs = night.sleepOnsetAt
+    val wakeMs = night.definitiveWakeAt
+    return if (onsetMs != null && wakeMs != null && wakeMs > onsetMs) {
+        val actualMinutes = ((wakeMs - onsetMs) / 60_000L).toInt()
+        val target = sleepConfig.targetMinutes()
+        "${SleepPolicy.formatDuration(actualMinutes)} de ${SleepPolicy.formatDuration(target)}"
+    } else {
+        // Manual entry: sleptAt/wokeAt are stored in targetSleepAt/targetWakeAt fields for now.
+        // Show the target window as fallback.
+        val target = sleepConfig.targetMinutes()
+        "${SleepPolicy.formatDuration(target)} objetivo"
+    }
 }
 
-private fun SleepLog?.sleepMeta(
+private fun SleepNight?.sleepMeta(
     sleepConfig: SleepConfig,
     sleepSession: SleepSessionState?,
 ): String {
     if (sleepSession != null) return "en descanso"
-    val log = this ?: return "toca registrar"
-    val actual = SleepPolicy.minutesBetween(log.sleptAt, log.wokeAt) ?: return "toca registrar"
-    val target = sleepConfig.targetMinutes()
-    return if (actual >= target) "base cubierta" else "descanso bajo"
+    val night = this ?: return "toca registrar"
+    val score = night.sleepScore
+    return when {
+        score == null -> if (night.source == "manual") "registrado" else "sin lectura"
+        score >= 0.90f -> "base cubierta"
+        score >= 0.70f -> "descanso aceptable"
+        else -> "descanso bajo"
+    }
 }
 
-private fun SleepLog?.sleepStatus(sleepSession: SleepSessionState?): DashboardDimensionStatus =
+private fun SleepNight?.sleepStatus(sleepSession: SleepSessionState?): DashboardDimensionStatus =
     when {
         sleepSession != null -> DashboardDimensionStatus.Motion
         this == null -> DashboardDimensionStatus.Unknown
-        SleepScoring.score(this) >= 0.90f -> DashboardDimensionStatus.Stable
-        SleepScoring.score(this) >= 0.70f -> DashboardDimensionStatus.Motion
-        else -> DashboardDimensionStatus.Attention
+        else -> {
+            val score = sleepScore
+            when {
+                score == null -> DashboardDimensionStatus.Unknown // NoData — no score available
+                score >= 0.90f -> DashboardDimensionStatus.Stable
+                score >= 0.70f -> DashboardDimensionStatus.Motion
+                else -> DashboardDimensionStatus.Attention
+            }
+        }
     }
 
 private fun ActivityDefinition?.activityValue(logsByActivity: Map<String, ActivityLog>): String {
@@ -510,7 +533,7 @@ private fun ActivityDefinition.shortLabel(): String =
 private fun String.projectMeta(): String =
     replace("Proyecto ", "").substringBefore("/").trim().lowercase().ifBlank { "proyecto" }
 
-private fun SleepLog?.toSleepState(
+private fun SleepNight?.toSleepState(
     sleepConfig: SleepConfig,
     sleepSession: SleepSessionState?,
 ): DashboardSleepState =
@@ -531,11 +554,31 @@ private fun SleepLog?.toSleepState(
             digitalWindDownMinutes = sleepConfig.digitalWindDownMinutes,
             pendingStartedAt = sleepSession?.startedAt.orEmpty(),
             pendingDate = sleepSession?.date.orEmpty(),
-            sleptAt = sleptAt,
-            wokeAt = wokeAt,
+            sleptAt = targetSleepAt,   // best-effort display for manual entries
+            wokeAt = targetWakeAt,
             note = note,
         )
     }
+
+/**
+ * Converts a [SleepNight] header (with cached sub-scores) to [SleepNightScore] for scoring path.
+ * Returns null when the night has no scored data (NoData confidence or null sleepScore).
+ * This is the bridge used by [buildDashboardState] to wire today's night into the daily
+ * scoring path (WU-7, design §7 — connect day score to dashboard).
+ */
+private fun SleepNight.toSleepNightScore(): SleepNightScore? {
+    val score = sleepScore ?: return null
+    return SleepNightScore(
+        duration = durationScore ?: 0f,
+        continuity = continuityScore ?: 0f,
+        alignment = alignmentScore ?: 0f,
+        digitalInterruption = digitalInterruptionScore ?: 0f,
+        sleepScore = score,
+        confidence = runCatching {
+            dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence.valueOf(confidenceLevel)
+        }.getOrElse { dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence.NoData },
+    )
+}
 
 private fun SleepConfig.targetMinutes(): Int =
     SleepPolicy.plannedWindowMinutes(targetSleepAt, targetWakeAt)
