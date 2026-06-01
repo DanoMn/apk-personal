@@ -1,5 +1,7 @@
 # Vocal / Autonomía sin límites — Mapa de componentes v0.2
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Estado: borrador vivo\
 Propósito: ordenar los componentes actuales de la app antes de cerrar scoring, configuración o refactors técnicos.
 
@@ -43,6 +45,55 @@ Pero ahora hay que añadir una segunda regla:
 ```text
 No todos los usuarios activan los mismos componentes.
 El score debe calcularse contra la base configurada del usuario, no contra una plantilla universal.
+```
+
+---
+
+## 2.1 Mapa de capas técnicas (actualizado v12)
+
+El sistema implementa estas capas de paquetes. Se lista aquí para que el mapa de
+componentes no diverja del código real.
+
+```text
+platform/telemetry/          — captura de hechos del dispositivo (UsageStats)
+                               sin conceptos de dominio; solo eventos crudos.
+data/local/                  — entidades Room, seed, mappers
+data/repository/             — AutonomiaRepository, TelemetryRepository
+data/worker/                 — DailyClosureWorker, DeviceTelemetryDrainWorker
+domain/sleep/                — scoring de sueño (SleepScoring, SleepPolicy)
+domain/sleep/interpretation/ — interpretación de eventos → NightTimeline
+                               (SleepInterpreter, SleepModels, InterpretationParams)
+domain/scoring/              — motor de score semanal (*Policy.kt)
+domain/abstinence/           — lógica de abstinencias
+domain/activity/             — lógica de actividades
+domain/closure/              — cierre diario
+domain/dashboard/            — proyección para dashboard
+domain/task/                 — lógica de tasks
+ui/dashboard/                — DashboardScreen
+ui/sleep/                    — SleepConfigScreen
+ui/scoring/                  — ScoringScreen
+ui/anchors/                  — AnchorConfig
+ui/supports/                 — SupportsConfigScreen
+ui/sobriety/                 — SobrietyScreen
+ui/tasks/                    — TasksScreen
+```
+
+Flujo de datos del sueño (v12):
+
+```text
+UsageStats (Android)
+  → platform/telemetry/TelemetryCaptureSource
+  → DeviceTelemetryDrainWorker           (WorkManager)
+  → DeviceActivityEventEntity            (Room, device_activity_events)
+  → data/repository/TelemetryRepository
+  → domain/sleep/interpretation/SleepInterpreter
+      → NightTimeline (con SleepSegment[])
+  → domain/sleep/SleepScoring
+      → SleepNightScore (4 sub-scores + sleepScore)
+  → SleepNightEntity + SleepSegmentEntity (Room, sleep_nights / sleep_segments)
+  → domain/scoring/*Policy.kt            (incorporado al score semanal)
+  → ScoreReport → DashboardProjection
+  → Compose (DashboardScreen / ScoringScreen)
 ```
 
 ---
@@ -130,16 +181,18 @@ Nombre UI:
 Sueño
 ```
 
-Concepto técnico esperado inicial:
+Concepto técnico (v12, activo):
 
 ```text
-SleepLog
+SleepNightEntity + SleepSegmentEntity
+(reemplazan a SleepLogEntity, dropeada en migración 11→12)
 ```
 
 Definición:
 
 ```text
-Registro simple del ritmo de sueño como base fisiológica y conductual del estado del usuario.
+Registro automático (vía telemetría del dispositivo) o manual del ritmo de sueño
+como base fisiológica y conductual del estado del usuario.
 ```
 
 El sueño debe considerarse core porque:
@@ -173,17 +226,38 @@ El score no debería subir demasiado.
 Debe aparecer una señal de sueño/ritmo.
 ```
 
-Campos esperados para una primera versión manual/simple:
+Modelo Room vigente (`SleepNightEntity`, tabla `sleep_nights`):
 
 ```text
-date
-sleepStartAt
-wakeAt
-durationMinutes
-quality
-note
-updatedAt
+nightDate          — PK ISO yyyy-MM-dd, fecha del despertar
+targetSleepAt      — objetivo de hora de dormir (e.g. "23:30")
+targetWakeAt       — objetivo de hora de despertar (e.g. "07:30")
+sleepOnsetAt       — epoch ms; null si NoData
+definitiveWakeAt   — epoch ms; null si NoData
+confidenceLevel    — High | Ambiguous | NoData
+durationScore      — sub-score cacheado (recalculable)
+continuityScore    — sub-score cacheado
+alignmentScore     — sub-score cacheado
+digitalInterruptionScore — sub-score cacheado
+sleepScore         — null cuando NoData
+note               — texto libre
+source             — "auto" | "manual"
+updatedAt          — epoch ms
 ```
+
+Modelo de segmentos (`SleepSegmentEntity`, tabla `sleep_segments`):
+
+```text
+id          — PK autoincrement
+nightDate   — FK → sleep_nights.nightDate
+startAt     — epoch ms
+endAt       — epoch ms
+kind        — "Asleep" | "AwakeUse"
+```
+
+Nota: el campo `quality` fue eliminado (bug §10). El scoring usa el pipeline de
+4 componentes: duración (0.40), continuidad (0.25), alineación (0.20),
+interrupción digital (0.15).
 
 Regla UX:
 
@@ -192,88 +266,74 @@ Registrar sueño debe ser muy simple.
 No debe sentirse como tracking médico complejo.
 ```
 
-### 5.1 Idea futura: sueño por telemetría y patrones de desuso
+### 5.1 Sueño por telemetría — IMPLEMENTADO
 
-Registrar manualmente todos los días la hora de dormir y despertar puede volverse tedioso.
+> **Actualización (v12):** esto ya no es una "idea futura". El pipeline de
+> inferencia automática de sueño está implementado y activo.
 
-Idea futura:
+La estimación de sueño a partir de patrones de uso del teléfono está en producción:
 
-```text
-Estimar sueño a partir de patrones de uso y desuso del teléfono.
-```
-
-Hipótesis:
+**Capa `platform/telemetry/`** — captura eventos de dispositivo (UsageStats API):
 
 ```text
-Las personas tienen patrones de inactividad, bloqueo, desbloqueo, uso nocturno y primer uso matutino que podrían ayudar a estimar ventanas probables de sueño.
+TelemetryCaptureSource       — fuente de eventos; lee UsageStats
+UsageStatsTelemetrySource    — implementación concreta vía Android UsageStats
+DeviceTelemetryDrainWorker   — WorkManager worker; drena eventos a Room
+DeviceTelemetryWorkScheduler — programa el worker
+TelemetryPermission          — verifica permiso PACKAGE_USAGE_STATS
+TelemetryEventMapper         — mapea UsageStats → DeviceActivityEvent
+TelemetryGatingPolicy        — controla cuándo se drena
+TelemetryRetentionPolicy     — define cuánto tiempo se retienen eventos
+DeviceActivityEvent          — modelo puro: (eventType, packageName, timestamp, source)
+DeviceActivityEventType      — enum: SCREEN_ON, SCREEN_OFF, UNLOCK, LOCK,
+                               APP_FOREGROUND, APP_BACKGROUND, USER_INTERACTION
 ```
 
-Esta idea podría reducir fricción porque el usuario no tendría que llenar datos diariamente.
+Entidades Room asociadas: `DeviceActivityEventEntity` (device_activity_events) +
+`TelemetryCollectionLeaseEntity` (telemetry_collection_lease).
 
-Configuración mínima posible:
+`TelemetryRepository` vive en `data/repository/`.
+
+**Capa `domain/sleep/interpretation/`** — interpreta eventos en línea de tiempo de sueño:
 
 ```text
-Objetivo de sueño:
-- hora ideal de dormir;
-- hora ideal de despertar;
-- ventana esperada de descanso.
+SleepInterpreter     — objeto puro JVM; convierte List<DeviceActivityEvent>
+                       → NightTimeline. Lógica: ventana 20:00 D-1 → 12:00 D,
+                       agrupa AwakeUse, detecta onset/wake, asigna confidence.
+SleepModels.kt       — modelos de dominio de interpretación:
+  SleepSegment         — segmento (startAt, endAt, kind: Asleep|AwakeUse)
+  SleepSegmentKind     — enum: Asleep, AwakeUse
+  SleepConfidence      — enum: High, Ambiguous, NoData
+  NightTimeline        — resultado: nightDate, segments, sleepOnsetAt,
+                         definitiveWakeAt, confidence
+InterpretationParams — umbrales calibrables (quietGapMillis, etc.)
 ```
 
-Si el usuario incumple sistemáticamente esos objetivos, el sueño afectaría el scoring.
+**Resto de la capa `domain/sleep/`**:
 
-Fuentes futuras posibles:
+```text
+SleepScoring         — aplica el pipeline de 4 componentes a un NightTimeline
+SleepNightScore      — resultado del scoring: 4 sub-scores + sleepScore final
+SleepPolicy          — reglas de política (e.g., qué cuenta como NoData)
+SleepScoringParams   — pesos y umbrales del scoring
+```
 
-| Fuente | Ventaja | Riesgo / pendiente |
-| --- | --- | --- |
-| Telemetría del teléfono | Disponible para más usuarios | Requiere investigación algorítmica seria. |
-| Smartwatch / wearables | Mejor medición de sueño | No todos los usuarios tienen uno. |
-| Registro manual simple | Fácil de implementar | Puede generar fricción diaria. |
-| Bloqueo nocturno de teléfono | Mide y modifica conducta | Debe diseñarse sin sentirse punitivo. |
+Fuentes de sueño disponibles:
+
+| Fuente | Estado |
+| --- | --- |
+| Telemetría del teléfono (UsageStats) | **Implementado** (`platform/telemetry/`) |
+| Registro manual | **Disponible** (source="manual" en SleepNightEntity) |
+| Smartwatch / wearables | No implementado |
+| Bloqueo nocturno de teléfono | No implementado |
+
+Configuración del usuario: `SleepConfigEntity` (tabla `sleep_config`) guarda
+`targetSleepAt` y `targetWakeAt`. Pantalla: `SleepConfigScreen` (`ui/sleep/`).
 
 ### 5.2 Idea futura: bloqueo nocturno como ritual de sueño
 
-Otra posibilidad es usar un sistema tipo ritual o condicionamiento conductual positivo.
-
-No en sentido punitivo, sino como ayuda para crear asociación:
-
-```text
-Usar Vocal antes de dormir = proteger sueño, mente y conducta.
-```
-
-Ejemplo de flujo futuro:
-
-```text
-1. Usuario define objetivo de sueño.
-2. Antes de dormir, activa modo descanso.
-3. La app bloquea o limita el teléfono durante la ventana propuesta.
-4. Al despertar, el usuario desactiva o confirma el descanso.
-5. Esa señal alimenta sueño, conducta y score.
-```
-
-Esto podría conectarse con actividades como:
-
-```text
-No usar celular en la cama antes de dormir.
-```
-
-Esa actividad podría alimentar indirectamente la métrica de sueño/conducta.
-
-Pendiente:
-
-```text
-Esta idea requiere un SDD propio.
-No debe implementarse todavía como parte del MVP sin investigación.
-```
-
-Preguntas futuras:
-
-- ¿Qué telemetría permite Android de forma pública y ética?
-- ¿Qué permisos serían necesarios?
-- ¿Se puede estimar sueño sin invadir privacidad?
-- ¿Qué tan confiable sería la inferencia?
-- ¿Cómo evitar falsos positivos?
-- ¿Cómo lo hacen apps grandes como Instagram u otras plataformas?
-- ¿Existe investigación pública sobre predicción de sueño por uso del teléfono?
+Esta idea sigue pendiente. El pipeline de detección ya existe; el bloqueo nocturno
+activo como "ritual" no está implementado y requiere un SDD propio antes de encararse.
 
 ---
 

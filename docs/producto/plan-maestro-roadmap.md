@@ -44,12 +44,15 @@ sesiones de desarrollo.
 - `isInverted` funcional en `CheckBoxMark`
 - `SectionHeader` con tamaño reducido
 
+### ✅ Completado (posterior a 2026-05-23)
+
+- Catálogo de presets disponible en `SupportsConfigScreen` — `supportOptions` se muestra como lista filtrable por capa con botón "Agregar" por ítem (S1).
+- `SupportsConfigScreen` conectada a la navegación principal vía `AppScreen.Supports` / `onNavigateToSupportsConfig` en `MainActivity.kt` (S2).
+
 ### 🔲 Pendiente
 
 | ID | Tarea | Documentación | Código |
 |----|-------|--------------|--------|
-| S1 | **Agregar del catálogo de presets** — `SupportsConfigScreen` actualmente solo permite crear soportes personalizados. Debe permitir elegir de los 8 presets de Support definidos en `presets-actividades-v1.md` | `presets-actividades-v1.md` (Support section) | `SupportsConfigScreen.kt` |
-| S2 | **Integrar navegación** — `SupportsConfigScreen` no está conectado al drawer ni a "editar soportes" | `plan-reestructuracion-3-capas.md` §2.5 | `MainActivity.kt`, `NavigationDrawer.kt` |
 | S3 | **Inicialización diaria** — Verificar que al empezar un nuevo día, todos los soportes aparezcan como cumplidos por defecto | `configuracion-canonica-sistema-v1.md` §2 | `DashboardViewModel.kt`, `AutonomiaRepository.kt` |
 | S4 | **onResetAll funcional** — El botón "Restablecer todo" necesita un callback real en el ViewModel | `plan-reestructuracion-3-capas.md` §3.7 | `DashboardViewModel.kt`, `DashboardScreen.kt` |
 
@@ -80,28 +83,20 @@ sesiones de desarrollo.
 
 ## 4. Sueño
 
-### ✅ Actual
+### ✅ Actual / Completado (Sueño v1 — Configuración Primero, 2026-05-26)
 
-- `SleepConfigScreen` creada como pagina profunda de configuracion.
+- `SleepConfigScreen` creada como pagina profunda de configuracion (D2).
 - `sleep_config` guarda la fila unica `default` con hora objetivo de dormir, hora objetivo de despertar y descanso digital.
 - `sleep_session_state` guarda la sesion nocturna pendiente iniciada con `Ir a dormir`.
 - Dashboard y configuracion rapida exponen `Ir a dormir` / `Desperte` como acciones automaticas; no se escriben horas manualmente en el panel rapido.
-- `SleepScoring` ya no usa calidad subjetiva; `SleepLogEntity.quality` queda temporalmente por compatibilidad.
-- Nota 2026-05-26: D1, D2 y D4 quedaron implementadas en Sueno v1 - Configuracion Primero.
-
-### 🔲 Pendiente — Configuración
-
-| ID | Tarea | Documentación | Código |
-|----|-------|--------------|--------|
-| D1 | **Quitar botón de calidad** — Decisión de producto: eliminar selector Baja/Aceptable/Buena. No hay forma objetiva de medirla | `configuracion-canonica-sistema-v1.md` §4 | `DashboardPanels.kt` (SleepPanel) |
-| D2 | **Pantalla de configuración de objetivos** — Separar la configuración de objetivos de sueño (horario fijo) del registro diario | `configuracion-canonica-sistema-v1.md` §4 | Nuevo: `SleepConfigScreen.kt` |
+- `SleepScoring.scoreNight()` usa 4 componentes objetivos (duración, continuidad, alineación, interrupción digital); calidad subjetiva eliminada (D1). El método `score(SleepLog)` quedó como legacy `@Deprecated`.
+- Validación de ventana mínima de 5 horas implementada via `SleepPolicy` (D4).
 
 ### 🔲 Pendiente — Visión futura (NO implementar aún)
 
 | ID | Tarea | Documentación |
 |----|-------|--------------|
 | D3 | **Modo "Hora de dormir"** — Botón que bloquea el teléfono durante la ventana configurada. Al desbloquear, registra tiempo dormido. Múltiples segmentos por noche | `configuracion-canonica-sistema-v1.md` §4 |
-| D4 | **Mínimo 5 horas** — Implementar validación de ventana mínima configurable | `configuracion-canonica-sistema-v1.md` §4 |
 | D5 | **Scoring de sueño como base** — Sueño ocupa los primeros ~700 puntos del sistema 700-1000 | `nucleo-dominio-autonomia.md` §Sueño |
 
 ---
@@ -163,8 +158,9 @@ Este roadmap solo lista las dependencias hacia el scoring.
 
 ## Orden recomendado de ejecución
 
-1. **S1, S2** — Soportes funcionales (presets + navegación)
-2. **B2, B3** — Sobriedad: sistema de olvido y respeto al usuario
-3. **D1, D2** — Sueño (quitar calidad + config screen)
-4. **SC1-SC5** — Scoring (scope separado)
-5. **AR1-AR4** — Limpieza arquitectónica
+1. ~~**S1, S2** — Soportes funcionales (presets + navegación)~~ ✅ completado
+2. **S3, S4** — Soportes: inicialización diaria y onResetAll funcional
+3. **B2, B3** — Sobriedad: sistema de olvido y respeto al usuario
+4. ~~**D1, D2** — Sueño (quitar calidad + config screen)~~ ✅ completado
+5. **SC1-SC5** — Scoring (scope separado)
+6. **AR1-AR4** — Limpieza arquitectónica

@@ -1,5 +1,7 @@
 # Mapa de flujos del proyecto — estado actual
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-24
 Proyecto: Vocal / Autonomia sin limites
 Proposito: dejar una referencia visual clara de como fluye la app despues de la
@@ -17,10 +19,12 @@ en el codigo.
 flowchart TD
     Usuario["Usuario"] --> MainActivity["MainActivity"]
     MainActivity --> DashboardScreen["DashboardScreen"]
+    MainActivity --> ScoringScreen["ScoringScreen / Estado Base"]
     MainActivity --> AnchorConfigScreen["AnchorConfigScreen / Mis anclas"]
     MainActivity --> SupportsConfigScreen["SupportsConfigScreen / Soportes"]
     MainActivity --> TasksScreen["TasksScreen / Pendientes"]
     MainActivity --> SobrietyConfigScreen["SobrietyConfigScreen / Sobriedad"]
+    MainActivity --> SleepConfigScreen["SleepConfigScreen / Sueño"]
 
     DashboardScreen --> DashboardSheetHost["DashboardSheetHost / paneles inferiores"]
     DashboardScreen --> NavigationDrawer["NavigationDrawer / menu lateral"]
@@ -35,6 +39,7 @@ flowchart TD
     NavigationDrawer --> SupportsConfigScreen
     NavigationDrawer --> TasksScreen
     NavigationDrawer --> SobrietyConfigScreen
+    NavigationDrawer --> SleepConfigScreen
 
     DashboardSheetHost --> EntryMenu["EntryMenuPanel"]
     DashboardSheetHost --> AnchorPanel["AnchorPanel / registrar ancla"]
@@ -47,9 +52,11 @@ flowchart TD
 ### Lectura rapida
 
 - La pantalla inicial real es `DashboardScreen`.
-- `MainActivity` cambia entre pantallas completas: Dashboard, Mis anclas,
-  Soportes, Pendientes y Sobriedad.
+- `MainActivity` cambia entre pantallas completas: Dashboard, Scoring, Mis anclas,
+  Soportes, Pendientes, Sobriedad y SleepConfig. El enum `AppScreen` lista los 7 valores.
 - El dashboard tambien abre paneles inferiores para registro rapido.
+- `ScoringScreen` muestra el detalle del score semanal ("Estado Base").
+- `SleepConfigScreen` configura la ventana objetivo de sueño y el modo automatico.
 - `SobrietyConfigScreen` gestiona presets opt-in y rachas personalizadas.
 
 ---
@@ -68,8 +75,14 @@ flowchart TD
     Repository --> RiskEvents["riskEventsForDate"]
     Repository --> TasksFlow["tasksFlow"]
     Repository --> AnchorPhrases["anchorPhrasesFlow"]
-    Repository --> SleepFlow["sleepLogForDate"]
+    Repository --> SleepNightFlow["sleepNightForDateFlow"]
+    Repository --> SleepConfigFlow["sleepConfigFlow"]
+    Repository --> SleepSessionFlow["sleepSessionStateFlow"]
     Repository --> FocusSignal["focusSignalActivityIdFlow"]
+
+    SleepNightFlow --> SleepSnapshot["DashboardSleepSnapshot"]
+    SleepConfigFlow --> SleepSnapshot
+    SleepSessionFlow --> SleepSnapshot
 
     LayersFlow --> ViewModel["DashboardViewModel"]
     ConfiguredActivities --> ViewModel
@@ -79,7 +92,7 @@ flowchart TD
     RiskEvents --> ViewModel
     TasksFlow --> ViewModel
     AnchorPhrases --> ViewModel
-    SleepFlow --> ViewModel
+    SleepSnapshot --> ViewModel
     FocusSignal --> ViewModel
 
     ViewModel --> CoreSnapshot["DashboardCoreSnapshot"]
@@ -275,11 +288,35 @@ flowchart TD
 
 ```mermaid
 flowchart TD
+    TelemetryWorker["TelemetryWorker / DeviceActivityEvents"] --> materializeSleepNight["AutonomiaRepository.materializeSleepNight"]
+    materializeSleepNight --> SleepInterpreter["SleepInterpreter / NightTimeline"]
+    SleepInterpreter --> SleepScoring["SleepScoring.scoreNight / 4 componentes"]
+    SleepScoring --> SleepNightEntity["sleep_nights + sleep_segments"]
+
     Dashboard["DashboardScreen"] --> SleepSignal["SignalsSection / Sueño"]
-    SleepSignal --> SleepPanel["SleepPanel"]
-    SleepPanel --> SaveSleep["DashboardViewModel.saveSleep"]
-    SaveSleep --> SleepPolicy["SleepPolicy.validatePlannedWindow"]
-    SleepPolicy --> SleepLog["sleep_logs"]
+    SleepSignal --> SleepPanel["SleepPanel / iniciar sesion manual"]
+    SleepPanel --> StartSession["DashboardViewModel.startSleepSession"]
+    SleepPanel --> FinishSession["DashboardViewModel.finishSleepSession"]
+    StartSession --> RepositoryStart["AutonomiaRepository.startSleepSession"]
+    FinishSession --> RepositoryFinish["AutonomiaRepository.finishSleepSession"]
+    RepositoryStart --> SleepSessionState["sleep_session_state"]
+    RepositoryFinish --> SleepSessionState
+
+    Dashboard --> SleepConfigNav["onNavigateToSleepConfig"]
+    SleepConfigNav --> SleepConfigScreen["SleepConfigScreen"]
+    SleepConfigScreen --> SaveConfig["DashboardViewModel.saveSleepConfig"]
+    SleepConfigScreen --> ToggleAutoMode["DashboardViewModel.toggleSleepAutoMode"]
+    SaveConfig --> SleepConfigEntity["sleep_config"]
+    ToggleAutoMode --> AutoModePrefs["SharedPreferences / sleep_auto_mode_enabled"]
+
+    SleepNightEntity --> sleepNightForDateFlow["sleepNightForDateFlow"]
+    SleepConfigEntity --> sleepConfigFlow["sleepConfigFlow"]
+    SleepSessionState --> sleepSessionStateFlow["sleepSessionStateFlow"]
+    sleepNightForDateFlow --> DashboardSleepSnapshot["DashboardSleepSnapshot"]
+    sleepConfigFlow --> DashboardSleepSnapshot
+    sleepSessionStateFlow --> DashboardSleepSnapshot
+    DashboardSleepSnapshot --> Projection["buildDashboardState"]
+    Projection --> DashboardState["DashboardState.sleep"]
 
     Dashboard --> SobrietySection["SobrietySection"]
     Dashboard --> SobrietyConfig["SobrietyConfigScreen"]
@@ -296,16 +333,24 @@ flowchart TD
     RelapsePanel --> ToggleRelapse["toggleAbstinenceRelapse"]
     ToggleRelapse --> AbstinenceLogRelapse["abstinence_logs / Relapse"]
 
-    AbstinenceTrack --> Projection["buildDashboardState"]
+    AbstinenceTrack --> Projection
     AbstinenceLogClean --> Projection
     AbstinenceLogRelapse --> Projection
-    SleepLog --> Projection
-    Projection --> DashboardState["DashboardState"]
 ```
 
 ### Estado vigente
 
-- Sueño se registra desde el panel inferior.
+- **Sueño v2**: la tabla `sleep_logs` fue dropeada en MIGRATION_11_12. El modelo
+  actual usa `sleep_nights` (una noche) + `sleep_segments` (segmentos de la noche).
+  `sleepLogForDate` es un stub `flowOf(null)` marcado `@Deprecated` (TODO WU-6);
+  el flow real es `sleepNightForDateFlow`.
+- El modo automatico (`toggleSleepAutoMode`) usa `DeviceActivityEventEntity`
+  capturada por telemetria. `SleepInterpreter` convierte esos eventos en una
+  `NightTimeline`; `SleepScoring` la puntua con 4 componentes: duracion 0.40,
+  continuidad 0.25, alineacion 0.20, interrupcion digital 0.15.
+- El modo manual (session start/finish) coexiste con el automatico.
+- `SleepConfigScreen` es una pantalla completa propia (no un panel inferior);
+  configura la ventana objetivo y el toggle de modo automatico.
 - Sobriedad aparece en el dashboard si hay rachas activas y permite marcar limpio.
 - `SobrietyConfigScreen` activa/desactiva presets opt-in y gestiona personalizadas.
 - Recaidas se registran desde el panel inferior para rachas activas.
@@ -364,11 +409,14 @@ flowchart TD
 
 | Area | Archivo principal | Rol |
 |------|-------------------|-----|
-| Navegacion de pantallas | `app/src/main/java/dev/panopt/autonomia/MainActivity.kt` | Cambia entre Dashboard, Mis anclas, Soportes, Pendientes y Sobriedad |
+| Navegacion de pantallas | `app/src/main/java/dev/panopt/autonomia/MainActivity.kt` | Cambia entre las 7 pantallas del enum `AppScreen` |
 | Estado de UI | `app/src/main/java/dev/panopt/autonomia/ui/dashboard/DashboardViewModel.kt` | Combina flujos, recibe acciones y escribe en repositorio |
 | Persistencia | `app/src/main/java/dev/panopt/autonomia/AutonomiaRepository.kt` | Fachada sobre Room, seeds y preferencias |
 | Dominio dashboard | `app/src/main/java/dev/panopt/autonomia/domain/dashboard/DashboardProjection.kt` | Construye `DashboardState` |
 | Modelo de estado | `app/src/main/java/dev/panopt/autonomia/domain/dashboard/DashboardState.kt` | DTOs consumidos por Compose |
+| Scoring | `app/src/main/java/dev/panopt/autonomia/ui/scoring/ScoringScreen.kt` | Detalle del score semanal ("Estado Base") |
+| Sueño config | `app/src/main/java/dev/panopt/autonomia/ui/sleep/SleepConfigScreen.kt` | Configura ventana objetivo y modo automatico de sueño |
+| Sueño dominio | `app/src/main/java/dev/panopt/autonomia/domain/sleep/interpretation/` | `SleepInterpreter` + scoring de 4 componentes |
 | Anclas | `app/src/main/java/dev/panopt/autonomia/ui/anchors/AnchorConfigScreen.kt` | Configuracion completa de Mis anclas |
 | Soportes | `app/src/main/java/dev/panopt/autonomia/ui/supports/SupportsConfigScreen.kt` | Configuracion de Soportes |
 | Pendientes | `app/src/main/java/dev/panopt/autonomia/ui/tasks/TasksScreen.kt` | Pantalla completa de Pendientes |

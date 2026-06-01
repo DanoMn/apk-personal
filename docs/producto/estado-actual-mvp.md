@@ -1,5 +1,7 @@
 # Estado actual del MVP
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha de referencia: 2026-05-20.
 
 ## Que es la app
@@ -38,8 +40,8 @@ La app ya tiene base Android con:
 - Persistencia local con Room.
 - Datos sensibles locales por defecto.
 - Drawer navigation.
-- Pantallas: Dashboard, Checklist, Sobriedad, Progreso, Riesgo, Configuracion.
-- Tablas v1 para capas, actividades, logs, rachas y eventos de riesgo.
+- Pantallas: Dashboard, Scoring, AnchorConfig (anclas), Supports (soportes), Tasks (pendientes), Sobriety, SleepConfig.
+- Tablas v12 para capas, actividades, logs, rachas, sueño, telemetría y scoring.
 - Seed inicial de capas, actividades y rachas.
 - APK debug generable con `build-apk.ps1`.
 
@@ -134,7 +136,6 @@ de sueno, recaidas, abstinencias, uso digital, logs personales ni scoring.
   necesaria cuando el esquema local este estable.
 - No agregar servidor remoto como fuente de datos personales, login
   obligatorio, analytics remotos, nube de logs sensibles ni comunidad.
-- No meter tracking automatico de celular hasta decidir permisos y privacidad.
 - No complejizar algoritmo antes de tener logs confiables.
 - No convertir la app en fitness, productividad pura o moralismo de sobriedad.
 

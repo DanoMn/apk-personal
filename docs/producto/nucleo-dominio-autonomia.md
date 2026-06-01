@@ -1,5 +1,7 @@
 # Nucleo de dominio - Autonomia sin limites
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Estado: puente de nucleo en desarrollo
 
 Este documento define el centro operativo de Vocal para seguir construyendo
@@ -90,19 +92,9 @@ Practicas recurrentes que el usuario elige porque sostienen su base personal.
 
 Son pocas, visibles y centrales.
 
-Conceptualmente son `Activity` configuradas por el usuario como base principal.
-No son el registro diario. El registro diario vive en `ActivityLog`.
-
-Nota sobre el codigo actual:
-
-```text
-El modelo actual se llama TrackedActivity, pero ese nombre es transitorio y
-puede confundir porque suena a actividad ya registrada.
-```
-
-En el dominio futuro, el nombre deberia migrar a algo mas claro como
-`ActivityDefinition`, `ConfiguredActivity` o simplemente `Activity`, segun la
-separacion final del codigo.
+Conceptualmente son `ActivityDefinition` configuradas por el usuario como base principal
+a traves de `UserActivityConfigEntity`. No son el registro diario. El registro
+diario vive en `DailyActivityLogEntity`.
 
 Regla actual de superficie:
 
@@ -171,21 +163,37 @@ Sueno es core.
 No es solo una actividad dentro de Cuerpo. Es base fisiologica y conductual del
 sistema.
 
-En esta etapa se registra manualmente mientras se investiga una fuente mejor.
+El sueño se captura automaticamente via telemetria local del dispositivo
+(`platform/telemetry`). No requiere registro manual. La interpretacion vive en
+`domain/sleep/interpretation/SleepInterpreter`.
 
-Modelo actual:
+Modelo actual (v2):
 
 ```text
-SleepLog
-- date
-- plannedSleepAt
-- plannedWakeAt
-- sleptAt
-- wokeAt
-- quality
-- note
-- updatedAt
+SleepNight  (tabla sleep_nights)
+- noche identificada por fecha de despertar
+
+SleepSegment  (tabla sleep_segments)
+- startAt / endAt
+- kind: Asleep | AwakeUse
 ```
+
+La interpretacion produce un `NightTimeline` con:
+- `sleepOnsetAt`: inicio del bloque de sueno principal.
+- `definitiveWakeAt`: inicio del episodio de vigilia que cierra la noche.
+- `segments`: lista alternada Asleep / AwakeUse.
+- `confidence`: `High` | `Ambiguous` | `NoData`.
+
+El score de sueno tiene 4 componentes (sellados; no cambiar pesos):
+
+```text
+SleepScore = 0.40 · DurationScore
+           + 0.25 · ContinuityScore
+           + 0.20 · ScheduleAlignmentScore
+           + 0.15 · DigitalInterruptionScore
+```
+
+`NoData` no produce score (null, no 0). `Ambiguous` produce score atenuado.
 
 Regla de dominio:
 
@@ -204,14 +212,14 @@ aceptar objetivos desde 5 horas en adelante.
 
 El score de sueno no debe castigar a alguien por elegir 5, 6, 7 u 8 horas. Debe
 leer si la persona cumplio razonablemente la ventana que ella misma configuro,
-junto con calidad subjetiva y consistencia.
+junto con continuidad y alineacion de horario.
 
 Distincion:
 
 ```text
 Minimo configurable: 5 horas.
 Objetivo personal: ventana elegida por el usuario desde 5h en adelante.
-Score de sueno: cumplimiento del objetivo personal + calidad + consistencia.
+Score de sueno: cumplimiento del objetivo + continuidad + alineacion + uso digital nocturno.
 ```
 
 Esto no debe comunicarse como castigo. Debe comunicarse como cuidado:
@@ -219,9 +227,6 @@ Esto no debe comunicarse como castigo. Debe comunicarse como cuidado:
 ```text
 El descanso esta bajo. Volvamos al cuerpo.
 ```
-
-Telemetria, wearables, uso/desuso del telefono o bloqueo nocturno quedan como
-investigacion futura. No entran como requisito de esta etapa.
 
 ### Score y estado de base
 
@@ -559,8 +564,8 @@ senales especiales.
 Mapa:
 
 ```text
-ActivityLog
-SleepLog
+DailyActivityLog
+SleepNight / SleepSegment  (via telemetria automatica)
 AbstinenceLog
 Task
 RiskEvent
@@ -792,7 +797,5 @@ El documento debe sostener estos escenarios:
 - Alinear labels del codigo con tildes visibles del HTML canonico cuando toque
   pulir UI.
 - Seguir refinando pesos y umbrales con datos reales.
-- Investigar sueno automatico, uso del telefono y telemetria solo cuando el
-  nucleo local sea estable.
 - Export/import queda postergado hasta estabilizar el esquema local, pero es
   feature futura necesaria por la decision de datos sensibles locales.
