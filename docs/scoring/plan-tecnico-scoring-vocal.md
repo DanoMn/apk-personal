@@ -11,7 +11,7 @@ conceptual y la realidad del codigo.
 La referencia canonica de formulas, variables y arbol matematico esta en:
 
 ```text
-docs/arbol-scoring-vocal-v1.md
+docs/scoring/arbol-scoring-vocal-v1.md
 ```
 
 Los documentos `sistema-scoring-semanal-vocal-v1.md` y

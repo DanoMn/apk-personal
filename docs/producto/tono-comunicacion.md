@@ -203,4 +203,4 @@ Las frases ancla deben ser:
 
 Fuente vigente:
 
-- `docs/frases-ancla.md` define el catalogo, las familias, la rotacion por fase del dia y el esquema de implementacion.
+- `docs/dominio/frases-ancla.md` define el catalogo, las familias, la rotacion por fase del dia y el esquema de implementacion.

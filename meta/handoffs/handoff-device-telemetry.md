@@ -150,7 +150,7 @@ Estos dos son los que sostienen la reutilización. Si se rompen, se acopla todo.
 
 ## 2. Dónde va (ubicación en la arquitectura existente)
 
-La arquitectura ya lo anticipó. `docs/arquitectura-recomendada-autonomia.md`:
+La arquitectura ya lo anticipó. `docs/dominio/arquitectura-recomendada-autonomia.md`:
 
 - Línea 166-167: *"el dominio no debe saber si los hechos vienen de Room, una API,
   un archivo o **telemetría futura**."*
@@ -224,8 +224,8 @@ con Context7 (Room/Compose/Android actuales) y/o docs oficiales:
 1. Recuperar contexto de Engram (`mem_search` + `mem_get_observation`):
    - `sdd/sleep-redesign/findings` (#593) — hallazgos de Sueño + esta dirección.
    - `sdd-init/apk-personal` — capacidades de testing + Strict TDD.
-2. Leer este handoff + `docs/arquitectura-recomendada-autonomia.md` (capa Platform)
-   + `docs/sleep-feature-preliminar.md` (el primer consumidor).
+2. Leer este handoff + `docs/dominio/arquitectura-recomendada-autonomia.md` (capa Platform)
+   + `docs/sueno/sleep-feature-preliminar.md` (el primer consumidor).
 3. Lanzar **`sdd-explore`** de `device-telemetry`: mecanismo de detección Android
    (§4), contrato de hechos (§3), ubicación (§2). NO mezclar con el consumidor
    (Sueño) — es otro scope.
@@ -261,7 +261,7 @@ con Context7 (Room/Compose/Android actuales) y/o docs oficiales:
 
 - Flujos manual vs automático y su convivencia (¿cuál gana?).
 - "¿Despertó de verdad?" (umbral/debounce), noche fragmentada, frontera detox/inicio de
-  sueño, cierre de la noche. Ver `docs/sleep-feature-preliminar.md` §3.
+  sueño, cierre de la noche. Ver `docs/sueno/sleep-feature-preliminar.md` §3.
 
 ---
 
@@ -269,7 +269,7 @@ con Context7 (Room/Compose/Android actuales) y/o docs oficiales:
 
 ```
 1. device-telemetry (ESTE handoff) → contrato de hechos genérico
-2. Sueño como consumidor          → docs/sleep-feature-preliminar.md
+2. Sueño como consumidor          → docs/sueno/sleep-feature-preliminar.md
 3. Tests con valores confiables    → recién cuando 1 y 2 estén cerrados
 ```
 

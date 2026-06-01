@@ -39,22 +39,22 @@ debe transmitir paz, estructura, calidez y control humano.
 
 La fuente de verdad visual esta en:
 
-- `docs/frontend-design.md`
-- `docs/prototipo/index.html`
-- `docs/prototipo/dashboard.html`
+- `docs/frontend/frontend-design.md`
+- `docs/frontend/prototipo/index.html`
+- `docs/frontend/prototipo/dashboard.html`
 
 La fuente de verdad de producto/dominio esta en:
 
 - `docs/README.md`
-- `docs/estado-actual-mvp.md`
-- `docs/nucleo-dominio-autonomia.md`
-- `docs/especificacion-actividades-sobriedad-v1.md`
-- `docs/definicion-tablas-room-v1.md`
-- `docs/tono-comunicacion.md`
+- `docs/producto/estado-actual-mvp.md`
+- `docs/producto/nucleo-dominio-autonomia.md`
+- `docs/old/especificacion-actividades-sobriedad-v1.md` (archivado — revisar si sigue citándose)
+- `docs/datos-room/definicion-tablas-room-v1.md`
+- `docs/producto/tono-comunicacion.md`
 
 ## Nombres canonicos del frontend
 
-Fuente: `docs/vocal_mapa_componentes_v_0_2_borrador.md` y `docs/nucleo-dominio-autonomia.md`.
+Fuente: `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md` y `docs/producto/nucleo-dominio-autonomia.md`.
 
 Usa estos nombres para TODOS los textos visibles en la UI. No uses los nombres tecnicos en la interfaz.
 

@@ -2,7 +2,7 @@
 
 Fecha: 2026-05-23
 Proyecto: Vocal / Autonomía sin límites
-Fuente canónica: `docs/actividades-ancla-predeterminadas-v1.md`
+Fuente canónica: `docs/datos-room/actividades-ancla-predeterminadas-v1.md`
 Propósito: generar `ActivityDefinitionEntity` seeds. Sin targets, sin metas, sin
 configuración de usuario. Solo definiciones inmutables del catálogo.
 
@@ -21,7 +21,7 @@ configura (tipo, targets, metas) desde la UI. Cero pre-configuración.
 
 ## Mis anclas (Anchor)
 
-33 actividades. Fuente: `docs/actividades-ancla-predeterminadas-v1.md`.
+33 actividades. Fuente: `docs/datos-room/actividades-ancla-predeterminadas-v1.md`.
 
 ### Interior
 

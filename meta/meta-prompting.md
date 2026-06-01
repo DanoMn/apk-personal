@@ -112,7 +112,7 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 * **Duración del Compromiso (`commitmentDurationMonths`)**: Nueva columna nullable (`Int?`) en `user_activity_configs` que indica cuántos meses se sostendrá el compromiso. Si es null, representa "indefinido" (opción preseleccionada por defecto).
 * **Tiempo Objetivo por Sesión (`sessionTargetMinutes`)**: Máximo permitido de 15 horas por día (900 minutos) para evitar desbalances en otras áreas/capas (sueño, cuerpo, vínculos, etc.). Se guarda en `targetValue` en `user_activity_configs`.
 * **Flujo UX de Duración del Compromiso**: Al seleccionar la meta semanal no se abre ningún modal. La recomendación de dejar la duración como `Indefinido` vive dentro del diálogo de meses, y ese diálogo solo se abre cuando el usuario presiona el botón de configuración.
-* **Canon UX de Mis anclas (25/05/2026)**: Fuente vigente en `docs/mis-anclas-ux-canon-v1.md`. Orden del editor: identidad/nombre, tiempo objetivo, meta semanal, duración del compromiso, acciones. Configuración rápida > Anclas ajusta anclas configuradas, no administra catálogo.
+* **Canon UX de Mis anclas (25/05/2026)**: Fuente vigente en `docs/frontend/mis-anclas-ux-canon-v1.md`. Orden del editor: identidad/nombre, tiempo objetivo, meta semanal, duración del compromiso, acciones. Configuración rápida > Anclas ajusta anclas configuradas, no administra catálogo.
 
 ### Pendientes V1 como lista operativa (26/05/2026)
 

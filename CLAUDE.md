@@ -29,8 +29,8 @@ de `AGENTS.md`). Trabajá sin miedo a romper datos de dev:
   soportes predeterminados (`data/local/seed/DefaultSeeds.kt`) y los catálogos
   canónicos son **data predeterminada**, no datos de usuario. NO los borres ni los
   vacíes: son la fuente que repuebla la DB tras cada wipe. Están respaldados por la
-  documentación (`docs/actividades-ancla-predeterminadas-v1.md`,
-  `docs/preset-soportes-v1.md`, `docs/presets-actividades-v1.md`) y deben
+  documentación (`docs/datos-room/actividades-ancla-predeterminadas-v1.md`,
+  `docs/datos-room/preset-soportes-v1.md`, `docs/datos-room/presets-actividades-v1.md`) y deben
   preservarse (`AGENTS.md` #21). "Romper datos de dev" = filas de usuario en la DB;
   nunca = el seed/catálogo canónico.
 
@@ -82,6 +82,27 @@ ajustes de layout— no hace falta compilar.)
 - Instalar en dispositivo: `adb install -r app\build\outputs\apk\debug\app-debug.apk`.
   `minSdk 26` / `targetSdk 36`, sin permisos especiales.
 
+## Contrato de Spec (obligatorio antes de planificar/lanzar SDD)
+
+Antes de autorizar o lanzar CUALQUIER ejecución SDD, la IA **DEBE** evaluar la spec
+contra `meta/guias/contrato-de-spec.md` y aplicar su compuerta (sección 9). Si la
+spec no pasa el checklist —sobre las secciones que apliquen al cambio—, **FRENÁ y pedí
+los detalles faltantes**; no empieces a codificar. La fricción en esta etapa es
+deliberada. (Cambios triviales —ver sección 0— no requieren spec.)
+
+## Contrato de verificación (obligatorio antes de SDD)
+
+Antes de iniciar CUALQUIER fase SDD que toque código, la IA **DEBE** cargar
+`meta/guias/verificacion-por-capas.md` y tratar sus capas como **gates
+obligatorios**. Ninguna capa es opcional. Un cambio NO está "terminado" si una capa
+aplicable quedó en rojo. Saltear una capa = incumplir el contrato.
+
+- El entorno para correr esas capas (emulador, build, lint, logs, captura) vive en
+  `scripts/dev/` — se maneja con `scripts/dev/dev.sh <verbo>`. Guía de uso:
+  `meta/guias/entorno-verificacion.md`.
+- Para cambios **triviales** (strings, imports, layout, limpieza de seeds) NO aplica
+  la escalera completa — vale lo que dice **Build & test** arriba.
+
 ## Arquitectura: hechos → dominio → estado → Compose
 
 Local-first. Room guarda **hechos**; el **dominio** convierte hechos en
@@ -114,8 +135,8 @@ Hechos Room
   → Compose (resumen en DashboardScreen / detalle en ScoringScreen "Estado Base")
 ```
 
-- El contrato matemático está en `docs/arbol-scoring-vocal-v1.md` (fórmulas
-  canónicas) y `docs/plan-tecnico-scoring-vocal.md` (plan técnico, estado por
+- El contrato matemático está en `docs/scoring/arbol-scoring-vocal-v1.md` (fórmulas
+  canónicas) y `docs/scoring/plan-tecnico-scoring-vocal.md` (plan técnico, estado por
   fases, decisiones). Al tocar scoring, esos docs son el spec.
 - La historia semanal es un **cache derivado y versionado**
   (`WeeklyScoreSnapshotEntity` vía `WeeklyScoreSnapshotWriter`), nunca verdad
@@ -123,9 +144,25 @@ Hechos Room
 - El cierre diario (`AutonomiaRepository.closeElapsedActivityDays`) materializa
   estados editables del día en hechos históricos; corre con `DailyClosureWorker`
   (WorkManager, medianoche local) y como garantía al abrir la app.
-- El esquema Room está en versión 10; las migraciones viven en
+- El esquema Room está en versión 12; las migraciones viven en
   `AutonomiaDatabase.kt`. Agregar o alterar entidades exige una migración nueva
   numerada.
+
+## Mapa de documentación
+
+La doc de **producto/contrato** vive en `docs/` (organizada por tema); la doc de
+**proceso de agente** vive en `meta/`. Dónde leer según qué necesites:
+
+- `docs/producto/` — filosofía, visión, estado MVP, roadmap, tono.
+- `docs/frontend/` — diseño visual, UX canónica (anclas/soportes), `prototipo/` (HTML vivo).
+- `docs/dominio/` — modelo conceptual, capas, configuración canónica, frases, flujos.
+- `docs/datos-room/` — esquema Room, seeds/presets canónicos.
+- `docs/scoring/` — contrato matemático y plan técnico del scoring.
+- `docs/sueno/` — feature Sueño y telemetría.
+- `docs/auditorias/` — auditorías técnicas vigentes.
+- `docs/old/` — **archivado/deprecated**: NO usar como contrato vigente.
+- `meta/guias/` — guías de proceso (verificación por capas, contrato de spec, entorno).
+- `meta/handoffs/` — handoffs de sesión. `meta/pendientes.md` — backlog vivo.
 
 ## SDD + memoria
 

@@ -1,50 +1,69 @@
-# Documentacion canonica
+# Documentación canónica
 
-Este directorio separa lo vigente de lo exploratorio. Si hay conflicto entre
-documentos, este orden manda.
+Este directorio guarda la doc de **producto/contrato**, organizada por tema. La doc
+de **proceso de agente** (guías, handoffs, backlog) vive en `meta/`, no acá. Si hay
+conflicto entre documentos, lo vigente manda sobre lo archivado (`old/`).
 
-## 1. Estado actual
+## `producto/` — visión, estado, tono
 
-- `estado-actual-mvp.md`: snapshot vigente del producto, alcance y proximas decisiones.
-- `mapa-flujos-estado-actual-2026-05-24.md`: mapa visual de navegacion, datos, dominio y flujos actuales.
-- `frontend-design.md`: reglas visuales actuales. Reemplaza cualquier idea anterior tipo cyberpunk, terminal o neon.
-- `mis-anclas-ux-canon-v1.md`: patron cerrado de UX/UI para Mis anclas, editor de anclas y Configuracion rapida > Anclas.
-- `tono-comunicacion.md`: voz de la app y reglas para mensajes.
+- `producto/estado-actual-mvp.md`: snapshot del producto, alcance y próximas decisiones.
+- `producto/nucleo-dominio-autonomia.md`: centro conceptual de la app.
+- `producto/vocal-01-filosofia-producto.md`: filosofía de producto ("patas de la mesa").
+- `producto/tono-comunicacion.md`: voz de la app y reglas para mensajes.
+- `producto/plan-maestro-roadmap.md`: hoja de ruta viva por feature.
+- `producto/research-apps-similares.md`: investigación de apps similares (material de apoyo).
 
-## 2. Dominio y datos
+## `frontend/` — diseño visual y UX
 
-- `nucleo-dominio-autonomia.md`: centro conceptual de la app.
-- `configuracion-canonica-sistema-v1.md`: reglas vigentes de configuracion por superficie, incluyendo anclas.
-- `arquitectura-recomendada-autonomia.md`: decision arquitectonica para backend local, dominio, data y UI.
-- `especificacion-actividades-sobriedad-v1.md`: actividades, tipos, checklist y abstinencias.
-- `definicion-tablas-room-v1.md`: esquema Room v1 y tablas actuales.
-- `frases-ancla.md`: catalogo de citas, taxonomias, rotacion por fase del dia y esquema de frases.
+- `frontend/frontend-design.md`: reglas visuales actuales (orgánico/editorial; reemplaza cualquier idea cyberpunk/neón).
+- `frontend/mis-anclas-ux-canon-v1.md`: patrón cerrado de UX/UI para Mis anclas.
+- `frontend/mis-soportes-ux-canon-v1.md`: patrón cerrado de UX/UI para Soportes.
+- `frontend/vocal_mapa_componentes_v_0_2_borrador.md`: mapa de componentes y nombres canónicos.
+- `frontend/prototipo/`: prototipos HTML vivos (`index.html`, `dashboard.html`, `score-states.html`, `styles.css`).
 
-## 3. Prototipos
+## `dominio/` — modelo conceptual y reglas
 
-- `prototipo/index.html`: guia visual viva, iconografia y componentes.
-- `prototipo/dashboard.html`: maqueta mobile del dashboard.
-- `prototipo/score-states.html`: laboratorio de score general y estados del dashboard.
-- `prototipo/styles.css`: estilos base del prototipo inicial.
+- `dominio/configuracion-canonica-sistema-v1.md`: reglas vigentes de configuración por superficie.
+- `dominio/decisiones-capas-actividades-v1.md`: decisiones sobre capas y modelo de actividades.
+- `dominio/arquitectura-recomendada-autonomia.md`: decisión arquitectónica (backend local, dominio, data, UI).
+- `dominio/definicion-reestructuracion-soporte.md`: reglas de dominio de Soportes.
+- `dominio/frases-ancla.md`: catálogo de frases, taxonomías y rotación.
+- `dominio/mapa-flujos-estado-actual-2026-05-24.md`: mapa de navegación, datos y flujos.
 
-## 4. Investigacion y canvas
+## `datos-room/` — esquema y seeds
 
-- `canvas-reestructuracion-autonomia.md`: bitacora viva de decisiones y preguntas. Contiene historia util, pero no siempre es mas autoritativo que `estado-actual-mvp.md`.
-- `research-apps-similares.md`: investigacion de apps similares. Es material de apoyo, no especificacion final.
+- `datos-room/definicion-tablas-room-v1.md`: esquema Room y tablas (⚠ describe v5; real v12 — actualizar).
+- `datos-room/actividades-ancla-predeterminadas-v1.md`: catálogo canónico de anclas predeterminadas.
+- `datos-room/presets-actividades-v1.md`: seed dataset de actividades.
+- `datos-room/preset-soportes-v1.md`: seed dataset de soportes.
 
-## 5. Archivo historico
+## `scoring/` — motor de puntuación
 
-- `alt/`: documentos archivados o reemplazados. Nada debe moverse ahi si todavia aporta decisiones vigentes.
+- `scoring/arbol-scoring-vocal-v1.md`: contrato matemático canónico (fórmulas).
+- `scoring/plan-tecnico-scoring-vocal.md`: plan técnico vivo del scoring.
 
-## Decision de init
+## `sueno/` — feature Sueño
 
-A partir de este punto, el proyecto queda inicializado documentalmente:
+- `sueno/decisiones-diseno-sueno-v1.md`: diseño conceptual cerrado del feature Sueño.
+- `sueno/sleep-feature-preliminar.md`: edge cases del feature (borrador / deuda diferida).
 
-- La direccion visual oficial es organica/editorial.
-- La app es local-first y privacy-first: los datos sensibles viven en el
-  dispositivo; auth futura es opcional.
+## `auditorias/` — auditorías vigentes
+
+- `auditorias/auditoria-permisos-v1.md`: auditoría de permisos Android (v0.3.0).
+
+## `old/` — archivado / deprecated
+
+Documentación histórica o reemplazada. **NO usar como contrato vigente.** Incluye los
+scoring exploratorios, las auditorías ya resueltas, `entidades-room-v1.md`, specs
+pre-reestructuración, etc.
+
+## `alt/` — reservada
+
+Carpeta de archivo declarada, actualmente vacía.
+
+## Decisión de init
+
+- La dirección visual oficial es orgánica/editorial.
+- La app es local-first y privacy-first: los datos sensibles viven en el dispositivo.
 - Room guarda hechos; el dominio calcula inferencias.
-- Export/import cifrado sera la portabilidad futura entre dispositivos.
-- El dashboard debe ser la pantalla inicial real.
-- Las actividades por capa y los tipos medibles siguen en definicion.
-- El tono de comunicacion debe definirse antes de cerrar textos finales.
+- El dashboard es la pantalla inicial real.

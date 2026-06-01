@@ -1,7 +1,7 @@
 # Handoff — Sueño como consumidor de `device-telemetry`
 
 > Para arrancar en **sesión nueva** sin contaminar contexto. Cargar este doc +
-> `docs/sleep-feature-preliminar.md` (edge cases detallados) + recuperar memoria de
+> `docs/sueno/sleep-feature-preliminar.md` (edge cases detallados) + recuperar memoria de
 > Engram (proyecto `apk-personal`).
 >
 > Fecha: 2026-05-29 · Proyecto: apk-personal (Vocal) · Estado del prerrequisito:
@@ -84,7 +84,7 @@ Problemas conocidos (de `sleep-feature-preliminar.md`):
 4. **Scoring incompleto:** `SleepScoring` usa 2 de 4 componentes
    (`duration*0.70 + schedule*0.30`); el árbol pide **4**:
    `Duration 0.40 / Continuity 0.25 / ScheduleAlignment 0.20 / DigitalInterruption 0.15`
-   (`docs/arbol-scoring-vocal-v1.md`). Continuity y DigitalInterruption faltan.
+   (`docs/scoring/arbol-scoring-vocal-v1.md`). Continuity y DigitalInterruption faltan.
 
 ---
 
@@ -142,9 +142,9 @@ completo en `sleep-feature-preliminar.md` §3:
    - `sdd/device-telemetry/spec` (#604) — el contrato de hechos.
    - `device-telemetry/scoping-decisions` (#600) — D1–D8.
    - `sdd-init/apk-personal` (#418) — capacidades de testing + Strict TDD.
-2. Leer este handoff + `docs/sleep-feature-preliminar.md` (§3 edge cases) +
-   `docs/arbol-scoring-vocal-v1.md` (fórmula de los 4 componentes) +
-   `docs/nucleo-dominio-autonomia.md` (Sueño es core).
+2. Leer este handoff + `docs/sueno/sleep-feature-preliminar.md` (§3 edge cases) +
+   `docs/scoring/arbol-scoring-vocal-v1.md` (fórmula de los 4 componentes) +
+   `docs/producto/nucleo-dominio-autonomia.md` (Sueño es core).
 3. Lanzar **`sdd-explore`** de `sleep-consumer`: resolver los edge cases §4 (la parte
    conceptual difícil), decidir el modelo de segmentos y los 4 componentes del scoring.
    **NO** re-explorar telemetría — ya está; solo se consume (§1).
@@ -168,7 +168,7 @@ completo en `sleep-feature-preliminar.md` §3:
 | Flujo manual actual | `AutonomiaRepository.kt:417-471` |
 | Ubicación en capa | `domain/scoring/SpecialLayerScoringPolicy.kt` (sueño → Cuerpo) |
 | Cierre diario | `AutonomiaRepository.closeElapsedActivityDays` + `data/worker/DailyClosureWorker.kt` |
-| Contrato matemático | `docs/arbol-scoring-vocal-v1.md` |
+| Contrato matemático | `docs/scoring/arbol-scoring-vocal-v1.md` |
 
 ---
 

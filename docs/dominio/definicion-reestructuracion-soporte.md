@@ -5,11 +5,11 @@ Proyecto: Vocal / Autonomía sin límites
 Scope: Reestructuración completa del feature Soporte (configuración, dominio, dashboard)
 
 Fuentes:
-- `docs/configuracion-canonica-sistema-v1.md` §2
-- `docs/nucleo-dominio-autonomia.md` §Soportes
-- `docs/presets-actividades-v1.md` §Soportes
-- `docs/definicion-tablas-room-v1.md`
-- `docs/plan-maestro-roadmap.md` §2 (S1-S4)
+- `docs/dominio/configuracion-canonica-sistema-v1.md` §2
+- `docs/producto/nucleo-dominio-autonomia.md` §Soportes
+- `docs/datos-room/presets-actividades-v1.md` §Soportes
+- `docs/datos-room/definicion-tablas-room-v1.md`
+- `docs/producto/plan-maestro-roadmap.md` §2 (S1-S4)
 - Definiciones de UX del producto (2026-05-25)
 
 ---

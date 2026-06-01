@@ -47,10 +47,10 @@ pero hacer que el dominio sea el centro operativo del producto.
 Esta recomendacion parte de:
 
 - `AGENTS.md`;
-- `docs/nucleo-dominio-autonomia.md`;
-- `docs/vocal_mapa_componentes_v_0_2_borrador.md`;
-- `docs/definicion-tablas-room-v1.md`;
-- `docs/estado-actual-mvp.md`;
+- `docs/producto/nucleo-dominio-autonomia.md`;
+- `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md`;
+- `docs/datos-room/definicion-tablas-room-v1.md`;
+- `docs/producto/estado-actual-mvp.md`;
 - codigo actual en `app/src/main/java/dev/panopt/autonomia`;
 - Context7 sobre arquitectura Android moderna.
 

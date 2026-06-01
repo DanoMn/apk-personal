@@ -1,7 +1,7 @@
 # Plan Maestro — Roadmap de desarrollo
 
 Fecha: 2026-05-23
-Fuente: `docs/configuracion-canonica-sistema-v1.md`
+Fuente: `docs/dominio/configuracion-canonica-sistema-v1.md`
 Estado: vivo — se actualiza conforme se completan features.
 
 ---

@@ -6,8 +6,8 @@ corporativa fria.
 
 La fuente visual viva esta en:
 
-- `docs/prototipo/index.html`
-- `docs/prototipo/dashboard.html`
+- `docs/frontend/prototipo/index.html`
+- `docs/frontend/prototipo/dashboard.html`
 
 ## Filosofia principal
 
@@ -101,7 +101,7 @@ No usar monospace para UI general.
 
 ### Mis anclas
 
-El patron canonico de Mis anclas esta en `docs/mis-anclas-ux-canon-v1.md`.
+El patron canonico de Mis anclas esta en `docs/frontend/mis-anclas-ux-canon-v1.md`.
 
 - El editor ordena: identidad/nombre, tiempo objetivo, meta semanal, duracion
   del compromiso y acciones.

@@ -12,7 +12,7 @@ configuración. Este documento es vinculante para cualquier implementación futu
 ### Definición (ya cerrada)
 
 Práctica recurrente que el usuario elige porque construye su base personal. 33
-actividades canónicas en el catálogo. Fuente completa: `docs/actividades-ancla-predeterminadas-v1.md`.
+actividades canónicas en el catálogo. Fuente completa: `docs/datos-room/actividades-ancla-predeterminadas-v1.md`.
 
 ### Reglas de configuración
 
@@ -32,7 +32,7 @@ actividades canónicas en el catálogo. Fuente completa: `docs/actividades-ancla
 
 ### UX/UI vigente
 
-Fuente canonica: `docs/mis-anclas-ux-canon-v1.md`.
+Fuente canonica: `docs/frontend/mis-anclas-ux-canon-v1.md`.
 
 - Orden del editor: identidad/nombre, tiempo objetivo, meta semanal, duracion
   del compromiso, acciones.
@@ -69,7 +69,7 @@ las anclas, no compite con ellas. 8 actividades canónicas en el seed.
 
 ### UX/UI vigente
 
-Fuente canónica: `docs/mis-soportes-ux-canon-v1.md`.
+Fuente canónica: `docs/frontend/mis-soportes-ux-canon-v1.md`.
 
 - El panel de configuración rápida de Soportes tiene una altura máxima del 60%.
 - Las vistas estáticas (cabecera y botón de catálogo) están fuera de la zona de scroll.

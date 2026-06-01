@@ -10,12 +10,12 @@ el codigo respete el dominio.
 
 Fuentes relacionadas:
 
-- `docs/vocal-01-filosofia-producto.md`
-- `docs/vocal_mapa_componentes_v_0_2_borrador.md`
-- `docs/decisiones-capas-actividades-v1.md`
-- `docs/definicion-tablas-room-v1.md`
-- `docs/prototipo/score-states.html`
-- `docs/tono-comunicacion.md`
+- `docs/producto/vocal-01-filosofia-producto.md`
+- `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md`
+- `docs/dominio/decisiones-capas-actividades-v1.md`
+- `docs/datos-room/definicion-tablas-room-v1.md`
+- `docs/frontend/prototipo/score-states.html`
+- `docs/producto/tono-comunicacion.md`
 
 ## Idea central
 
@@ -592,7 +592,7 @@ y muestra `--` / `sin score`.
 
 ## Estados canonicos
 
-La fuente canonica visual es `docs/prototipo/score-states.html`.
+La fuente canonica visual es `docs/frontend/prototipo/score-states.html`.
 
 | Enum tecnico | UI canonica | Rango visible | Lectura |
 | --- | --- | ---: | --- |
@@ -656,7 +656,7 @@ Compose presenta estado y envia acciones.
 La arquitectura recomendada se define con mas detalle en:
 
 ```text
-docs/arquitectura-recomendada-autonomia.md
+docs/dominio/arquitectura-recomendada-autonomia.md
 ```
 
 Decision corta:
@@ -710,7 +710,7 @@ El dashboard no debe contener todo el sistema ni redefinir el dominio.
 
 Su rol es presentar el estado calculado y las superficies principales. El
 contrato concreto vive en el dashboard actual de Compose y en
-`docs/prototipo/dashboard.html`.
+`docs/frontend/prototipo/dashboard.html`.
 
 El dashboard actual debe mantenerse como referencia:
 

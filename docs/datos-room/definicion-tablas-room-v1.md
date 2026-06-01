@@ -1,6 +1,6 @@
 # Definición de tablas Room v1
 
-> **Nota de version**: Actualizado 2026-05-24 — `user_activity_configs` pasa a esquema v5 para anclas: `weeklyFrequencyTarget`, `sessionTargetMinutes` y `commitmentDurationMonths`. `commitmentDurationMonths = null` significa **Indefinido**, no ausencia de configuracion. Fuente canonica: `docs/configuracion-canonica-sistema-v1.md`.
+> **Nota de version**: Actualizado 2026-05-24 — `user_activity_configs` pasa a esquema v5 para anclas: `weeklyFrequencyTarget`, `sessionTargetMinutes` y `commitmentDurationMonths`. `commitmentDurationMonths = null` significa **Indefinido**, no ausencia de configuracion. Fuente canonica: `docs/dominio/configuracion-canonica-sistema-v1.md`.
 
 ## Principio de diseño
 
@@ -110,7 +110,7 @@ Reemplaza el viejo `DisplaySurface`.
 | `Support` | Accion de mantenimiento diario que sostiene dignidad | "Soporte", "Soportes" | **Sin targets** | Inversa: usuario marca lo que NO hizo |
 | `Task` | Pendiente puntual, una sola vez, sin recurrencia | "Pendiente", "Pendientes" | **Sin targets** | Una vez: desaparece al completar |
 
-Fuente canonica de reglas: `docs/configuracion-canonica-sistema-v1.md`.
+Fuente canonica de reglas: `docs/dominio/configuracion-canonica-sistema-v1.md`.
 
 ## Migracion v3 → v4 (MIGRATION_3_4)
 
@@ -205,7 +205,7 @@ Eventos de modo riesgo. No son castigo; son señales para leer patrones después
 ## `anchor_phrases`
 
 Catalogo local de citas ancla. La fuente completa de producto esta en
-`docs/frases-ancla.md`.
+`docs/dominio/frases-ancla.md`.
 
 Regla:
 

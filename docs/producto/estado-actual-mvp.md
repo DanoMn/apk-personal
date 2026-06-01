@@ -26,9 +26,9 @@ La interfaz debe sentirse como:
 
 Referencias internas:
 
-- `docs/frontend-design.md`
-- `docs/prototipo/index.html`
-- `docs/prototipo/dashboard.html`
+- `docs/frontend/frontend-design.md`
+- `docs/frontend/prototipo/index.html`
+- `docs/frontend/prototipo/dashboard.html`
 
 ## MVP funcional actual
 
@@ -68,7 +68,7 @@ Definido a nivel suficiente para MVP:
 - Room guarda hechos y el dominio calcula senales.
 - las anclas nuevas requieren meta semanal (`2..7`) y tiempo por sesion (`1..900`);
 - la duracion del compromiso admite `Indefinido` (`commitmentDurationMonths = null`) y no es frecuencia mensual.
-- la UX cerrada de Mis anclas esta canonizada en `docs/mis-anclas-ux-canon-v1.md`.
+- la UX cerrada de Mis anclas esta canonizada en `docs/frontend/mis-anclas-ux-canon-v1.md`.
 
 ## Lo que sigue abierto
 
@@ -113,7 +113,7 @@ Compose.
 
 Referencia:
 
-- `docs/tono-comunicacion.md`
+- `docs/producto/tono-comunicacion.md`
 
 ### Privacidad, identidad y portabilidad
 

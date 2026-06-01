@@ -995,7 +995,7 @@ Criterio de presets:
 Crear:
 
 ```text
-docs/presets-actividades-v1.md
+docs/datos-room/presets-actividades-v1.md
 ```
 
 Contenido:

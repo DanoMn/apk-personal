@@ -4,7 +4,7 @@
 > de la feature de Sueño y los edge cases detectados. **`device-telemetry` YA está
 > entregado** (en `main`), así que el prerrequisito está resuelto: este doc es ahora
 > el **apéndice de edge cases** del handoff de arranque
-> **`docs/handoff-sleep-consumer.md`** — empezá por ahí.
+> **`meta/handoffs/handoff-sleep-consumer.md`** — empezá por ahí.
 >
 > Fecha: 2026-05-29 · Proyecto: apk-personal (Vocal)
 
@@ -53,7 +53,7 @@ Lo que falta es **conectar Sueño como consumidor**. El flujo de Sueño hoy sigu
 4. **El scoring usa 2 de 4 componentes** (`SleepScoring`: `duration*0.70 +
    schedule*0.30`); el árbol pide `0.40 / 0.25 / 0.20 / 0.15`
    (Duration / Continuity / ScheduleAlignment / DigitalInterruption). Ver
-   `docs/arbol-scoring-vocal-v1.md`.
+   `docs/scoring/arbol-scoring-vocal-v1.md`.
 
 ---
 
@@ -135,10 +135,10 @@ El flujo correcto, con cada caja ignorando a la siguiente:
 ## 6. Dependencia y secuencia
 
 1. ✅ **HECHO**: `device-telemetry` (infraestructura genérica de captura) — entregado
-   en `main`, ciclo SDD completo (archive Engram #611). Ver `docs/handoff-device-telemetry.md`.
+   en `main`, ciclo SDD completo (archive Engram #611). Ver `meta/handoffs/handoff-device-telemetry.md`.
 2. **AHORA**: explorar Sueño como **consumidor** de ese contrato de hechos, resolver
    los edge cases de la §3, y recién ahí escribir tests con valores esperados
-   confiables. Punto de arranque: **`docs/handoff-sleep-consumer.md`**.
+   confiables. Punto de arranque: **`meta/handoffs/handoff-sleep-consumer.md`**.
 
 > No mezclar ambos scopes: si Sueño y telemetría se exploran juntos, se acopla el
 > productor al consumidor y se pierde la reutilización (tracking de proyecto futuro).
