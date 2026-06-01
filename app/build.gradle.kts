@@ -15,6 +15,12 @@ android {
         versionCode = 3
         versionName = "0.3.0"
     }
+
+    compileOptions {
+        // Empaqueta APIs modernas de java.time/streams (ej. LocalDate.datesUntil,
+        // Stream.toList) dentro del APK para que funcionen desde minSdk 26.
+        isCoreLibraryDesugaringEnabled = true
+    }
 }
 
 ksp {
@@ -43,4 +49,6 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
