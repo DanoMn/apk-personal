@@ -25,22 +25,35 @@ Verify de *"el modelo dice que está bien"* en *"el dispositivo dice que está b
 
 - **cmdline-tools** del SDK en `D:\Android-Studio\cmdline-tools\latest`
   (herramientas `sdkmanager` / `avdmanager`).
-- **Imagen de Android 36**, `google_apis;x86_64` — coincide con el `targetSdk = 36`
-  del proyecto. Es x86_64 porque el host usa WSL2/Hyper-V y el emulador acelera con
-  **WHPX** (no con HAXM).
-- **Dispositivo virtual (AVD)** llamado `vocal_api36` (perfil Pixel 6).
+- **Imágenes de Android x86_64** (aceleradas con **WHPX**, no HAXM, porque el host usa
+  WSL2/Hyper-V). El entorno es **multi-target** para cubrir piso y techo de la app:
+
+  | API | AVD | System image | Para qué |
+  |---|---|---|---|
+  | 26 | `vocal_api26` | `system-images;android-26;google_apis;x86_64` | **Piso / minSdk** — caza bugs clase `NewApi` ejecutando de verdad, no solo con Lint. |
+  | 36 | `vocal_api36` | `system-images;android-36;google_apis;x86_64` | Intermedio (default histórico). |
+  | 37 | `vocal_api37` | `system-images;android-37.0;google_apis_ps16k;x86_64` | **Techo / targetSdk 37** — valida el comportamiento runtime del `targetSdk`. (Imagen de 16 KB de página: el paquete es `android-37.0`, no `android-37`.) |
+
+  Todos perfil Pixel 6. Se elige el target con `-api NN` en cualquier comando (ver tabla).
 
 Los scripts de instalación quedaron versionados en `scripts/dev/_bootstrap-sdk.ps1`
-y `scripts/dev/_bootstrap-avd.ps1` por si hay que rehacerlo en otra máquina.
+y `scripts/dev/_bootstrap-avd.ps1` por si hay que rehacerlo en otra máquina. El bootstrap
+de AVD está parametrizado: `scripts/dev/dev.sh bootstrap -api NN` crea/recrea el AVD de ese
+nivel (mapa explícito api→imagen porque el naming de 37 es asimétrico).
 
 ## Cómo se usa (desde WSL)
 
 Todo pasa por un único comando: `scripts/dev/dev.sh <verbo>`.
 
+> **Target multi-API:** agregá `-api NN` (26 · 36 · 37) a cualquier comando para elegir
+> en qué device corre. Sin el flag, usa el default (36). Ej: `dev.sh run -api 37` valida el
+> techo (targetSdk 37); `dev.sh run -api 26` valida el piso (minSdk).
+
 | Comando | Qué hace |
 |---|---|
+| `dev.sh bootstrap -api NN` | Crea/recrea el AVD del API objetivo (26/36/37). Descarga grande la 1ª vez. |
 | `dev.sh doctor` | Diagnóstico: adb, emulador, aceleración, AVDs, dispositivos. |
-| `dev.sh emu-start` | Prende el emulador (sin ventana) y espera el boot. |
+| `dev.sh emu-start [-api NN]` | Prende el emulador (sin ventana) y espera el boot. |
 | `dev.sh emu-start -window` | Igual, pero con ventana visible (si querés mirarlo vos). |
 | `dev.sh emu-stop` | Apaga el emulador. |
 | `dev.sh emu-status` | Muestra dispositivos y si terminó de bootear. |

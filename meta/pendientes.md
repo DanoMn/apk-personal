@@ -52,10 +52,15 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
     caliente). Política de boot: **default arrancá; salteá solo si el cambio es
     inequívocamente dominio puro; ante la duda, arrancá.** Detalle en
     `meta/guias/verificacion-por-capas.md` (sección "Ejecución").
-- [ ] **Emulador API 26 (minSdk).** El AVD actual es API 36, no prueba el
-  comportamiento en dispositivos viejos. Un AVD API 26 cazaría la clase de bug
-  `NewApi` también ejecutando, no solo con Lint. Agregar como segundo target del
-  entorno.
+- [x] **Entorno multi-target de emulador (HECHO 2026-06-01).** El entorno pasó de un
+  solo AVD (API 36) a **tres**: `vocal_api26` (piso/minSdk), `vocal_api36` (intermedio),
+  `vocal_api37` (techo/targetSdk). Bootstrap parametrizado (`dev.sh bootstrap -api NN`,
+  mapa explícito api→imagen porque el naming de 37 es asimétrico: `android-37.0;google_apis_ps16k`).
+  Selector `-api NN` en todos los comandos; `emu-start`/`run` son **AVD-aware** (matan el
+  AVD equivocado y arrancan el pedido, con poll-until-gone para evitar `more than one device`).
+  **Verificado:** API 26 bootea y reporta `ro.build.version.sdk=26`; API 37 reporta 37.
+  Bugs cazados y arreglados en el camino: `IndexOf` sobre `$Rest` null (crash de `emu-stop`)
+  y el race de dos emuladores vivos al cambiar de target.
 - [ ] **Device-admin del sueño en emulador.** El `SleepDeviceAdminReceiver` puede
   exigir un tap manual; no se pudo forzar 100% por adb. Investigar si hay vía
   (`dpm set-active-admin` u otra) para activarlo en el emulador y automatizar las
@@ -92,9 +97,10 @@ cerrada. (Quedan 2 warnings de *compile* preexistentes —`SleepLog` deprecated 
 - [x] **Bumps de plataforma a API 37 (HECHO 2026-06-01).** `compileSdk` 36→37, `targetSdk`
   36→37, `androidx.test.ext:junit` 1.2.1→1.3.0, `androidx.test:runner` 1.6.2→1.7.0. El SDK
   Platform 37 se autoinstaló; `dev.sh lint` da BUILD SUCCESSFUL.
-  - **CAVEAT abierto:** `targetSdk 37` cambia comportamiento en *runtime* y el único AVD
-    es **API 36** — el bump compila pero NO se probó en un device API 37. Cuando se agregue
-    el target de emulador nuevo (ver abajo), correr la app con `targetSdk 37` y validar.
+  - **CAVEAT cerrado (2026-06-01):** ya existe el AVD `vocal_api37`. Para validar el
+    `targetSdk 37` en runtime: `dev.sh run -api 37` (build → emu API 37 → install → launch →
+    logs). El AVD bootea y reporta `ro.build.version.sdk=37`. Queda correr la app real ahí
+    cuando se toque algo sensible a comportamiento de plataforma.
 
 ## Specs / planeación
 

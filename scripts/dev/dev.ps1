@@ -4,7 +4,12 @@
 #
 # Uso:  powershell -ExecutionPolicy Bypass -File scripts\dev\dev.ps1 <comando> [args]
 #
+# Target AVD multi-API:  agregá `-api NN` a cualquier comando para elegir device.
+#   26 = piso/minSdk · 36 = intermedio (default) · 37 = techo/targetSdk.
+#   Ej:  dev.sh run -api 37   ·   dev.sh emu-start -api 26   ·   dev.sh bootstrap -api 37
+#
 # Comandos:
+#   bootstrap [-api NN]   Crea/recrea el AVD del API objetivo (default 36). Descarga grande.
 #   emu-start [-window]   Prende el AVD (headless por defecto) y espera el boot.
 #   emu-stop              Apaga el emulador.
 #   emu-status            Muestra dispositivos y si termino de bootear.
@@ -36,12 +41,23 @@ $ProjDir   = 'D:\APK-Personal'
 $Adb       = Join-Path $Sdk 'platform-tools\adb.exe'
 $Emulator  = Join-Path $Sdk 'emulator\emulator.exe'
 $JavaHome  = 'C:\Program Files\Android\Android Studio\jbr'
-$AvdName   = 'vocal_api36'
 $Pkg       = 'dev.panopt.autonomia'
 $Activity  = "$Pkg/.MainActivity"
 $AdminCmp  = "$Pkg/.sleep.SleepDeviceAdminReceiver"
 $Apk       = Join-Path $ProjDir 'app\build\outputs\apk\debug\app-debug.apk'
 $ArtDir    = Join-Path $ProjDir 'scripts\dev\.artifacts'
+
+# --- Target AVD ---
+# Multi-target: 26 = piso/minSdk, 36 = intermedio (default), 37 = techo/targetSdk.
+# Se elige con `-api NN` en cualquier comando (ej: dev.sh run -api 37). Sin flag, usa el default.
+$DefaultApi = 36
+$ApiSel = $DefaultApi
+# $Rest es $null cuando no se pasan args extra (ej. `emu-stop`); guardar antes de IndexOf.
+if ($Rest) {
+    $apiIdx = [Array]::IndexOf($Rest, '-api')
+    if ($apiIdx -ge 0 -and $apiIdx + 1 -lt $Rest.Count) { $ApiSel = [int]$Rest[$apiIdx + 1] }
+}
+$AvdName = "vocal_api$ApiSel"
 
 function Invoke-Adb { & $Adb @args }
 
@@ -67,18 +83,49 @@ function Get-AppPid {
     return (& $Adb shell pidof $Pkg 2>$null | Out-String).Trim()
 }
 
+# Nombre del AVD del emulador corriendo (o $null si no hay ninguno). Permite que -api
+# sea confiable: si corre OTRO AVD distinto al pedido, hay que apagarlo, no reusarlo.
+function Get-RunningAvd {
+    $dev = (& $Adb devices | Select-String 'emulator-')
+    if (-not $dev) { return $null }
+    return (& $Adb emu avd name 2>$null | Select-Object -First 1 | Out-String).Trim()
+}
+
+# Garantiza que el emulador corriendo sea $AvdName: reusa si coincide, mata-y-arranca si no.
+function Ensure-Avd {
+    param([switch]$Windowed)
+    $runningAvd = Get-RunningAvd
+    if ($runningAvd -eq $AvdName) { Write-Output "AVD '$AvdName' ya corriendo."; return (Wait-Boot) }
+    if ($runningAvd) {
+        Write-Output "Hay otro AVD corriendo ('$runningAvd'); lo apago para arrancar '$AvdName'..."
+        & $Adb emu kill 2>$null
+        # Esperar a que el device viejo DESAPAREZCA de verdad antes de arrancar el nuevo;
+        # un sleep fijo deja dos emuladores vivos un instante -> 'more than one device'.
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        while ($sw.Elapsed.TotalSeconds -lt 30) {
+            Start-Sleep -Seconds 2
+            if (-not (& $Adb devices | Select-String 'emulator-')) { break }
+        }
+    }
+    Write-Output "Arrancando AVD '$AvdName'..."
+    $emuArgs = @('-avd', $AvdName, '-no-audio', '-no-boot-anim', '-no-snapshot-save', '-gpu', 'swiftshader_indirect')
+    if (-not $Windowed) { $emuArgs += '-no-window' }
+    Start-Process -FilePath $Emulator -ArgumentList $emuArgs -WindowStyle Hidden
+    return (Wait-Boot)
+}
+
 switch ($Cmd) {
 
+    'bootstrap' {
+        # Crea (o recrea) el AVD del API objetivo. Ej: dev.sh bootstrap -api 37
+        Write-Output "Bootstrap del AVD para API $ApiSel (descarga grande la primera vez)..."
+        & 'powershell.exe' -NoProfile -ExecutionPolicy Bypass -File (Join-Path $ProjDir 'scripts\dev\_bootstrap-avd.ps1') -Api $ApiSel
+        if ($LASTEXITCODE -ne 0) { Write-Output 'BOOTSTRAP FAILED'; exit 1 }
+    }
+
     'emu-start' {
-        $running = (& $Adb devices | Select-String 'emulator-')
-        if ($running) { Write-Output 'Ya hay un emulador corriendo.'; Wait-Boot | Out-Null; break }
-        $windowed = $Rest -contains '-window'
-        Write-Output "Arrancando AVD '$AvdName'..."
-        $emuArgs = @('-avd', $AvdName, '-no-audio', '-no-boot-anim', '-no-snapshot-save', '-gpu', 'swiftshader_indirect')
-        if (-not $windowed) { $emuArgs += '-no-window' }
-        # Arranca el emulador en proceso aparte (no bloquea).
-        Start-Process -FilePath $Emulator -ArgumentList $emuArgs -WindowStyle Hidden
-        Wait-Boot | Out-Null
+        # AVD-aware: reusa si ya corre el AVD pedido, mata-y-arranca si corre otro.
+        Ensure-Avd -Windowed:($Rest -contains '-window') | Out-Null
     }
 
     'emu-stop' {
@@ -199,14 +246,9 @@ switch ($Cmd) {
         Write-Output '== [1/5] build =='
         & "$ProjDir\gradlew.bat" assembleDebug --no-daemon
         if ($LASTEXITCODE -ne 0) { Write-Output 'BUILD FAILED'; exit 1 }
-        # 2. emu
-        Write-Output '== [2/5] emulador =='
-        $running = (& $Adb devices | Select-String 'emulator-')
-        if (-not $running) {
-            $emuArgs = @('-avd', $AvdName, '-no-audio', '-no-boot-anim', '-no-snapshot-save', '-no-window', '-gpu', 'swiftshader_indirect')
-            Start-Process -FilePath $Emulator -ArgumentList $emuArgs -WindowStyle Hidden
-        }
-        if (-not (Wait-Boot)) { exit 1 }
+        # 2. emu (AVD-aware: arranca el AVD pedido, reemplaza si corre otro)
+        Write-Output "== [2/5] emulador ($AvdName) =="
+        if (-not (Ensure-Avd)) { exit 1 }
         # 3. install
         Write-Output '== [3/5] install =='
         if ($clean) { & $Adb uninstall $Pkg 2>$null | Out-Null }
@@ -240,7 +282,8 @@ switch ($Cmd) {
 
     default {
         Write-Output "Comando desconocido: '$Cmd'"
-        Write-Output 'Comandos: emu-start emu-stop emu-status build install launch grant stop-app logcat crash lint shot run doctor'
+        Write-Output 'Comandos: bootstrap emu-start emu-stop emu-status build install launch grant stop-app logcat crash lint shot run doctor'
+        Write-Output 'Target AVD: agregá -api NN (26|36|37) a cualquier comando. Default 36.'
         exit 1
     }
 }
