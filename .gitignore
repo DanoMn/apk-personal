@@ -6,3 +6,6 @@ app/build/
 local.properties
 *.iml
 
+# Claude Code local runtime artifacts (locks, machine-local state)
+.claude/scheduled_tasks.lock
+
