@@ -20,11 +20,11 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
   congelados: auditorias/handoffs/old). Política declarada en CLAUDE.md ("Documentación
   en vivo"): actualizar un doc vivo es parte de "terminado". Header `> **Estado: vivo**`
   estampado en los 23 docs vivos.
-- [ ] **Actualizar contenido de los DRIFT** (mover ≠ actualizar; esto es lo segundo):
-  `datos-room/definicion-tablas-room-v1.md` (dice v5, real v12 + entidades nuevas),
-  `producto/nucleo-dominio-autonomia.md` (modelo `SleepLog`→`SleepNight`),
-  `producto/estado-actual-mvp.md`, `dominio/mapa-flujos-estado-actual-2026-05-24.md`,
-  `producto/plan-maestro-roadmap.md`, `frontend/vocal_mapa_componentes_*`.
+- [x] **Actualizar contenido de los DRIFT (HECHO 2026-06-01).** 6 docs sincronizados
+  con el código vía 6 Sonnet en paralelo + verificación: `definicion-tablas-room-v1`
+  (v12, 22 entidades, historial de migraciones), `nucleo-dominio-autonomia`,
+  `estado-actual-mvp`, `mapa-flujos-estado-actual-2026-05-24`, `plan-maestro-roadmap`,
+  `vocal_mapa_componentes`. Plan: `meta/plan-update-drift-docs.md`.
 - [ ] **AGENTS.md cita `especificacion-actividades-sobriedad-v1.md`** como fuente de
   verdad, pero ese doc está en `old/` (deprecated). Decidir si se deja de citar o se
   reemplaza por los docs que lo absorbieron (`nucleo-dominio` + `configuracion-canonica`).
