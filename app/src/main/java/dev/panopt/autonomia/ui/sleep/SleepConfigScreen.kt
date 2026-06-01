@@ -55,6 +55,7 @@ internal fun SleepConfigScreen(
     onRequestSleepLockPermission: () -> Unit,
     onToggleAutoMode: (enabled: Boolean, onPermissionRequired: () -> Unit) -> Unit = { _, _ -> },
     onOpenTelemetrySettings: () -> Unit = {},
+    onOpenAppDetailsSettings: () -> Unit = {},
     onSave: (targetSleepAt: String, targetWakeAt: String, digitalWindDownMinutes: Int) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -138,10 +139,8 @@ internal fun SleepConfigScreen(
                     showPermissionPrompt = false
                     onToggleAutoMode(wantEnabled) { showPermissionPrompt = true }
                 },
-                onOpenSettings = {
-                    showPermissionPrompt = false
-                    onOpenTelemetrySettings()
-                },
+                onOpenUsageAccess = onOpenTelemetrySettings,
+                onOpenAppDetails = onOpenAppDetailsSettings,
             )
 
             Text(
@@ -194,8 +193,11 @@ internal fun SleepConfigScreen(
  *
  * - When OFF: toggle + explanation. User can activate.
  * - When ON: toggle + active status. User can deactivate.
- * - [showPermissionPrompt]: usage-access permission is required. Show compassionate prompt
- *   with a direct link to the system settings screen (no crash, no silent fail).
+ * - [showPermissionPrompt]: usage-access permission is required. Show a compassionate, two-step
+ *   prompt (no crash, no silent fail). On Android 13+ an app installed from an untrusted source
+ *   (e.g. `adb install`) hits **Restricted Settings**: the Usage-access toggle is greyed out
+ *   until the user first allows restricted settings from the app info screen. Step 1 covers that
+ *   escape hatch; step 2 is the actual Usage-access grant. See handoff follow-up 1.
  *
  * Tono: compasivo, adulto funcional (AGENTS.md).
  */
@@ -205,7 +207,8 @@ private fun AutoModeCard(
     showPermissionPrompt: Boolean,
     palette: DashboardPalette,
     onToggle: (Boolean) -> Unit,
-    onOpenSettings: () -> Unit = {},
+    onOpenUsageAccess: () -> Unit = {},
+    onOpenAppDetails: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -254,7 +257,7 @@ private fun AutoModeCard(
         }
 
         if (showPermissionPrompt) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "Falta el permiso de acceso a uso de apps.",
                     color = palette.textMain,
@@ -263,30 +266,77 @@ private fun AutoModeCard(
                     fontSize = 13.sp,
                 )
                 Text(
-                    text = "Esta es una senal, no una condena. Podes concederlo en Ajustes del sistema. La app nunca comparte esos datos.",
+                    text = "Esta es una senal, no una condena. La app nunca comparte esos datos. Son dos pasos:",
                     color = palette.textMuted,
                     fontFamily = DashboardSans,
                     fontSize = 12.5.sp,
                     lineHeight = 17.sp,
                 )
-                Box(
-                    modifier = Modifier
-                        .height(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(palette.colorCardboard)
-                        .clickable(role = Role.Button, onClick = onOpenSettings)
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Ir a Ajustes",
-                        color = palette.bgBase,
-                        fontFamily = DashboardSans,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.5.sp,
-                    )
-                }
+                PermissionStep(
+                    number = "1",
+                    instruction = "Si el interruptor de Acceso de uso aparece bloqueado, abri la info de la app y, en el menu ⋮, elegi \"Permitir ajustes restringidos\".",
+                    actionLabel = "Abrir info de la app",
+                    palette = palette,
+                    onAction = onOpenAppDetails,
+                )
+                PermissionStep(
+                    number = "2",
+                    instruction = "Despues entra a Acceso de uso y concedelo a Vocal.",
+                    actionLabel = "Ir a Acceso de uso",
+                    palette = palette,
+                    onAction = onOpenUsageAccess,
+                )
             }
+        }
+    }
+}
+
+/**
+ * One numbered step inside the usage-access permission prompt: a calm instruction line plus a
+ * single action button that opens the relevant system settings screen.
+ */
+@Composable
+private fun PermissionStep(
+    number: String,
+    instruction: String,
+    actionLabel: String,
+    palette: DashboardPalette,
+    onAction: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "$number ·",
+                color = palette.colorCardboard,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.5.sp,
+            )
+            Text(
+                text = instruction,
+                color = palette.textMuted,
+                fontFamily = DashboardSans,
+                fontSize = 12.5.sp,
+                lineHeight = 17.sp,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .height(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(palette.colorCardboard)
+                .clickable(role = Role.Button, onClick = onAction)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = actionLabel,
+                color = palette.bgBase,
+                fontFamily = DashboardSans,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.5.sp,
+            )
         }
     }
 }

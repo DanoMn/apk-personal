@@ -200,6 +200,12 @@ class MainActivity : ComponentActivity() {
                             dev.panopt.autonomia.platform.telemetry.TelemetryPermission.settingsIntent(),
                         )
                     },
+                    onOpenAppDetailsSettings = {
+                        startActivity(
+                            dev.panopt.autonomia.platform.telemetry.TelemetryPermission
+                                .appDetailsSettingsIntent(this@MainActivity),
+                        )
+                    },
                     onSave = dashboardViewModel::saveSleepConfig,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
