@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      ObsoleteSdkInt sugiere fusionar `mipmap-anydpi-v26` en `mipmap-anydpi` porque
+      minSdk ya es 26. Es un FALSO-POSITIVO en este caso: son adaptive-icons con
+      `<monochrome>` (iconos tematicos). Mover el recurso fuera de `-v26` rompe el
+      resource linking en AAPT ("error: resource mipmap/ic_launcher not found") —
+      probado y revertido el 2026-06-01. El qualifier `-v26` es lo que genera el
+      template de Android Studio para adaptive icons. Se suprime con razon documentada.
+    -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="src/main/res/mipmap-anydpi-v26" />
+    </issue>
+</lint>

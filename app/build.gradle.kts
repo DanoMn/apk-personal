@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "dev.panopt.autonomia"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.panopt.autonomia"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 3
         versionName = "0.3.0"
     }
@@ -45,8 +45,8 @@ dependencies {
 
     // androidTest dependencies for MigrationTestHelper (SleepMigration11To12Test)
     androidTestImplementation("androidx.room:room-testing:2.8.4")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test:runner:1.7.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 

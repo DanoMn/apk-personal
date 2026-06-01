@@ -64,8 +64,9 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
 ## Limpieza de Lint (no urgente — Warnings/Hints, ninguno bloquea)
 
 Estado tras la pasada de limpieza (2026-06-01): **de 34 warnings + 13 hints a
-5 warnings + 0 hints**, verificado con `dev.sh lint` (BUILD SUCCESSFUL). Lo que
-queda es Balde B (decisiones de plataforma) + un falso-amigo del lint.
+0 warnings + 0 hints**, verificado con `dev.sh lint` (BUILD SUCCESSFUL). Sección
+cerrada. (Quedan 2 warnings de *compile* preexistentes —`SleepLog` deprecated y
+`unsafeCheckOpNoThrow` deprecated— que NO son de lint y son ajenos a esta pasada.)
 
 - [x] `ModifierParameter` (×23 — 22 `DashboardIcons.kt` + 1 `SobrietyConfigScreen.kt`,
   HECHO 2026-06-01). Default `Modifier.size(N.dp)` → `Modifier`, con el tamaño movido
@@ -82,14 +83,18 @@ queda es Balde B (decisiones de plataforma) + un falso-amigo del lint.
 - [x] `UseOfNonLambdaOffsetOverload` (`DashboardScreen.kt:190`, HECHO 2026-06-01) —
   overload lambda `offset { IntOffset(drawerOffset.roundToPx(), 0) }` (lee en layout phase;
   el valor es `animateDpAsState`, evita recomposición por frame).
-- [ ] **`ObsoleteSdkInt` (mipmap-anydpi-v26) — NO aplicar a ciegas.** El lint dice que el
-  qualifier `-v26` sobra con minSdk 26, pero son **adaptive-icons con `<monochrome>`**: mover
-  a `mipmap-anydpi` sin versión **rompe el resource linking** (`AAPT: resource mipmap/ic_launcher
-  not found`) — probado y revertido el 2026-06-01. El `-v26` es lo que genera el template de
-  Studio. Es un falso-amigo del lint; dejar como está o investigar a fondo, sin prisa.
-- [ ] **Balde B (decisiones de plataforma, no limpieza):** `GradleDependency` (compileSdk 37,
-  `androidx.test.ext:junit` 1.3.0, `androidx.test:runner` 1.7.0) y `OldTargetApi`
-  (`build.gradle.kts:14`, targetSdk). Son bumps de versión: se evalúan aparte, con cabeza.
+- [x] **`ObsoleteSdkInt` (mipmap-anydpi-v26) — SUPRIMIDO como falso-positivo (2026-06-01).**
+  El lint dice que el qualifier `-v26` sobra con minSdk 26, pero son **adaptive-icons con
+  `<monochrome>`**: mover a `mipmap-anydpi` sin versión **rompe el resource linking**
+  (`AAPT: resource mipmap/ic_launcher not found`) — probado y revertido. El `-v26` es lo
+  que genera el template de Studio. Se suprimió con razón documentada en `app/lint.xml`
+  (`<ignore path="src/main/res/mipmap-anydpi-v26"/>`), NO se aplicó el merge.
+- [x] **Bumps de plataforma a API 37 (HECHO 2026-06-01).** `compileSdk` 36→37, `targetSdk`
+  36→37, `androidx.test.ext:junit` 1.2.1→1.3.0, `androidx.test:runner` 1.6.2→1.7.0. El SDK
+  Platform 37 se autoinstaló; `dev.sh lint` da BUILD SUCCESSFUL.
+  - **CAVEAT abierto:** `targetSdk 37` cambia comportamiento en *runtime* y el único AVD
+    es **API 36** — el bump compila pero NO se probó en un device API 37. Cuando se agregue
+    el target de emulador nuevo (ver abajo), correr la app con `targetSdk 37` y validar.
 
 ## Specs / planeación
 
