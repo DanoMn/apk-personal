@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,12 +53,12 @@ internal fun AnchorEditorForm(
 ) {
     val initialTotalMinutes = (activity.sessionTargetMinutes ?: activity.targetValue)
         .coerceIn(5, MAX_ANCHOR_SESSION_MINUTES)
-    var wheelHours by remember(activity.id) { mutableStateOf(initialTotalMinutes / 60) }
-    var wheelMinutes by remember(activity.id) { mutableStateOf(initialTotalMinutes % 60) }
+    var wheelHours by remember(activity.id) { mutableIntStateOf(initialTotalMinutes / 60) }
+    var wheelMinutes by remember(activity.id) { mutableIntStateOf(initialTotalMinutes % 60) }
     val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, MAX_ANCHOR_SESSION_MINUTES)
 
     var weeklyFrequencyTarget by remember(activity.id) {
-        mutableStateOf(normalizeWeeklyFrequencyTarget(activity.weeklyFrequencyTarget))
+        mutableIntStateOf(normalizeWeeklyFrequencyTarget(activity.weeklyFrequencyTarget))
     }
     var commitmentDurationMonths by remember(activity.id) {
         mutableStateOf(activity.commitmentDurationMonths)

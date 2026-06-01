@@ -23,6 +23,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,7 +65,7 @@ internal fun SleepConfigScreen(
     var targetSleepAt by remember(sleep.targetSleepAt) { mutableStateOf(sleep.targetSleepAt) }
     var targetWakeAt by remember(sleep.targetWakeAt) { mutableStateOf(sleep.targetWakeAt) }
     var windDownMinutes by remember(sleep.digitalWindDownMinutes) {
-        mutableStateOf(sleep.digitalWindDownMinutes)
+        mutableIntStateOf(sleep.digitalWindDownMinutes)
     }
     var error by remember { mutableStateOf<String?>(null) }
     var showPermissionPrompt by remember { mutableStateOf(false) }

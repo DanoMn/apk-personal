@@ -1,6 +1,7 @@
 package dev.panopt.autonomia
 
 import android.content.Context
+import androidx.core.content.edit
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceRelapseEventEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
@@ -81,17 +82,17 @@ class AutonomiaRepository(context: Context) {
         _isInitialConfigurationComplete.asStateFlow()
 
     suspend fun setDarkMode(enabled: Boolean) {
-        prefs.edit().putBoolean("dark_mode", enabled).apply()
+        prefs.edit { putBoolean("dark_mode", enabled) }
         _isDarkMode.value = enabled
     }
 
     suspend fun setFocusSignalActivity(activityId: String?) {
-        prefs.edit().putString("focus_signal_activity_id", activityId).apply()
+        prefs.edit { putString("focus_signal_activity_id", activityId) }
         _focusSignalActivityId.value = activityId
     }
 
     suspend fun setInitialConfigurationComplete(completed: Boolean) {
-        prefs.edit().putBoolean("initial_configuration_complete", completed).apply()
+        prefs.edit { putBoolean("initial_configuration_complete", completed) }
         _isInitialConfigurationComplete.value = completed
     }
 
@@ -630,7 +631,7 @@ class AutonomiaRepository(context: Context) {
         } else {
             DeviceTelemetryWorkScheduler.unregister(appContext, "sleep")
         }
-        prefs.edit().putBoolean("sleep_auto_mode_enabled", enabled).apply()
+        prefs.edit { putBoolean("sleep_auto_mode_enabled", enabled) }
         _isSleepAutoModeEnabled.value = enabled
         return SleepAutoModeResult.Success(enabled)
     }

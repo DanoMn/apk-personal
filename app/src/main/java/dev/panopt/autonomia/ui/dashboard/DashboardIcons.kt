@@ -27,9 +27,9 @@ import kotlin.math.min
 @Composable
 internal fun InteriorLayerIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val outer = Path().apply {
                 moveTo(12f, 2f)
@@ -58,9 +58,9 @@ internal fun InteriorLayerIcon(
 @Composable
 internal fun VinculosLayerIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val outer = Path().apply {
                 moveTo(12f, 2f)
@@ -93,9 +93,9 @@ internal fun VinculosLayerIcon(
 @Composable
 internal fun ProjectTriangleIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val triangle = Path().apply {
                 moveTo(12f, 2f)
@@ -111,7 +111,7 @@ internal fun ProjectTriangleIcon(
 @Composable
 internal fun WavesIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     MultiPathStrokeIcon(
         color = color,
@@ -127,9 +127,9 @@ internal fun WavesIcon(
 @Composable
 internal fun InfinityIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val path = Path().apply {
                 moveTo(18.2f, 7.6f)
@@ -156,7 +156,7 @@ internal fun InfinityIcon(
 @Composable
 internal fun SleepIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     val moon = remember {
         PathParser().parsePathString(
@@ -169,7 +169,7 @@ internal fun SleepIcon(
         ).toPath()
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawPathInViewport(moon, viewport = 24f, color = color, style = Fill)
         drawPathInViewport(
             path = star,
@@ -183,9 +183,9 @@ internal fun SleepIcon(
 @Composable
 internal fun GlassWaterIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             val glass = Path().apply {
@@ -212,7 +212,7 @@ internal fun GlassWaterIcon(
 @Composable
 internal fun IntimateBoundaryIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     val outer = remember {
         PathParser().parsePathString(
@@ -226,7 +226,7 @@ internal fun IntimateBoundaryIcon(
         PathParser().parsePathString("M12 10.55l1.25 1.25L12 13.05l-1.25-1.25L12 10.55z").toPath()
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawPathInViewport(outer, 24f, color, Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         drawPathInViewport(inner, 24f, color, Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         drawPathInViewport(center, 24f, color, Fill)
@@ -236,7 +236,7 @@ internal fun IntimateBoundaryIcon(
 @Composable
 internal fun NoPhoneBedIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     MultiPathStrokeIcon(
         color = color,
@@ -257,9 +257,9 @@ internal fun NoPhoneBedIcon(
 @Composable
 internal fun MenuIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             drawLine(color, Offset(4f, 12f), Offset(20f, 12f), strokeWidth = stroke.width, cap = StrokeCap.Round)
@@ -272,9 +272,9 @@ internal fun MenuIcon(
 @Composable
 internal fun SearchIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             drawCircle(
                 color = color,
@@ -296,9 +296,9 @@ internal fun SearchIcon(
 @Composable
 internal fun XIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             drawLine(color, Offset(18f, 6f), Offset(6f, 18f), strokeWidth = 1.5f, cap = StrokeCap.Round)
             drawLine(color, Offset(6f, 6f), Offset(18f, 18f), strokeWidth = 1.5f, cap = StrokeCap.Round)
@@ -309,9 +309,9 @@ internal fun XIcon(
 @Composable
 internal fun ActivityIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val path = Path().apply {
                 moveTo(22f, 12f)
@@ -333,9 +333,9 @@ internal fun ActivityIcon(
 @Composable
 internal fun FlagIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             withTransform({ translate(left = -1.35f, top = 0f) }) {
                 val poleStroke = Stroke(width = 1.6f, cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -370,9 +370,9 @@ internal fun FlagIcon(
 @Composable
 internal fun CheckIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             drawLine(color, Offset(20f, 6f), Offset(9f, 17f), strokeWidth = 1.5f, cap = StrokeCap.Round)
             drawLine(color, Offset(9f, 17f), Offset(4f, 12f), strokeWidth = 1.5f, cap = StrokeCap.Round)
@@ -383,9 +383,9 @@ internal fun CheckIcon(
 @Composable
 internal fun CircleIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawCircle(
             color = color,
             radius = size.minDimension / 2f - 1.5f,
@@ -397,7 +397,7 @@ internal fun CircleIcon(
 @Composable
 internal fun MoonIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     val path = remember {
         PathParser().parsePathString(
@@ -405,7 +405,7 @@ internal fun MoonIcon(
         ).toPath()
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawPathInViewport(
             path = path,
             viewport = 24f,
@@ -418,9 +418,9 @@ internal fun MoonIcon(
 @Composable
 internal fun AnchorIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             drawRoundRect(color, Offset(4f, 5f), Size(3.3f, 3.3f), CornerRadius(0.9f, 0.9f))
@@ -436,9 +436,9 @@ internal fun AnchorIcon(
 @Composable
 internal fun ListTodoIcon(
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawIconViewport {
             val stroke = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             drawLine(color, Offset(13f, 5f), Offset(21f, 5f), strokeWidth = stroke.width, cap = StrokeCap.Round)
@@ -541,13 +541,13 @@ internal fun LayerStackIcon(color: Color) {
 @Composable
 internal fun SpiralLogo(
     color: Color,
-    modifier: Modifier = Modifier.size(38.dp),
+    modifier: Modifier = Modifier,
 ) {
     val path = remember {
         PathParser().parsePathString(SPIRAL_PATH).toPath()
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(38.dp)) {
         val iconSize = min(size.width, size.height)
         val scale = iconSize / 64f
         val dx = (size.width - iconSize) / 2f
@@ -579,14 +579,14 @@ internal const val SPIRAL_PATH =
 internal fun PathStrokeIcon(
     pathData: String,
     color: Color,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
     viewport: Float = 24f,
 ) {
     val path = remember(pathData) {
         PathParser().parsePathString(pathData).toPath()
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         drawPathInViewport(
             path = path,
             viewport = viewport,
@@ -600,13 +600,13 @@ internal fun PathStrokeIcon(
 internal fun MultiPathStrokeIcon(
     color: Color,
     pathData: List<String>,
-    modifier: Modifier = Modifier.size(22.dp),
+    modifier: Modifier = Modifier,
 ) {
     val paths = remember(pathData) {
         pathData.map { PathParser().parsePathString(it).toPath() }
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.size(22.dp)) {
         paths.forEach { path ->
             drawPathInViewport(
                 path = path,

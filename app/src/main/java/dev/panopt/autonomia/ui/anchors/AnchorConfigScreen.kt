@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -740,14 +741,14 @@ private fun ActivityConfigSection(
 ) {
     val initialTotalMinutes = (activity.sessionTargetMinutes ?: activity.targetValue)
         .coerceIn(5, MAX_ANCHOR_SESSION_MINUTES)
-    var wheelHours by remember { mutableStateOf(initialTotalMinutes / 60) }
-    var wheelMinutes by remember { mutableStateOf(initialTotalMinutes % 60) }
+    var wheelHours by remember { mutableIntStateOf(initialTotalMinutes / 60) }
+    var wheelMinutes by remember { mutableIntStateOf(initialTotalMinutes % 60) }
     val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, MAX_ANCHOR_SESSION_MINUTES)
 
     BackHandler(onBack = onDismiss)
 
     var weeklyFrequencyTarget by remember {
-        mutableStateOf(normalizeWeeklyFrequencyTarget(activity.weeklyFrequencyTarget))
+        mutableIntStateOf(normalizeWeeklyFrequencyTarget(activity.weeklyFrequencyTarget))
     }
     var commitmentDurationMonths by remember { mutableStateOf(activity.commitmentDurationMonths) }
     var showCommitmentDurationDialog by remember { mutableStateOf(false) }
@@ -943,12 +944,12 @@ private fun CreateCustomActivitySection(
     onDismiss: () -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var wheelHours by remember { mutableStateOf(0) }
-    var wheelMinutes by remember { mutableStateOf(0) }
+    var wheelHours by remember { mutableIntStateOf(0) }
+    var wheelMinutes by remember { mutableIntStateOf(0) }
     val totalMinutes = (wheelHours * 60 + wheelMinutes).coerceIn(0, MAX_ANCHOR_SESSION_MINUTES)
     var selectedLayerId by remember(layers) { mutableStateOf(layers.firstOrNull()?.id.orEmpty()) }
 
-    var weeklyFrequencyTarget by remember { mutableStateOf(normalizeWeeklyFrequencyTarget(null)) }
+    var weeklyFrequencyTarget by remember { mutableIntStateOf(normalizeWeeklyFrequencyTarget(null)) }
     var commitmentDurationMonths by remember { mutableStateOf<Int?>(null) }
     var showCommitmentDurationDialog by remember { mutableStateOf(false) }
     var showTargetError by remember { mutableStateOf(false) }

@@ -63,22 +63,33 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
 
 ## Limpieza de Lint (no urgente — Warnings/Hints, ninguno bloquea)
 
-Salida de `dev.sh lint` tras el fix de desugaring: 0 errores, 34 warnings, 13 hints.
+Estado tras la pasada de limpieza (2026-06-01): **de 34 warnings + 13 hints a
+5 warnings + 0 hints**, verificado con `dev.sh lint` (BUILD SUCCESSFUL). Lo que
+queda es Balde B (decisiones de plataforma) + un falso-amigo del lint.
 
-- [ ] `ModifierParameter` (×24 en `DashboardIcons.kt`) — el `Modifier` opcional
-  debería tener default `Modifier`. Convención Compose.
-- [ ] `UnusedResources` — `ic_spiral.xml` no se usa. Borrar o cablear.
-- [ ] `UseKtx` (×4 en `AutonomiaRepository.kt`) — usar extensión KTX
-  `SharedPreferences.edit`.
-- [ ] `AutoboxingStateCreation` (13 hints) — preferir `mutableIntStateOf` sobre
-  `mutableStateOf` para Int (micro-perf) en `ActivityValueInputDialog`,
-  `AnchorConfigScreen`, `AnchorEditorForm`, `SleepConfigScreen`.
-- [ ] `GradleDependency` — versiones más nuevas disponibles (compileSdk 37,
-  `androidx.test.ext:junit` 1.3.0, `androidx.test:runner` 1.7.0). Evaluar bump.
-- [ ] `ObsoleteSdkInt` — carpeta `mipmap-anydpi-v26` innecesaria (minSdk ya es 26);
-  fusionar en `mipmap-anydpi`.
-- [ ] `UseOfNonLambdaOffsetOverload` (`DashboardScreen.kt:190`) y
-  `OldTargetApi` (`build.gradle.kts:14`) — revisar.
+- [x] `ModifierParameter` (×23 — 22 `DashboardIcons.kt` + 1 `SobrietyConfigScreen.kt`,
+  HECHO 2026-06-01). Default `Modifier.size(N.dp)` → `Modifier`, con el tamaño movido
+  a `Canvas(modifier = modifier.size(N.dp))`. Equivalente verificado: todos los callers
+  pasan size (gana por `enforceIncoming`), ningún camino quedaba sin tamaño.
+- [x] `UnusedResources` (HECHO 2026-06-01) — borrado `drawable/ic_spiral.xml` (huérfano).
+  OJO: `ic_spiral_foreground.xml` SÍ se usa (es el foreground del launcher); ese se queda.
+- [x] `UseKtx` (×4 en `AutonomiaRepository.kt`, HECHO 2026-06-01) — `prefs.edit { }`
+  (KTX defaultea a `apply()`, equivalente). Extensión de `core-ktx` transitiva (lint
+  solo la sugiere si es resoluble). Si se quiere declarar `core-ktx` explícito = Balde B.
+- [x] `AutoboxingStateCreation` (13 hints, HECHO 2026-06-01) — `mutableIntStateOf` en
+  `ActivityValueInputDialog`, `AnchorConfigScreen`, `AnchorEditorForm`, `SleepConfigScreen`.
+  Los `Int?` nullable (commitmentDurationMonths) NO se tocan (no pueden ir en IntState).
+- [x] `UseOfNonLambdaOffsetOverload` (`DashboardScreen.kt:190`, HECHO 2026-06-01) —
+  overload lambda `offset { IntOffset(drawerOffset.roundToPx(), 0) }` (lee en layout phase;
+  el valor es `animateDpAsState`, evita recomposición por frame).
+- [ ] **`ObsoleteSdkInt` (mipmap-anydpi-v26) — NO aplicar a ciegas.** El lint dice que el
+  qualifier `-v26` sobra con minSdk 26, pero son **adaptive-icons con `<monochrome>`**: mover
+  a `mipmap-anydpi` sin versión **rompe el resource linking** (`AAPT: resource mipmap/ic_launcher
+  not found`) — probado y revertido el 2026-06-01. El `-v26` es lo que genera el template de
+  Studio. Es un falso-amigo del lint; dejar como está o investigar a fondo, sin prisa.
+- [ ] **Balde B (decisiones de plataforma, no limpieza):** `GradleDependency` (compileSdk 37,
+  `androidx.test.ext:junit` 1.3.0, `androidx.test:runner` 1.7.0) y `OldTargetApi`
+  (`build.gradle.kts:14`, targetSdk). Son bumps de versión: se evalúan aparte, con cabeza.
 
 ## Specs / planeación
 

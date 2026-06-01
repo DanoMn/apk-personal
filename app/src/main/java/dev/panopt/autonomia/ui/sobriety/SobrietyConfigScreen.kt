@@ -496,10 +496,11 @@ private fun FullWidthButton(
     palette: DashboardPalette,
     primary: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(),
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
+            .fillMaxWidth()
             .height(46.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (primary) palette.colorCardboard else palette.bgSurface2)

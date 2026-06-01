@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.ui.dashboard.components.ActionButtons
@@ -187,7 +188,7 @@ internal fun DashboardScreen(
             palette = palette,
             isDarkMode = isDarkMode,
             width = drawerWidth,
-            modifier = Modifier.offset(x = drawerOffset),
+            modifier = Modifier.offset { IntOffset(x = drawerOffset.roundToPx(), y = 0) },
             onClose = { isDrawerOpen = false },
             onThemeChange = onThemeChange,
             onOpenScoring = onNavigateToScoring,

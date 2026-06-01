@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,10 +47,10 @@ internal fun ActivityValueInputDialog(
     onSave: (Int) -> Unit
 ) {
     var totalMinutes by remember { 
-        mutableStateOf(activity.actualValue.coerceAtLeast(activity.targetValue)) 
+        mutableIntStateOf(activity.actualValue.coerceAtLeast(activity.targetValue))
     }
-    var hours by remember { mutableStateOf(totalMinutes / 60) }
-    var minutes by remember { mutableStateOf(totalMinutes % 60) }
+    var hours by remember { mutableIntStateOf(totalMinutes / 60) }
+    var minutes by remember { mutableIntStateOf(totalMinutes % 60) }
 
     LaunchedEffect(hours, minutes) {
         totalMinutes = hours * 60 + minutes
