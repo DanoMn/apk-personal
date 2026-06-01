@@ -1,5 +1,7 @@
 # Sueño — Documento preliminar (BORRADOR)
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 > **Estado: requisitos / edge cases (NO diseño cerrado).** Captura lo que se ESPERA
 > de la feature de Sueño y los edge cases detectados. **`device-telemetry` YA está
 > entregado** (en `main`), así que el prerrequisito está resuelto: este doc es ahora

@@ -1,5 +1,7 @@
 # Mis Soportes UX Canon v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-25
 Producto: Vocal / Autonomía sin límites
 Estado: canónico para la configuración rápida de soportes y su panel.

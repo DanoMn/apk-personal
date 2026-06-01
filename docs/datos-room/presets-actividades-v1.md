@@ -1,5 +1,7 @@
 # Presets de actividades — Seed dataset v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-23
 Proyecto: Vocal / Autonomía sin límites
 Fuente canónica: `docs/datos-room/actividades-ancla-predeterminadas-v1.md`

@@ -1,5 +1,7 @@
 # Frases ancla v1 - catalogo, reglas y esquema
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-20  
 Proyecto: Vocal / Autonomia sin limites  
 Objetivo: dejar listo el sistema de frases ancla antes de implementarlo en Room, dominio y dashboard.

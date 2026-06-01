@@ -1,5 +1,7 @@
 # Decisiones de diseño — Sueño (consumidor de `device-telemetry`) v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 > **Estado: DISEÑO CONCEPTUAL CERRADO.** Insumo directo del ciclo SDD
 > (proposal → spec → design → tasks → apply → verify). No es implementación:
 > es el contrato conceptual acordado con el dueño.

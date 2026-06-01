@@ -1,5 +1,7 @@
 # Arquitectura recomendada - Vocal / Autonomia sin limites
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Estado: decision arquitectonica inicial para guiar el backend local y el
 dominio.
 

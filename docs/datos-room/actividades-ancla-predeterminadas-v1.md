@@ -1,5 +1,7 @@
 # Actividades ancla predeterminadas — Vocal / Autonomía sin límites
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-22  
 Estado: Canonización inicial  
 Propósito: declarar el dataset base de actividades ancla predeterminadas para la app.

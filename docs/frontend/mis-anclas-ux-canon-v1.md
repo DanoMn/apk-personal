@@ -1,5 +1,7 @@
 # Mis anclas UX canon v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-25
 Producto: Vocal / Autonomia sin limites
 Estado: canonico para la configuracion de anclas y su panel rapido.

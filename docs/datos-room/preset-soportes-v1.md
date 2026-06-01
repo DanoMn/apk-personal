@@ -1,5 +1,7 @@
 # Preset de Soportes — v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Proyecto: Vocal / Autonomía sin límites  
 Destino: seed de `ActivityDefinitionEntity` para actividades de soporte  
 Estado: propuesta corregida para revisión/implementación  

@@ -164,6 +164,25 @@ La doc de **producto/contrato** vive en `docs/` (organizada por tema); la doc de
 - `meta/guias/` — guías de proceso (verificación por capas, contrato de spec, entorno).
 - `meta/handoffs/` — handoffs de sesión. `meta/pendientes.md` — backlog vivo.
 
+## Documentación en vivo (mantenerla al día — parte de "terminado")
+
+Parte de la doc es **contrato/estado vivo** (sigue al código); otra parte son **fotos
+de un momento** (no se tocan). Cada doc vivo lleva un header `> **Estado: vivo**`.
+
+- **VIVOS** (se actualizan cuando cambia el código que describen): `docs/producto/`,
+  `docs/dominio/`, `docs/datos-room/`, `docs/scoring/`, `docs/frontend/`,
+  `docs/sueno/`. (Excepción: `producto/research-apps-similares.md` es material de
+  apoyo, no vive.)
+- **CONGELADOS** (NO se actualizan; si la realidad cambia, se escribe uno nuevo):
+  `docs/auditorias/` (auditorías fechadas), `meta/handoffs/`, `docs/old/`. Editar un
+  handoff o una auditoría destruye su valor de registro.
+
+**Regla:** si un cambio altera lo que un doc VIVO describe (esquema Room, fórmulas de
+scoring, reglas de superficie, pantallas, flujos), actualizar ese doc es parte de la
+Definición de Terminado —igual que las capas de `meta/guias/verificacion-por-capas.md`—.
+Un cambio NO está terminado si dejó un doc vivo contradiciendo al código. Es
+proporcional: solo el/los doc(s) afectado(s); los cambios triviales no tocan docs.
+
 ## SDD + memoria
 
 - El proyecto usa Spec-Driven Development. El contexto de proyecto, las

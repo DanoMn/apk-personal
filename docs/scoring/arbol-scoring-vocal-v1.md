@@ -1,5 +1,7 @@
 # Arbol de scoring Vocal v1
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Estado: referencia canonica de formulas aprobadas; implementacion v0 iniciada
 Fecha: 2026-05-26
 Producto: Vocal / Autonomia sin limites

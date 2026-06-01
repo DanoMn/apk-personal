@@ -1,5 +1,7 @@
 # Decisiones de diseño - Capas, actividades y modelo de datos
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-20  
 Proyecto: Vocal / Autonomía sin límites  
 Objetivo: normalizar la estructura conceptual y de datos antes de ajustar Room, dominio y UI.

@@ -1,5 +1,7 @@
 # Sistema de diseno frontend
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Este documento es la guia visual vigente de `Vocal / Autonomia sin limites`.
 Reemplaza cualquier direccion anterior tipo cyberpunk, terminal, neon o
 corporativa fria.

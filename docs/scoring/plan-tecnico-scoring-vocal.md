@@ -1,5 +1,7 @@
 # Plan tecnico del sistema de scoring de Vocal
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Estado: fuente de verdad tecnica viva; implementacion v0 en curso
 Fecha: 2026-05-26
 Proyecto: Vocal / Autonomia sin limites

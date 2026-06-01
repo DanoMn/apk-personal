@@ -1,5 +1,7 @@
 # Tono de comunicacion
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 La comunicacion de Vocal es parte del producto. No es decoracion.
 
 La app aparece cuando el usuario puede estar cansado, disperso, avergonzado,

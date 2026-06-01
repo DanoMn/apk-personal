@@ -15,10 +15,11 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
   de docs en CLAUDE.md; README reescrito. Backup en
   `/mnt/d/APK-Personal-backups/docs-backup-2026-06-01.tar.gz`. Plan:
   `meta/plan-reorg-docs.md`.
-- [ ] **Documentación en vivo + política en CLAUDE.md.** Decidir CUÁLES docs son
-  "documentación en vivo" (se actualizan conforme crece el proyecto) y **declarar en
-  CLAUDE.md la regla** de mantenerlos al día al final de cada sesión que los afecte,
-  para evitar doc desactualizada tras cada sesión.
+- [x] **Documentación en vivo + política en CLAUDE.md (HECHO 2026-06-01).** Split
+  vivo/congelado por carpeta (vivos: producto/dominio/datos-room/scoring/frontend/sueno;
+  congelados: auditorias/handoffs/old). Política declarada en CLAUDE.md ("Documentación
+  en vivo"): actualizar un doc vivo es parte de "terminado". Header `> **Estado: vivo**`
+  estampado en los 23 docs vivos.
 - [ ] **Actualizar contenido de los DRIFT** (mover ≠ actualizar; esto es lo segundo):
   `datos-room/definicion-tablas-room-v1.md` (dice v5, real v12 + entidades nuevas),
   `producto/nucleo-dominio-autonomia.md` (modelo `SleepLog`→`SleepNight`),

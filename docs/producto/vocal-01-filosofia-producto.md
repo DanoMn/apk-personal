@@ -1,5 +1,7 @@
 # Vocal / Autonomía sin límites — Filosofía de producto
 
+> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+
 Fecha: 2026-05-21  
 Estado: Documento conceptual base  
 Propósito: ordenar la teoría interna del producto antes de cerrar configuración, score y dashboard.
