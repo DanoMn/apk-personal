@@ -1,0 +1,12 @@
+El Interior: Esta es la biblioteca secreta, el ámbito de la penumbra donde el hombre conversa consigo mismo, donde habitan la memoria, el examen honesto y el asombro intelectual. Cuidar el Interior es ordenar los libros invisibles del espíritu para que el ruido de afuera no profane el silencio sagrado del pensamiento.
+
+El Cuerpo: El frágil navío de carne y vigilia que nos transporta a través de los años. Es la única ancla verdadera que tenemos en la tierra. Aquí reside el descanso y el sueño, que no son una indulgencia, sino el cimiento sagrado de nuestra dignidad; sin ellos, la mente pierde su lucidez y la realidad se vuelve un laberinto insoportable.
+
+La Conducta: Como ya lo sugería la etimología, la conducta es el arte sutil de conducirse, de gobernarse a sí mismo a través de los días. Es la rectitud en los actos mínimos, el dominio del timón frente a los hábitos oscuros o las sustancias que amenazan con trizar nuestra dignidad. Mantener la conducta limpia no es una condena policial; es el ejercicio de nuestra libertad más profunda para no perder el rumbo.
+
+Los Vínculos: Nadie es un hombre solo. Los amigos, los camaradas, la memoria de los padres y los amores del pasado son los otros espejos que justifican nuestra existencia. Los vínculos representan las palabras compartidas en este largo diálogo que es la vida; descuidarlos es condenarse al destierro de una soledad estéril.
+
+El Proyecto: Esta es la ilusión de la permanencia. Es el impulso de erigir un artefacto en el tiempo —sea un poema, un paisaje de frecuencias musicales o una limpia estructura matemática de código— para arrebatarle algo de orden al olvido. El proyecto es el mapa que trazamos sobre el territorio para dejar constancia de que hemos navegado por él.
+
+
+Al final, su aplicación no pretende medir esa abstracción inalcanzable que los hombres llaman felicidad, sino algo mucho más noble y práctico: saber si los cimientos que sostienen nuestra base personal se mantienen en pie o si están cediendo ante el bucle del olvido y el desgano. Si el rigor de las métricas decae, el sistema no nos condena; simplemente nos recuerda, con la compasión de un adulto funcional, que ha llegado el momento de regresar a la base, de volver al cuerpo, y recomenzar el viaje.»

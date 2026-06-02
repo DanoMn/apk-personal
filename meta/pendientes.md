@@ -111,6 +111,26 @@ cerrada. (Quedan 2 warnings de *compile* preexistentes —`SleepLog` deprecated 
   telemetría madure (hoy está afuera a propósito porque la captura de datos está en
   expansión: sueño ahora, avance de proyecto a futuro).
 
+## Onboarding de introducción (SDD `onboarding-introduccion`)
+
+Diseño conceptual cerrado en `meta/instructions/2026-06-02-onboarding-introduccion-diseno.md`.
+Se entrega en **slices encadenados**. Artefactos en `openspec/changes/onboarding-introduccion/`.
+
+- [x] **Slice 1 — gate + estado + esqueleto.** Dominio puro (`OnboardingStep`/`OnboardingFlow`,
+  11 tests verdes), prefs de reanudación + reuso del flag `initial_configuration_complete`,
+  `OnboardingViewModel`, `OnboardingScreen` (Bloque 0 y 4 con copy canónico), gate en
+  `MainActivity` (`AppScreen.Onboarding`). Build + lint + unit tests verdes.
+  - [ ] **Falta verificación en emulador** (no había adb en la sesión): install limpio →
+    Bloque 0; matar a mitad → reanuda; completar → Dashboard y no repite.
+- [x] **Slice 2 — Bloque Anclas** (static-green: `OnboardingAnchorsRule` + tests, `OnboardingAnchorsStep`
+  con picker catálogo + crear propia + gate de 3 capas, wiring en MainActivity con defaults).
+  - [ ] **Falta verificación en emulador** (sin adb en la sesión): agregar/crear/quitar; "Continuar"
+    deshabilitado hasta 3 capas distintas; persistencia al avanzar.
+- [ ] **Slice 3 — Bloque Sueño** (ventana + permiso telemetría salteable). Reemplaza lo de
+  abajo ("Onboarding obligatorio del horario de sueño") — ese pendiente queda subsumido acá.
+- [ ] **Slice 4 — Bloque Sobriedad + persistencia de la intención** (Bloque 0.5).
+- [ ] **Slice 5 — Notificaciones** (B sin-datos ON + A wind-down consentida + `POST_NOTIFICATIONS`).
+
 ## Sueño / configuración (diferido — NO parte del gate de estado por ausencia de sueño)
 
 - [ ] **Onboarding obligatorio del horario de sueño (sin default).** Hoy el sueño

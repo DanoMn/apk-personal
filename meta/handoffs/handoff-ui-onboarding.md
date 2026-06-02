@@ -8,6 +8,19 @@
 
 ---
 
+> **🔄 Actualización 2026-06-02 (diseño conceptual cerrado).** El diseño del
+> onboarding se resolvió en una sesión posterior. La fuente autoritativa ahora es
+> **`meta/instructions/2026-06-02-onboarding-introduccion-diseno.md`** (10 decisiones +
+> copy v3 + mapa de bloques + referencias técnicas). Este handoff se conserva como
+> registro de arranque, pero **donde diga algo distinto al doc de captura, manda el doc
+> de captura**. Correcciones clave: (a) las "Decisiones pendientes" §17 de más abajo
+> quedaron resueltas (ver tabla del doc de captura §5); (b) el sueño **NO se registra a
+> mano** — la sección de notificaciones de abajo estaba equivocada y se corrige inline;
+> (c) el nombre de la app pasa a ser **"Autonomía sin límites"** (retiro de "Vocal":
+> tarea aparte).
+
+---
+
 ## Objetivo de la sesión
 
 El motor de scoring quedó **completo y blindado** (ver
@@ -86,8 +99,13 @@ una ventana silenciosa **23:30→07:30 / 480 min** (`domain/sleep/SleepPolicy.kt
   horaria** (`targetSleepAt`/`targetWakeAt`), no "horas sueltas". Mínimo 5h
   (`MIN_SLEEP_WINDOW_MINUTES = 300`).
 - **Notificaciones (se implementan JUNTO con esta feature):**
-  - Recordatorio para no olvidarse de **registrar** el sueño.
-  - Aviso de **días seguidos sin registrar** (racha de no-registro).
+  - ❌ ~~Recordatorio para no olvidarse de **registrar** el sueño.~~
+  - ❌ ~~Aviso de **días seguidos sin registrar** (racha de no-registro).~~
+  - > **Corregido (2026-06-02):** el sueño se detecta por **telemetría**; NO hay
+    > registro nocturno que recordar (contradecía `docs/sueno/decisiones-diseno-sueno-v1.md`
+    > §2). Modelo final en el doc de captura §2.8: **B ·** aviso de sueño *sin datos /
+    > permiso* (informativa, encendida por defecto) **+ A ·** recordatorio de *hora de
+    > dormir* (consentido en el onboarding). `POST_NOTIFICATIONS` se pide perezoso.
 - Detalle en `meta/pendientes.md` → "Sueño / configuración".
 
 ## El tutorial de introducción (la pieza grande — sin diseñar aún)
