@@ -32,25 +32,22 @@
 | Puerta Inquebrantable | §16.4 | `unbreakableRequires…` + `perfectSingle…` | — | OK |
 | VisibleScore: bordes | §3.2 | asserts en ScoreEngine | clamp <0 / >1, 700 y 1000 sin unit directo | BAJA |
 | StabilityScore: fórmula + conteo semanas | §15 | vía unbreakable | fórmula directa sin test | MEDIA |
-| **Capa activa sin anclas** | §7.3 | **ninguno** | discrepancia código vs contrato (ver abajo) | **DECISIÓN** |
+| Gate config mínima: 3+ capas con ancla | §7.4 | `fewerThanThree…` + `exactlyThree…` | — IMPLEMENTADO (commit 4af47ef) | OK |
 | Guards div-por-cero (regresión) | — | ninguno | protegido en código, sin test que lo blinde | BAJA |
 
-## Requisito de configuración mínima — 3 capas activas con ancla (decisión del dueño 2026-06-01)
+## Requisito de configuración mínima — 3 capas activas con ancla (IMPLEMENTADO 2026-06-01)
 
-Regla definida por el dueño: de las **5 capas** (Interior, Cuerpo, Conducta, Vínculos,
-Proyecto), el scoring exige **mínimo 3 capas activas, cada una con al menos 1 ancla**.
-Hasta **2 capas se pueden prescindir** (dejar inactivas). Esta regla global **contiene**
-el caso atómico §7.3 (una capa activa sin anclas no cuenta para el mínimo).
+Regla del dueño: de las **5 capas**, el scoring exige **mínimo 3 capas activas con al
+menos 1 ancla** (hasta 2 prescindibles). Una capa cuenta solo si está activa Y tiene
+≥1 ancla. **Implementado** en `ScoreEngine` (§7.4 del árbol, commit 4af47ef): con < 3
+capas válidas → `NoData`. Constante `MIN_ACTIVE_LAYERS_WITH_ANCHOR = 3`.
 
-Estado del código (gap a implementar): `ScoreEngine` NO enforce esto — solo exige que
-haya alguna capa activa con algún hecho (`hasAnyFact`). No cuenta "≥3 capas con ancla".
-Pendiente: definir qué pasa si hay < 3 capas válidas (¿NoData? ¿estado "configuración
-incompleta"?) e implementar el gate + su test. Hermano de los gates de sueño (§16.7) y
-onboarding (ver `pendientes.md`).
+Queda aparte (UI, no scoring): el onboarding que OBLIGA a configurar esas 3 capas
+—ver `pendientes.md`—.
 
 ## Orden sugerido de ataque
 
-1. **Sobriedad multi-track (ALTA)** — fórmula core de §13.4, hoy sin ninguna red.
-2. **Capa sin anclas** — decidir producto primero (como hicimos con sueño), luego test.
+1. ~~Sobriedad multi-track (ALTA)~~ — HECHO (commit d3d4c1b).
+2. ~~Gate de 3 capas con ancla~~ — HECHO (commit 4af47ef).
 3. **Curvas (MEDIA)** — TaskMomentum §10.3, RelapseProtection §13.3, Stability §15.
 4. **Defensivos (BAJA)** — VisibleScore bordes, guards div-cero, units directos de Anchor/Support.
