@@ -647,7 +647,41 @@ Entradas:
 - `WeeklyBaseScore`;
 - `WorstLayerScore`;
 - `StabilityEvaluation` (hasTemporalMemory, stabilityScore);
-- `previousState` (desde historial, para histeresis).
+- `previousState` (desde historial, para histeresis);
+- `hasSleepData` (ver 16.7).
+
+### 16.7 Cap por ausencia de registro de sueno (decision 2026-06-01)
+
+Entrada:
+
+```text
+hasSleepData = existe al menos una noche de la semana con sleepScore != null.
+```
+
+Regla:
+
+```text
+Si hasSleepData == false, el estado se topea en En marcha (Motion):
+no puede mostrar Plenitud ni Inquebrantable, sin importar WeeklyBaseScore.
+```
+
+Reglas:
+
+- el cap solo baja el estado; `WeeklyBaseScore`, `visibleScore` y `reasons` se
+  exponen crudos (igual que la histeresis 16.3);
+- no penaliza el numero de Cuerpo: ADR-3 sigue intacto (ausencia != sueno malo).
+  El sueno ausente re-normaliza Cuerpo; este cap actua solo sobre el estado;
+- se aplica despues del ladder de peor capa (16.2) y antes de la puerta
+  Inquebrantable (16.4): al topear en Motion, Plenitud/Inquebrantable quedan
+  bloqueados por construccion.
+
+Razon:
+
+```text
+El sueno es un pilar CORE (30% de Cuerpo). Sin registro, la base no esta completa
+(decisiones-diseno-sueno-v1.md) y mostrar Plenitud mentiria sobre esa completitud.
+Sobriedad es opt-in y no dispara este cap; el sueno no es opt-in.
+```
 
 ## 17. Snapshots semanales
 

@@ -181,11 +181,13 @@ class BaseStatePolicyTest {
         worstLayerScore: Float = 0.80f,
         stability: StabilityEvaluation = stabilityWith(hasMemory = false, score = null),
         previousState: ScoreState? = null,
+        hasSleepData: Boolean = true,
     ): ScoreState = BaseStatePolicy.stateFor(
         weeklyBaseScore = weeklyBaseScore,
         worstLayerScore = worstLayerScore,
         stability = stability,
         previousState = previousState,
+        hasSleepData = hasSleepData,
     )
 
     private fun stabilityWith(hasMemory: Boolean, score: Float?): StabilityEvaluation =

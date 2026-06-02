@@ -9,6 +9,7 @@ internal object BaseStatePolicy {
         worstLayerScore: Float,
         stability: StabilityEvaluation,
         previousState: ScoreState?,
+        hasSleepData: Boolean,
     ): ScoreState {
         val base = weeklyBaseScore.coerceIn(0f, 1f)
 
@@ -22,7 +23,12 @@ internal object BaseStatePolicy {
         val dampedBand = applyHysteresis(rawBand, previousState, base)
 
         // 3. Worst-layer ladder caps
-        val capped = applyWorstLayerCaps(dampedBand, worstLayerScore)
+        val cappedByWorst = applyWorstLayerCaps(dampedBand, worstLayerScore)
+
+        // 3b. Sleep registration cap (§16.7): sin registro de sueño el estado se
+        // topea en Motion — sueño es CORE, no opt-in; sin él la base no está completa.
+        // No toca weeklyBaseScore/visibleScore (crudos); ADR-3 intacto.
+        val capped = if (!hasSleepData) minOf(cappedByWorst, ScoreState.Motion) else cappedByWorst
 
         // 4. Inquebrantable gate (only if we reached Plenitude after caps)
         if (capped == ScoreState.Plenitude &&

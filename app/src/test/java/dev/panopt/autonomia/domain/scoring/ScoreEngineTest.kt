@@ -282,6 +282,46 @@ class ScoreEngineTest {
         assertEquals(6, report.stabilityWeeks)
     }
 
+    @Test
+    fun missingSleepRegistrationCapsStateAtMotionWithoutTouchingTheNumber() {
+        // §16.7: sin registro de sueño el estado se topea en Motion (En marcha),
+        // pero weeklyBaseScore/visibleScore quedan CRUDOS. ADR-3 intacto: el número
+        // de Cuerpo no se penaliza (ausencia ≠ sueño malo), solo se topea el estado.
+        // Con sueño registrado, las mismas anclas perfectas sí suben a Plenitud.
+        val layers = coreLayers()
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
+        val logs = activities.flatMap { activity ->
+            weekDates.map { date -> log(activity.id, date, actualValue = 20) }
+        }
+        val track = abstinenceTrack()
+        val cleanSobriety = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) }
+
+        val withoutSleep = calculate(
+            layers = layers,
+            activities = activities,
+            activityLogs = logs,
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = cleanSobriety,
+            sleepNights = emptyList(),
+        )
+        val withSleep = calculate(
+            layers = layers,
+            activities = activities,
+            activityLogs = logs,
+            abstinenceTracks = listOf(track),
+            abstinenceLogs = cleanSobriety,
+            sleepNights = listOf(sleepNight(score = 1.0f)),
+        )
+
+        // Con sueño registrado: llega a Plenitud.
+        assertEquals(ScoreState.Plenitude, withSleep.state)
+        // Sin registro de sueño: el estado se topea en Motion...
+        assertEquals(ScoreState.Motion, withoutSleep.state)
+        // ...pero el número es IDÉNTICO (no se penaliza, solo se topea el estado).
+        assertEquals(withSleep.visibleScore, withoutSleep.visibleScore)
+        assertEquals(withSleep.weeklyBaseScore, withoutSleep.weeklyBaseScore, 0.001f)
+    }
+
     private fun calculate(
         today: LocalDate = this.today,
         layers: List<Layer>,

@@ -30,5 +30,7 @@ data class WeeklyScoreSnapshotDraft(
 )
 
 object WeeklyScoreSnapshotConstants {
-    const val SCORING_VERSION = "weekly-base-v0"
+    // v1 (2026-06-01): cap de estado por ausencia de registro de sueño (árbol §16.7).
+    // El estado se topea en Motion sin sueño; invalida snapshots v0 (regla de estado distinta).
+    const val SCORING_VERSION = "weekly-base-v1"
 }

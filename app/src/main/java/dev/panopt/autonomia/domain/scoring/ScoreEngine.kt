@@ -40,6 +40,7 @@ object ScoreEngine {
                 worstLayerScore = weeklySummary.worstLayerScore,
                 stability = stability,
                 previousState = previousState,
+                hasSleepData = context.sleepScore != null,
             ),
             visibleScore = visibleScore,
             baseScore = visibleScore,
