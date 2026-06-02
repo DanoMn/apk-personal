@@ -172,6 +172,43 @@ class BaseStatePolicyTest {
         assertEquals(ScoreState.Plenitude, state)
     }
 
+    @Test
+    fun `missing sleep data caps Plenitude at Motion (gate sleep)`() {
+        // Base 0.90 (banda Plenitud) + peor capa 0.85 (sin cap por peor capa).
+        // Sin registro de sueño → el estado se topea en Motion. No toca weeklyBaseScore.
+        val state = stateFor(
+            weeklyBaseScore = 0.90f,
+            worstLayerScore = 0.85f,
+            hasSleepData = false,
+        )
+        assertEquals(ScoreState.Motion, state)
+    }
+
+    @Test
+    fun `missing sleep data blocks Unbreakable even with full stability (gate sleep)`() {
+        // Todo lo demás habilitaría Inquebrantable (base 0.92, peor 0.85, estabilidad 0.95
+        // con memoria). Sin sueño, el cap a Motion gana ANTES de la puerta Inquebrantable.
+        val state = stateFor(
+            weeklyBaseScore = 0.92f,
+            worstLayerScore = 0.85f,
+            stability = stabilityWith(hasMemory = true, score = 0.95f),
+            hasSleepData = false,
+        )
+        assertEquals(ScoreState.Motion, state)
+    }
+
+    @Test
+    fun `with sleep data the same inputs reach Plenitude (control)`() {
+        // Mismo caso que el cap, pero CON registro de sueño → llega a Plenitud.
+        // Demuestra que la diferencia la hace exclusivamente el sueño.
+        val state = stateFor(
+            weeklyBaseScore = 0.90f,
+            worstLayerScore = 0.85f,
+            hasSleepData = true,
+        )
+        assertEquals(ScoreState.Plenitude, state)
+    }
+
     // endregion
 
     // region helpers

@@ -8,6 +8,7 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -65,6 +66,34 @@ class SobrietyScoringPolicyTest {
         )
 
         assertEquals(1.0f, score!!, 0.001f)
+    }
+
+    // --- Guards anti-división-por-cero (regresión) ----------------------------
+
+    @Test
+    fun emptyTracksReturnNull() {
+        // Sin tracks → sobriedad inactiva: no aporta ni limita.
+        val score = SobrietyScoringPolicy.score(
+            tracks = emptyList(),
+            allLogs = emptyList(),
+            todayLogs = emptyList(),
+            weekDates = weekDates,
+            today = today,
+        )
+        assertNull(score)
+    }
+
+    @Test
+    fun emptyWeekDatesReturnNull() {
+        // Guard: weekDates vacío → evaluableDays sería 0 → return null antes de dividir.
+        val score = SobrietyScoringPolicy.score(
+            tracks = listOf(track("trk_alcohol")),
+            allLogs = emptyList(),
+            todayLogs = emptyList(),
+            weekDates = emptyList(),
+            today = today,
+        )
+        assertNull(score)
     }
 
     // --- §13.3 RelapseProtectionScore = exp(-relapseDays / 1.5) ---------------
