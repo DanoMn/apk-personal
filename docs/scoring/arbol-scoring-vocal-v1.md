@@ -569,18 +569,62 @@ Reglas:
 
 ## 15. StabilityScore
 
-La existencia de memoria temporal esta aprobada. La formula final exacta queda
-pendiente de validacion.
+StabilityScore mide la constancia a lo largo del tiempo (memoria temporal). Es una
+de las cuatro condiciones de la puerta `Inquebrantable` (§16.4).
 
-Propuesta historica no canonica:
+### 15.1 Requisito de memoria temporal
 
 ```text
-StabilityScore =
-0.650 * PreviousStabilityScore
-+ 0.350 * WeeklyBaseScore
+REQUIRED_PREVIOUS_WEEKS = 5
 ```
 
-No implementar esta formula como canon sin validacion explicita.
+Se consideran solo las semanas previas versionadas que cumplen:
+
+```text
+entry.scoringVersion == SCORING_VERSION   (misma version de scoring)
+entry.weekStart != currentWeekStart        (no la semana en curso)
+```
+
+Si hay menos de 5 semanas previas validas:
+
+```text
+StabilityScore     = null
+hasTemporalMemory  = false
+evaluatedWeeks     = (semanas previas validas) + 1
+```
+
+`hasTemporalMemory = false` bloquea `Inquebrantable` (§16.4) sin importar el resto.
+
+### 15.2 Formula (canonica)
+
+Con al menos 5 semanas previas validas, se toman las 5 mas recientes (orden
+descendente por `weekStart`) y se les agrega el `WeeklyBaseScore` de la semana en
+curso: una ventana de 6 valores.
+
+```text
+window = (5 semanas previas mas recientes).weeklyBaseScore + WeeklyBaseScore_actual
+
+StabilityScore =
+0.750 * average(window)
++ 0.250 * worst(window)
+
+hasTemporalMemory = true
+evaluatedWeeks    = 6
+```
+
+El resultado se acota a `[0, 1]`.
+
+Razon:
+
+```text
+La estabilidad usa el MISMO criterio que el score semanal (§14): 75% promedio,
+25% peor. Una sola semana floja arrastra la estabilidad igual que una capa floja
+arrastra el score, de modo que `Inquebrantable` exige constancia real, no un pico.
+```
+
+> Validada explicitamente el 2026-06-02 (decision del dueno). Reemplaza la propuesta
+> recursiva historica `0.650 * PreviousStabilityScore + 0.350 * WeeklyBaseScore`, que
+> nunca se implemento.
 
 ## 16. Estados
 
