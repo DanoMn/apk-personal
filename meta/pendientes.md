@@ -111,6 +111,20 @@ cerrada. (Quedan 2 warnings de *compile* preexistentes —`SleepLog` deprecated 
   telemetría madure (hoy está afuera a propósito porque la captura de datos está en
   expansión: sueño ahora, avance de proyecto a futuro).
 
+## Sueño / configuración (diferido — NO parte del gate de estado por ausencia de sueño)
+
+- [ ] **Onboarding obligatorio del horario de sueño (sin default).** Hoy el sueño
+  NO es opt-in (siempre existe config), pero tiene un **default heredado**:
+  `SleepPolicy.defaultConfig()` = ventana 23:30→07:30 (8h / 480 min, `SleepPolicy.kt:20`).
+  El dueño quiere que el usuario **deba SELECCIONAR activamente** su ventana de sueño
+  en el onboarding, sin caer en un default silencioso. Es trabajo de **UI/onboarding**,
+  separado del gate de scoring (que se dispara por falta de **registro de noches**, no
+  de config). Ojo: el objetivo es una **ventana horaria** (`targetSleepAt`/`targetWakeAt`),
+  no "horas sueltas"; mínimo 5h (`MIN_SLEEP_WINDOW_MINUTES = 300`).
+  - [ ] **Notificaciones (se implementan JUNTO con esta feature):**
+    - Recordatorio para que la persona **no se olvide de registrar** su horario de sueño.
+    - Aviso de la **cantidad de días seguidos sin registrar** sueño (racha de no-registro).
+
 ## Commits pendientes
 
 - [ ] **Commitear el trabajo de esta sesión** (sin commitear aún), preferiblemente
