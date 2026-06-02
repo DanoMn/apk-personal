@@ -67,6 +67,66 @@ class SobrietyScoringPolicyTest {
         assertEquals(1.0f, score!!, 0.001f)
     }
 
+    // --- §13.3 RelapseProtectionScore = exp(-relapseDays / 1.5) ---------------
+    // Caracterizada vía el trackScore compuesto de UN solo track sin días pendientes:
+    //   trackScore = cleanCoverage * relapseProtection * trackingConfidence
+    // Con un único track, SobrietyWeekly = 0.70*track + 0.30*track = track.
+    // Sin pendientes → confidence = 1.0, así el peso de la recaída se ve limpio.
+
+    @Test
+    fun zeroRelapsesGivesFullProtection() {
+        // 7/7 Clean → coverage 1.0 · relapseProtection exp(0)=1.0 · conf 1.0 = 1.0
+        val score = scoreSingleTrack(relapseDays = 0)
+        assertEquals(1.0f, score, 0.001f)
+    }
+
+    @Test
+    fun oneRelapseDecaysByTheExpCurve() {
+        // 6 Clean / 1 Relapse →
+        //   coverage = 6/7            = 0.857143
+        //   relapseProtection = exp(-1/1.5) = 0.513417
+        //   confidence = 1.0
+        //   trackScore = 0.857143 * 0.513417 = 0.440072
+        val score = scoreSingleTrack(relapseDays = 1)
+        assertEquals(0.440072f, score, 0.001f)
+    }
+
+    @Test
+    fun twoRelapsesDecayFasterThanLinear() {
+        // 5 Clean / 2 Relapse →
+        //   coverage = 5/7            = 0.714286
+        //   relapseProtection = exp(-2/1.5) = 0.263597
+        //   trackScore = 0.714286 * 0.263597 = 0.188284
+        val score = scoreSingleTrack(relapseDays = 2)
+        assertEquals(0.188284f, score, 0.001f)
+    }
+
+    @Test
+    fun threeRelapsesCollapseTheTrack() {
+        // 4 Clean / 3 Relapse →
+        //   coverage = 4/7            = 0.571429
+        //   relapseProtection = exp(-3/1.5) = exp(-2) = 0.135335
+        //   trackScore = 0.571429 * 0.135335 = 0.077334
+        val score = scoreSingleTrack(relapseDays = 3)
+        assertEquals(0.077334f, score, 0.001f)
+    }
+
+    /** Un solo track: [relapseDays] días Relapse explícitos, el resto Clean (sin pendientes). */
+    private fun scoreSingleTrack(relapseDays: Int): Float {
+        val trk = track("trk_alcohol")
+        val logs = weekDates.mapIndexed { index, date ->
+            val status = if (index < relapseDays) AbstinenceStatus.Relapse else AbstinenceStatus.Clean
+            logFor(trk.id, date, status)
+        }
+        return SobrietyScoringPolicy.score(
+            tracks = listOf(trk),
+            allLogs = logs,
+            todayLogs = emptyList(),
+            weekDates = weekDates,
+            today = today,
+        )!!
+    }
+
     private fun track(id: String): AbstinenceTrack =
         AbstinenceTrack(
             id = id,
