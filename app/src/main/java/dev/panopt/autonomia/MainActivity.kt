@@ -21,11 +21,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import dev.panopt.autonomia.data.worker.DailyClosureWorkScheduler
+import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_SESSION_MINUTES
+import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_WEEKLY_FREQUENCY
 import dev.panopt.autonomia.sleep.SleepDeviceAdminReceiver
 import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardViewModel
 import dev.panopt.autonomia.ui.dashboard.dashboardPalette
+import dev.panopt.autonomia.ui.onboarding.OnboardingScreen
+import dev.panopt.autonomia.ui.onboarding.OnboardingViewModel
 import dev.panopt.autonomia.ui.scoring.ScoringScreen
 import dev.panopt.autonomia.ui.sleep.SleepConfigScreen
 import dev.panopt.autonomia.ui.sobriety.SobrietyConfigScreen
@@ -94,13 +98,59 @@ class MainActivity : ComponentActivity() {
             val isSleepAutoModeEnabled by dashboardViewModel.isSleepAutoModeEnabled.collectAsStateWithLifecycle()
             val palette = dashboardPalette(isDarkMode)
 
-            var currentScreen by remember { mutableStateOf(AppScreen.Dashboard) }
+            val onboardingViewModel: OnboardingViewModel = viewModel(
+                factory = OnboardingViewModel.Factory(applicationContext),
+            )
+            val onboardingState by onboardingViewModel.onboardingState.collectAsStateWithLifecycle()
+
+            // Gate de primer-uso: la pantalla inicial se siembra del valor síncrono del
+            // estado de onboarding (StateFlow con valor inicial leído de prefs → sin flicker).
+            var currentScreen by remember {
+                mutableStateOf(
+                    if (onboardingViewModel.onboardingState.value.completed) {
+                        AppScreen.Dashboard
+                    } else {
+                        AppScreen.Onboarding
+                    },
+                )
+            }
 
             SideEffect {
                 applySystemBars(isDarkMode = isDarkMode, bgColor = palette.bgBase.toArgb())
             }
 
             when (currentScreen) {
+                AppScreen.Onboarding -> OnboardingScreen(
+                    state = onboardingState,
+                    palette = palette,
+                    onAdvance = onboardingViewModel::advance,
+                    onBack = onboardingViewModel::back,
+                    onComplete = {
+                        onboardingViewModel.complete()
+                        currentScreen = AppScreen.Dashboard
+                    },
+                    layers = dashboardState.layers,
+                    anchorOptions = dashboardState.activityOptions,
+                    onAddAnchor = { activityId ->
+                        dashboardViewModel.addActivityAsAnchor(
+                            activityId,
+                            DEFAULT_ANCHOR_SESSION_MINUTES,
+                            DEFAULT_ANCHOR_WEEKLY_FREQUENCY,
+                            null,
+                        )
+                    },
+                    onCreateAnchor = { name, layerId ->
+                        dashboardViewModel.createActivity(
+                            name = name,
+                            layerId = layerId,
+                            sessionTargetMinutes = DEFAULT_ANCHOR_SESSION_MINUTES,
+                            isSecondary = false,
+                            weeklyFrequencyTarget = DEFAULT_ANCHOR_WEEKLY_FREQUENCY,
+                            commitmentDurationMonths = null,
+                        )
+                    },
+                    onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                )
                 AppScreen.Dashboard -> DashboardScreen(
                     state = dashboardState,
                     isDarkMode = isDarkMode,
@@ -230,6 +280,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class AppScreen {
+    Onboarding,
     Dashboard,
     Scoring,
     AnchorConfig,

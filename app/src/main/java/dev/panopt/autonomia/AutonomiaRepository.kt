@@ -70,6 +70,7 @@ class AutonomiaRepository(context: Context) {
     private val _isInitialConfigurationComplete = MutableStateFlow(
         prefs.getBoolean("initial_configuration_complete", false),
     )
+    private val _onboardingCurrentStep = MutableStateFlow(prefs.getString("onboarding_current_step", null))
     private val _isSleepAutoModeEnabled = MutableStateFlow(prefs.getBoolean("sleep_auto_mode_enabled", false))
 
     fun isDarkModeFlow(): StateFlow<Boolean> = _isDarkMode.asStateFlow()
@@ -80,6 +81,10 @@ class AutonomiaRepository(context: Context) {
 
     fun isInitialConfigurationCompleteFlow(): StateFlow<Boolean> =
         _isInitialConfigurationComplete.asStateFlow()
+
+    /** Nombre del [OnboardingStep] en curso para reanudar el onboarding; null si nunca avanzó. */
+    fun onboardingCurrentStepFlow(): StateFlow<String?> =
+        _onboardingCurrentStep.asStateFlow()
 
     suspend fun setDarkMode(enabled: Boolean) {
         prefs.edit { putBoolean("dark_mode", enabled) }
@@ -94,6 +99,11 @@ class AutonomiaRepository(context: Context) {
     suspend fun setInitialConfigurationComplete(completed: Boolean) {
         prefs.edit { putBoolean("initial_configuration_complete", completed) }
         _isInitialConfigurationComplete.value = completed
+    }
+
+    suspend fun setOnboardingCurrentStep(stepName: String) {
+        prefs.edit { putString("onboarding_current_step", stepName) }
+        _onboardingCurrentStep.value = stepName
     }
 
     fun allActivityLogsFlow(): Flow<List<ActivityLog>> =
