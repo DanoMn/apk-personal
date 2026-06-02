@@ -18,6 +18,10 @@ internal object ScoringConstants {
     const val SOBRIETY_RELAPSE_DECAY = 1.5f
     const val SOBRIETY_FORGIVENESS_WINDOW_DAYS = 5L
 
+    // Configuración mínima para emitir scoring (árbol §7.4): de las 5 capas,
+    // mínimo 3 activas con al menos 1 ancla cada una. Si no se cumple → NoData.
+    const val MIN_ACTIVE_LAYERS_WITH_ANCHOR = 3
+
     // State band boundaries (lower-inclusive / upper-exclusive)
     const val STATE_RESTORATION_THRESHOLD = 0.40f
     const val STATE_ATTENTION_THRESHOLD = 0.70f

@@ -23,6 +23,8 @@ import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,14 +47,20 @@ class ScoreEngineTest {
 
     @Test
     fun anchorsUseSeventyPercentFrequencyAndThirtyPercentValue() {
-        val activity = anchor("act_meditation", "layer_interior")
+        // 3 capas idénticas (§7.4 gate); cada una 2/4 días → anchorScore 0.50, global 0.50.
+        val layers = listOf(
+            layer("layer_interior", "Interior", 10),
+            layer("layer_cuerpo", "Cuerpo", 20),
+            layer("layer_conducta", "Conducta", 30),
+        )
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
         val report = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(activity),
-            activityLogs = weekDates.take(2).map { log(activity.id, it, actualValue = 20) },
+            layers = layers,
+            activities = activities,
+            activityLogs = activities.flatMap { a -> weekDates.take(2).map { log(a.id, it, actualValue = 20) } },
         )
 
-        val layer = report.layerScores.single()
+        val layer = report.layerScores.first()
         assertEquals(0.50f, layer.anchorScore ?: 0f, 0.001f)
         assertEquals(0.50f, report.weeklyBaseScore, 0.001f)
         assertEquals(850, report.visibleScore)
@@ -62,15 +70,20 @@ class ScoreEngineTest {
     fun anchorSurplusAddsCappedPositiveMarginWithoutChangingBase() {
         val sunday = LocalDate.of(2026, 5, 24)
         val dates = (0L..5L).map { LocalDate.of(2026, 5, 18).plusDays(it) }
-        val activity = anchor("act_meditation", "layer_interior")
+        val layers = listOf(
+            layer("layer_interior", "Interior", 10),
+            layer("layer_cuerpo", "Cuerpo", 20),
+            layer("layer_conducta", "Conducta", 30),
+        )
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
         val report = calculate(
             today = sunday,
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(activity),
-            activityLogs = dates.map { log(activity.id, it, actualValue = 50) },
+            layers = layers,
+            activities = activities,
+            activityLogs = activities.flatMap { a -> dates.map { log(a.id, it, actualValue = 50) } },
         )
 
-        val layer = report.layerScores.single()
+        val layer = report.layerScores.first()
         assertEquals(1.0f, layer.baseScore, 0.001f)
         assertTrue(layer.anchorSurplusBonus > 0.03f)
         assertTrue(layer.rawScore > 1.0f)
@@ -83,19 +96,21 @@ class ScoreEngineTest {
         val support = support("sup_phone", "layer_interior")
         val fullAnchorLogs = weekDates.map { log(anchor.id, it, actualValue = 20) }
         val withoutSupports = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(anchor),
-            activityLogs = fullAnchorLogs,
+            layers = listOf(layer("layer_interior", "Interior")) + fillerLayers(),
+            activities = listOf(anchor) + fillerActivities(),
+            activityLogs = fullAnchorLogs + fillerLogs(),
         )
         val withOneOmission = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(anchor, support),
-            activityLogs = fullAnchorLogs + log(support.id, weekDates.first(), actualValue = 1),
+            layers = listOf(layer("layer_interior", "Interior")) + fillerLayers(),
+            activities = listOf(anchor, support) + fillerActivities(),
+            activityLogs = fullAnchorLogs + log(support.id, weekDates.first(), actualValue = 1) + fillerLogs(),
         )
 
-        assertEquals(1.0f, withoutSupports.layerScores.single().baseScore, 0.001f)
-        assertEquals(0.75f, withOneOmission.layerScores.single().supportScore ?: 0f, 0.001f)
-        assertEquals(0.95f, withOneOmission.layerScores.single().baseScore, 0.001f)
+        val interiorWithout = withoutSupports.layerScores.first { it.layerId == "layer_interior" }
+        val interiorOmission = withOneOmission.layerScores.first { it.layerId == "layer_interior" }
+        assertEquals(1.0f, interiorWithout.baseScore, 0.001f)
+        assertEquals(0.75f, interiorOmission.supportScore ?: 0f, 0.001f)
+        assertEquals(0.95f, interiorOmission.baseScore, 0.001f)
     }
 
     @Test
@@ -103,28 +118,31 @@ class ScoreEngineTest {
         val activity = anchor("act_meditation", "layer_interior")
         val logs = weekDates.map { log(activity.id, it, actualValue = 20) }
         val neutral = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_interior", "Interior")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
             tasks = listOf(task("task_neutral", "layer_interior", ContributionRole.Neutral, TaskStatus.Done)),
         )
         val pending = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_interior", "Interior")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
             tasks = listOf(task("task_pending", "layer_interior", ContributionRole.Support, TaskStatus.Pending)),
         )
         val completed = calculate(
-            layers = listOf(layer("layer_interior", "Interior")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_interior", "Interior")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
             tasks = listOf(task("task_done", "layer_interior", ContributionRole.Support, TaskStatus.Done)),
         )
 
-        assertEquals(0f, neutral.layerScores.single().taskMomentumBonus, 0.001f)
-        assertEquals(0f, pending.layerScores.single().taskMomentumBonus, 0.001f)
-        assertTrue(completed.layerScores.single().taskMomentumBonus > 0.0f)
-        assertTrue(completed.layerScores.single().rawScore > neutral.layerScores.single().rawScore)
+        val neutralInterior = neutral.layerScores.first { it.layerId == "layer_interior" }
+        val pendingInterior = pending.layerScores.first { it.layerId == "layer_interior" }
+        val completedInterior = completed.layerScores.first { it.layerId == "layer_interior" }
+        assertEquals(0f, neutralInterior.taskMomentumBonus, 0.001f)
+        assertEquals(0f, pendingInterior.taskMomentumBonus, 0.001f)
+        assertTrue(completedInterior.taskMomentumBonus > 0.0f)
+        assertTrue(completedInterior.rawScore > neutralInterior.rawScore)
     }
 
     @Test
@@ -135,33 +153,32 @@ class ScoreEngineTest {
         val activity = anchor("act_body", "layer_cuerpo")
         val logs = weekDates.map { log(activity.id, it, actualValue = 20) }
         val noSleep = calculate(
-            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
         )
         val withSleep = calculate(
-            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
             sleepNights = listOf(sleepNight(score = 1.0f)),
         )
         val withPoorSleep = calculate(
-            layers = listOf(layer("layer_cuerpo", "Cuerpo")),
-            activities = listOf(activity),
-            activityLogs = logs,
+            layers = listOf(layer("layer_cuerpo", "Cuerpo")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = logs + fillerLogs(),
             sleepNights = listOf(sleepNight(score = 0.0f)),
         )
 
-        // NoData: Cuerpo = anchorBase (not penalized — ADR-3)
-        // Perfect sleep: same (formula: 0.70*1.0 + 0.30*1.0 = 1.0)
-        assertEquals(noSleep.layerScores.single().baseScore, withSleep.layerScores.single().baseScore, 0.001f)
+        val noSleepBody = noSleep.layerScores.first { it.layerId == "layer_cuerpo" }.baseScore
+        val withSleepBody = withSleep.layerScores.first { it.layerId == "layer_cuerpo" }.baseScore
+        val poorSleepBody = withPoorSleep.layerScores.first { it.layerId == "layer_cuerpo" }.baseScore
+        // NoData: Cuerpo = anchorBase (not penalized — ADR-3). Perfect sleep: 0.70*1.0 + 0.30*1.0 = 1.0
+        assertEquals(noSleepBody, withSleepBody, 0.001f)
         // Poor sleep (0.0): Cuerpo = 0.70*1.0 + 0.30*0.0 = 0.70 — LOWER than NoData
-        assertEquals(0.70f, withPoorSleep.layerScores.single().baseScore, 0.001f)
+        assertEquals(0.70f, poorSleepBody, 0.001f)
         // NoData (1.0) is strictly better than poor sleep (0.70): absence ≠ poor sleep
-        assertTrue(
-            "NoData Cuerpo should be > poor-sleep Cuerpo",
-            noSleep.layerScores.single().baseScore > withPoorSleep.layerScores.single().baseScore,
-        )
+        assertTrue("NoData Cuerpo should be > poor-sleep Cuerpo", noSleepBody > poorSleepBody)
     }
 
     @Test
@@ -169,15 +186,16 @@ class ScoreEngineTest {
         val activity = anchor("act_conduct", "layer_conducta")
         val inactiveTrack = abstinenceTrack(active = false)
         val report = calculate(
-            layers = listOf(layer("layer_conducta", "Conducta")),
-            activities = listOf(activity),
-            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            layers = listOf(layer("layer_conducta", "Conducta")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) } + fillerLogs(),
             abstinenceTracks = listOf(inactiveTrack),
             abstinenceLogs = listOf(abstinenceLog(inactiveTrack.id, today, AbstinenceStatus.Relapse)),
         )
 
-        assertEquals(1.0f, report.layerScores.single().baseScore, 0.001f)
-        assertNull(report.layerScores.single().sobrietyScore)
+        val conduct = report.layerScores.first { it.layerId == "layer_conducta" }
+        assertEquals(1.0f, conduct.baseScore, 0.001f)
+        assertNull(conduct.sobrietyScore)
     }
 
     @Test
@@ -185,24 +203,26 @@ class ScoreEngineTest {
         val activity = anchor("act_conduct", "layer_conducta")
         val track = abstinenceTrack()
         val cleanReport = calculate(
-            layers = listOf(layer("layer_conducta", "Conducta")),
-            activities = listOf(activity),
-            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            layers = listOf(layer("layer_conducta", "Conducta")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) } + fillerLogs(),
             abstinenceTracks = listOf(track),
             abstinenceLogs = weekDates.map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) },
         )
         val relapseReport = calculate(
-            layers = listOf(layer("layer_conducta", "Conducta")),
-            activities = listOf(activity),
-            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            layers = listOf(layer("layer_conducta", "Conducta")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) } + fillerLogs(),
             abstinenceTracks = listOf(track),
             abstinenceLogs = weekDates.take(3).map { abstinenceLog(track.id, it, AbstinenceStatus.Clean) } +
                 abstinenceLog(track.id, today, AbstinenceStatus.Relapse),
         )
 
-        assertEquals(1.0f, cleanReport.layerScores.single().baseScore, 0.001f)
-        assertTrue((relapseReport.layerScores.single().sobrietyScore ?: 1f) < 0.40f)
-        assertTrue(relapseReport.layerScores.single().baseScore < cleanReport.layerScores.single().baseScore)
+        val cleanConduct = cleanReport.layerScores.first { it.layerId == "layer_conducta" }
+        val relapseConduct = relapseReport.layerScores.first { it.layerId == "layer_conducta" }
+        assertEquals(1.0f, cleanConduct.baseScore, 0.001f)
+        assertTrue((relapseConduct.sobrietyScore ?: 1f) < 0.40f)
+        assertTrue(relapseConduct.baseScore < cleanConduct.baseScore)
     }
 
     @Test
@@ -210,29 +230,38 @@ class ScoreEngineTest {
         val activity = anchor("act_conduct", "layer_conducta")
         val track = abstinenceTrack()
         val report = calculate(
-            layers = listOf(layer("layer_conducta", "Conducta")),
-            activities = listOf(activity),
-            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) },
+            layers = listOf(layer("layer_conducta", "Conducta")) + fillerLayers(),
+            activities = listOf(activity) + fillerActivities(),
+            activityLogs = weekDates.map { log(activity.id, it, actualValue = 20) } + fillerLogs(),
             abstinenceTracks = listOf(track),
         )
 
-        assertEquals(0.425f, report.layerScores.single().sobrietyScore ?: 0f, 0.001f)
-        assertEquals(0.8275f, report.layerScores.single().baseScore, 0.001f)
+        val conduct = report.layerScores.first { it.layerId == "layer_conducta" }
+        assertEquals(0.425f, conduct.sobrietyScore ?: 0f, 0.001f)
+        assertEquals(0.8275f, conduct.baseScore, 0.001f)
     }
 
     @Test
     fun worstLayerDragsWeeklyScoreByTwentyFivePercent() {
-        val strong = anchor("act_interior", "layer_interior")
+        // 3 capas con ancla (§7.4 gate): dos fuertes (1.0) + una débil sin logs (0.0).
+        // avg = (1+1+0)/3 = 0.6667 ; worst = 0.0 → weeklyBase = 0.75*0.6667 + 0.25*0 = 0.50.
+        val strong1 = anchor("act_interior", "layer_interior")
+        val strong2 = anchor("act_vinculos", "layer_vinculos")
         val weak = anchor("act_project", "layer_proyecto")
         val report = calculate(
-            layers = listOf(layer("layer_interior", "Interior"), layer("layer_proyecto", "Proyecto")),
-            activities = listOf(strong, weak),
-            activityLogs = weekDates.map { log(strong.id, it, actualValue = 20) },
+            layers = listOf(
+                layer("layer_interior", "Interior", 10),
+                layer("layer_vinculos", "Vinculos", 40),
+                layer("layer_proyecto", "Proyecto", 50),
+            ),
+            activities = listOf(strong1, strong2, weak),
+            activityLogs = weekDates.map { log(strong1.id, it, actualValue = 20) } +
+                weekDates.map { log(strong2.id, it, actualValue = 20) },
         )
 
         assertEquals("layer_proyecto", report.worstLayerId)
-        assertEquals(0.375f, report.weeklyBaseScore, 0.001f)
-        assertEquals(813, report.visibleScore)
+        assertEquals(0.50f, report.weeklyBaseScore, 0.001f)
+        assertEquals(850, report.visibleScore)
     }
 
     @Test
@@ -348,6 +377,46 @@ class ScoreEngineTest {
                 weeklyHistory = weeklyHistory,
             ),
         )
+
+    @Test
+    fun fewerThanThreeActiveLayersWithAnchorReturnsNoData() {
+        // §7.4: se exigen ≥3 capas activas con ancla. Con solo 2 válidas → NoData,
+        // aunque los hechos estén completos.
+        val layers = listOf(layer("layer_interior", "Interior", 10), layer("layer_cuerpo", "Cuerpo", 20))
+        val activities = listOf(anchor("act_a", "layer_interior"), anchor("act_b", "layer_cuerpo"))
+        val logs = activities.flatMap { a -> weekDates.map { log(a.id, it, actualValue = 20) } }
+        val report = calculate(layers = layers, activities = activities, activityLogs = logs)
+
+        assertEquals(ScoreState.NoData, report.state)
+        assertNull(report.visibleScore)
+    }
+
+    @Test
+    fun exactlyThreeActiveLayersWithAnchorOpensTheGateAndEmitsScoring() {
+        // §7.4: con 3 capas activas con ancla el gate se abre y se emite scoring real.
+        val layers = listOf(
+            layer("layer_interior", "Interior", 10),
+            layer("layer_cuerpo", "Cuerpo", 20),
+            layer("layer_conducta", "Conducta", 30),
+        )
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
+        val logs = activities.flatMap { a -> weekDates.map { log(a.id, it, actualValue = 20) } }
+        val report = calculate(layers = layers, activities = activities, activityLogs = logs)
+
+        assertNotEquals(ScoreState.NoData, report.state)
+        assertNotNull(report.visibleScore)
+    }
+
+    // Dos capas de relleno con ancla cumplida, para satisfacer el gate de 3 capas (§7.4)
+    // en tests que aíslan UNA capa. No afectan los asserts por-capa (se filtra la capa bajo prueba).
+    private fun fillerLayers(): List<Layer> =
+        listOf(layer("layer_fill_a", "FillA", 91), layer("layer_fill_b", "FillB", 92))
+
+    private fun fillerActivities(): List<ActivityDefinition> =
+        listOf(anchor("act_fill_a", "layer_fill_a"), anchor("act_fill_b", "layer_fill_b"))
+
+    private fun fillerLogs(): List<ActivityLog> =
+        fillerActivities().flatMap { a -> weekDates.map { log(a.id, it, actualValue = 20) } }
 
     private fun coreLayers(): List<Layer> =
         listOf(
@@ -465,14 +534,21 @@ class ScoreEngineTest {
 
     @Test
     fun previousStateFromWeeklyHistoryPropagatesHysteresisDamping() {
-        // Single layer, 3 out of 4 days with actualValue=15 (target=20):
+        // 3 capas idénticas (§7.4 gate), cada una 3/4 días con actualValue=15 (target=20):
         // frequencyRatio = 3/4 = 0.75, valueRatio = 45/80 = 0.5625
-        // anchorScore = 0.70*0.75 + 0.30*0.5625 = 0.69375
-        // weeklyBaseScore = 0.69375, worstLayerScore = 0.69375 (single layer, >= 0.55, no cap)
+        // anchorScore = 0.70*0.75 + 0.30*0.5625 = 0.69375 → weeklyBaseScore = 0.69375
+        // worstLayerScore = 0.69375 (>= 0.55, < 0.75 → cap Motion)
         // Raw band = Attention (0.69375 < 0.70), margin = 0.70 - 0.69375 = 0.00625 <= 0.03.
         // With previousState=Motion from history → hysteresis holds at Motion.
-        // Without previousState (no history) → falls to Attention (confirms derivation path).
-        val activity = anchor("act_motion", "layer_motion")
+        // Without previousState (no history) → falls to Attention.
+        // (Sin sueño, §16.7 topea en Motion: no afecta a ninguno, ambos esperados son <= Motion.)
+        val layers = listOf(
+            layer("layer_interior", "Interior", 10),
+            layer("layer_vinculos", "Vinculos", 40),
+            layer("layer_proyecto", "Proyecto", 50),
+        )
+        val activities = layers.map { anchor("act_${it.id}", it.id) }
+        val logs = activities.flatMap { a -> weekDates.take(3).map { log(a.id, it, actualValue = 15) } }
 
         val prevWeekStart = today
             .minusWeeks(1)
@@ -488,16 +564,16 @@ class ScoreEngineTest {
         )
 
         val withHistory = calculate(
-            layers = listOf(layer("layer_motion", "Motion")),
-            activities = listOf(activity),
-            activityLogs = weekDates.take(3).map { log(activity.id, it, actualValue = 15) },
+            layers = layers,
+            activities = activities,
+            activityLogs = logs,
             weeklyHistory = listOf(historyEntry),
         )
 
         val withoutHistory = calculate(
-            layers = listOf(layer("layer_motion", "Motion")),
-            activities = listOf(activity),
-            activityLogs = weekDates.take(3).map { log(activity.id, it, actualValue = 15) },
+            layers = layers,
+            activities = activities,
+            activityLogs = logs,
             weeklyHistory = emptyList(),
         )
 

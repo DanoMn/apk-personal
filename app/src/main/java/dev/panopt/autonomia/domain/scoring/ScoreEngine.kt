@@ -1,12 +1,18 @@
 package dev.panopt.autonomia.domain.scoring
 
+import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
 
 object ScoreEngine {
     fun calculate(input: ScoreInput): ScoreReport {
         val activeLayers = input.layers.filter { it.active }.sortedBy { it.sortOrder }
-        if (activeLayers.isEmpty() || !WeeklyScoringContextBuilder.hasAnyFact(input)) {
+        // Gate de configuración mínima (árbol §7.4): se exigen ≥3 capas activas con
+        // ≥1 ancla. Sin datos suficientes (sin capas, sin hechos, o config insuficiente) → NoData.
+        if (activeLayers.isEmpty() ||
+            !WeeklyScoringContextBuilder.hasAnyFact(input) ||
+            activeLayersWithAnchor(input, activeLayers) < ScoringConstants.MIN_ACTIVE_LAYERS_WITH_ANCHOR
+        ) {
             return noDataReport(activeLayers)
         }
 
@@ -62,6 +68,15 @@ object ScoreEngine {
             stabilityScore = stability.stabilityScore,
             stabilityWeeks = stability.evaluatedWeeks,
         )
+    }
+
+    /** Cuenta capas activas que tienen al menos 1 ancla configurada (activa, no archivada). */
+    private fun activeLayersWithAnchor(input: ScoreInput, activeLayers: List<Layer>): Int {
+        val layerIdsWithAnchor = input.activities
+            .filter { it.active && !it.archived && it.activityType == ActivitySurface.Anchor }
+            .map { it.layerId }
+            .toSet()
+        return activeLayers.count { it.id in layerIdsWithAnchor }
     }
 
     private fun noDataReport(activeLayers: List<Layer>): ScoreReport =

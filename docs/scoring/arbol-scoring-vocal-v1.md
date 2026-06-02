@@ -259,6 +259,25 @@ Si la capa activa no tiene anclas, la configuracion es invalida para scoring
 completo. La configuracion inicial exige al menos una ancla por capa activa
 minima.
 
+### 7.4 Gate de configuracion minima (decision 2026-06-01)
+
+Para emitir un scoring se exigen MINIMO 3 capas activas con al menos 1 ancla cada
+una (de las 5 capas: Interior, Cuerpo, Conducta, Vinculos, Proyecto; hasta 2 pueden
+quedar inactivas). Una capa cuenta solo si esta activa Y tiene >= 1 ancla; sueno o
+sobriedad SIN ancla no la hacen contar.
+
+```text
+activeLayersWithAnchor = count(capas activas con >= 1 ancla)
+Si activeLayersWithAnchor < 3:
+    state = NoData ("Sin datos"), visibleScore = null.
+```
+
+Razon: sin una base minima de capas configuradas no hay estructura suficiente para
+medir. Se reutiliza el estado NoData existente (no se crea estado nuevo); es el mismo
+camino que `hasAnyFact` (sin hechos -> NoData).
+
+Constante: `MIN_ACTIVE_LAYERS_WITH_ANCHOR = 3`.
+
 ## 8. Superhabit de anclas
 
 El superhabit se divide en:
