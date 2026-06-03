@@ -71,6 +71,7 @@ class AutonomiaRepository(context: Context) {
         prefs.getBoolean("initial_configuration_complete", false),
     )
     private val _onboardingCurrentStep = MutableStateFlow(prefs.getString("onboarding_current_step", null))
+    private val _onboardingIntention = MutableStateFlow(prefs.getString("onboarding_intention", null))
     private val _isSleepAutoModeEnabled = MutableStateFlow(prefs.getBoolean("sleep_auto_mode_enabled", false))
 
     // Onboarding sleep consent prefs (slice 3)
@@ -96,6 +97,9 @@ class AutonomiaRepository(context: Context) {
     /** Nombre del [OnboardingStep] en curso para reanudar el onboarding; null si nunca avanzó. */
     fun onboardingCurrentStepFlow(): StateFlow<String?> =
         _onboardingCurrentStep.asStateFlow()
+
+    /** Nombre de la [OnboardingIntention] persistida; null si el usuario todavía no eligió. */
+    fun onboardingIntentionFlow(): StateFlow<String?> = _onboardingIntention.asStateFlow()
 
     /** El usuario tocó "Activar" para el permiso UsageStats en el onboarding (slice 3). */
     fun sleepUsageStatsRequestedFlow(): StateFlow<Boolean> = _sleepUsageStatsRequested.asStateFlow()
@@ -127,6 +131,11 @@ class AutonomiaRepository(context: Context) {
     suspend fun setOnboardingCurrentStep(stepName: String) {
         prefs.edit { putString("onboarding_current_step", stepName) }
         _onboardingCurrentStep.value = stepName
+    }
+
+    suspend fun setOnboardingIntention(value: String) {
+        prefs.edit { putString("onboarding_intention", value) }
+        _onboardingIntention.value = value
     }
 
     suspend fun setSleepUsageStatsRequested(requested: Boolean) {
