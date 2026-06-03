@@ -143,6 +143,12 @@ class MainActivity : ComponentActivity() {
                         onboardingViewModel.complete()
                         currentScreen = AppScreen.Dashboard
                     },
+                    // Bloque Intención (slice 4) — la intención se persiste PRIMERO, luego avanza
+                    intention = onboardingState.intention,
+                    onSelectIntention = { chosen ->
+                        onboardingViewModel.selectIntention(chosen)
+                        onboardingViewModel.advance()
+                    },
                     layers = dashboardState.layers,
                     anchorOptions = dashboardState.activityOptions,
                     onAddAnchor = { activityId ->
@@ -189,6 +195,16 @@ class MainActivity : ComponentActivity() {
                             )
                             onboardingViewModel.advance()
                         }
+                    },
+                    // Bloque Sobriedad (slice 4)
+                    onCreateSobrietyTrack = { name ->
+                        scope.launch {
+                            repository.createCustomAbstinenceTrack(name)
+                            onboardingViewModel.advance()
+                        }
+                    },
+                    onSkipSobriety = {
+                        onboardingViewModel.advance()
                     },
                 )
                 AppScreen.Dashboard -> DashboardScreen(

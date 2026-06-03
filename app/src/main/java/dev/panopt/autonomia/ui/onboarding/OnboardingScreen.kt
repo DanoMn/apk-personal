@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
 import dev.panopt.autonomia.domain.dashboard.DashboardSleepState
+import dev.panopt.autonomia.domain.onboarding.OnboardingIntention
 import dev.panopt.autonomia.domain.onboarding.OnboardingState
 import dev.panopt.autonomia.domain.onboarding.OnboardingStep
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
@@ -48,6 +49,12 @@ internal fun OnboardingScreen(
     onAddAnchor: (activityId: String) -> Unit = {},
     onCreateAnchor: (name: String, layerId: String) -> Unit = { _, _ -> },
     onRemoveAnchor: (activityId: String) -> Unit = {},
+    // Bloque Intención (slice 4)
+    intention: OnboardingIntention? = null,
+    onSelectIntention: (OnboardingIntention) -> Unit = {},
+    // Bloque Sobriedad (slice 4)
+    onCreateSobrietyTrack: (name: String) -> Unit = {},
+    onSkipSobriety: () -> Unit = {},
     // Bloque Sueño (slice 3)
     sleepState: DashboardSleepState = DashboardSleepState(),
     isAutoModeEnabled: Boolean = false,
@@ -106,6 +113,13 @@ internal fun OnboardingScreen(
                 onBack = onBack,
             )
 
+            OnboardingStep.Intention -> OnboardingIntentionStep(
+                palette = palette,
+                currentIntention = intention,
+                onSelectAndContinue = onSelectIntention,
+                onBack = onBack,
+            )
+
             OnboardingStep.Sleep -> OnboardingSleepStep(
                 initialSleepAt = sleepState.targetSleepAt,
                 initialWakeAt = sleepState.targetWakeAt,
@@ -121,26 +135,15 @@ internal fun OnboardingScreen(
                 palette = palette,
             )
 
-            else -> OnboardingBlock(
+            OnboardingStep.Sobriety -> OnboardingSobrietyStep(
                 palette = palette,
-                title = placeholderTitle(state.currentStep),
-                body = "Esta sección se construye en el siguiente paso del desarrollo.",
-                primaryLabel = "Continuar",
-                onPrimary = onAdvance,
+                onCreateTrackAndContinue = onCreateSobrietyTrack,
+                onSkipSobriety = onSkipSobriety,
                 onBack = onBack,
             )
         }
     }
 }
-
-private fun placeholderTitle(step: OnboardingStep): String =
-    when (step) {
-        OnboardingStep.Intention -> "¿Qué te trae aquí?"
-        OnboardingStep.Anchors -> "Tus anclas"
-        OnboardingStep.Sleep -> "El descanso primero"
-        OnboardingStep.Sobriety -> "Cuidar algo que te cuesta"
-        else -> ""
-    }
 
 @Composable
 private fun OnboardingBlock(
