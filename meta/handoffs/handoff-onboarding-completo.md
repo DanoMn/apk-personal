@@ -11,12 +11,18 @@
 
 ## TL;DR — dónde estamos
 
-El change **`onboarding-introduccion` está COMPLETO: los 5 slices implementados,
-verificados en emulador y commiteados.** Todo pusheado a `origin/main`.
+El change **`onboarding-introduccion` está COMPLETO y ARCHIVADO: los 5 slices
+implementados, verificados en emulador, commiteados y el ciclo SDD cerrado.** Todo
+pusheado a `origin/main`.
 
-Lo único que falta del ciclo SDD es **`sdd-archive`** (sincronizar las delta specs a
-los specs principales y mover el change a `openspec/changes/archive/`). NO se hizo en
-esta sesión por decisión del dueño (cerrar acá).
+**`sdd-archive` HECHO** (commit `6a1f85f`): las 6 capabilities sincronizadas a
+`openspec/specs/onboarding-*` (gate incluye el delta de slice 4 mergeado), y el change
+movido a `openspec/changes/archive/2026-06-02-onboarding-introduccion/`. Ya NO queda nada
+del ciclo SDD de este change.
+
+> Nota de reparación: el sub-agente de archive condensó el `design.md` (313 vs 1300
+> líneas) y no pudo borrar el directorio activo (sin `rm`). Se reparó a mano: archive
+> re-copiado FIEL desde HEAD (design 1300 líneas) y directorio activo borrado.
 
 ```
 BLOQUE 0    Bienvenida ........................... slice 1 ✅
@@ -30,16 +36,16 @@ BLOQUE 4    Cierre + flag completado ............. slice 1 ✅
 
 ---
 
-## 1. Lo PRIMERO al retomar: `sdd-archive` del change
+## 1. Lo PRIMERO al retomar: los pendientes sueltos (ver §4)
 
-El change está listo para archivar. Lanzar `sdd-archive` para:
-- Sincronizar las **7 delta specs** (`onboarding-gate`, `onboarding-anchors`,
-  `onboarding-sleep`, `onboarding-intention`, `onboarding-sobriety`,
-  `onboarding-notifications`, `onboarding-gate-slice4-delta`) a los specs principales.
-- Mover `openspec/changes/onboarding-introduccion/` a `openspec/changes/archive/`.
+El change ya está archivado (ciclo SDD cerrado). Lo que queda NO es del change: son las
+tareas sueltas del §4 (retirar "Vocal", `Definicion_anclas.md`, fix del `TimeField`,
+revisar docs vivos). Empezar por la más barata.
 
-Artefactos del change en `openspec/changes/onboarding-introduccion/`: `proposal.md`,
-`design.md` (secciones por slice), `specs/*`, `tasks.md` + `tasks-slice2..5.md`.
+Specs principales (fuente de verdad implementada): `openspec/specs/onboarding-gate`,
+`onboarding-anchors`, `onboarding-sleep`, `onboarding-intention`, `onboarding-sobriety`,
+`onboarding-notifications`. Artefactos del change en
+`openspec/changes/archive/2026-06-02-onboarding-introduccion/`.
 
 ---
 
