@@ -843,3 +843,458 @@ duda de mejores prácticas al cablear la creación del track o el `TextField` de
   conscientemente por el Bloque 0.5 (no debería, es secuencial), la ruta cae a `STANDARD` y
   no vería Sobriety. Es el comportamiento deseado por la spec (ausencia = STANDARD), pero se
   documenta como decisión explícita, no como bug.
+
+---
+
+# Slice 5 — Notificaciones (último slice)
+
+Spec: `specs/onboarding-notifications/spec.md` (6 requirements, 17 escenarios) · Insumo
+conceptual: `meta/instructions/2026-06-02-onboarding-introduccion-diseno.md` §2.8, §7 ·
+`docs/sueno/decisiones-diseno-sueno-v1.md` §9 (D1).
+
+> Estado de partida: slices 1-4 implementados, verificados en emulador y commiteados.
+> SLICE 5 = **infraestructura de notificaciones NUEVA** (no existe nada de notificaciones
+> en el repo aún). Tras este slice, el change se archiva. PR encadenado, presupuesto ~400
+> líneas (con split propuesto si excede — ver S5.10).
+
+## S5.1 — Contexto y hallazgos clave (qué ya existe, qué hay que crear)
+
+A diferencia de los slices 1-4 (que reusaban dominio/UI ya escritos), el slice 5 **crea
+infraestructura nueva**: no hay `NotificationChannel`, no hay `NotificationManager`, no hay
+permiso `POST_NOTIFICATIONS`. Pero NO se parte de cero en la **decisión de disparo**: esta
+se ancla en hechos y dominio ya existentes. Hallazgos verificados en el código:
+
+- **NO existe una clase `Application` propia.** El scheduling de WorkManager se hace hoy en
+  `MainActivity.onCreate` (`DailyClosureWorkScheduler.schedule(applicationContext)`, línea 45).
+  Esto decide DÓNDE se registran los canales (S5-D4): el único punto de arranque garantizado
+  es `MainActivity.onCreate`. (Alternativa: crear una `Application` propia. Se evalúa y
+  descarta en S5-D4 por proporcionalidad — un slice de notificaciones no justifica un cambio
+  estructural de `<application android:name>`.)
+- **El contador de "noches sin datos" es DERIVABLE de Room existente — cero estado nuevo.**
+  El `DailyClosureWorker` ya llama `materializeSleepNight(today)` ANTES del snapshot
+  (línea 29). `materializeSleepNight` persiste un `SleepNightEntity` con
+  `confidenceLevel = timeline.confidence.name` (`"NoData"` cuando la noche no tiene datos,
+  línea 555). El DAO ya expone `getSleepNightsInRange(from, to)` (`AutonomiaDao` línea 156).
+  ⇒ Las últimas N noches con `confidenceLevel == "NoData"` (o sin fila) se leen del Room que
+  ya se escribe en cada cierre. **No hace falta cachear un contador en prefs ni crear entidad.**
+  Esto resuelve el Requirement "Sin Room nuevo" por la vía PREFERIDA por la spec (§246-257:
+  "Si el contador se puede derivar leyendo Room existente sin estado adicional, esa es la
+  opción preferida").
+- **El consentimiento de la Notif A ya está capturado (slice 3).** La pref
+  `sleep_wind_down_consent` (Boolean?, `AutonomiaRepository` línea 85/152) gatea la Notif A.
+  `null`/`false` ⇒ no se programa. El `targetSleepAt` ya vive en `SleepConfigEntity`
+  (`currentSleepConfig().targetSleepAt`).
+- **`SleepInterpreter` es REAL y funcional** (change `sleep-consumer` ARCHIVADO/implementado:
+  `openspec/changes/archive/2026-05-29-sleep-consumer/`). Devuelve `SleepConfidence.NoData`
+  cuando una noche no tiene datos. NO es dependencia pendiente ni bloqueante. La Notif B NO
+  vuelve a llamar `interpret()` directamente: lee el resultado YA materializado en
+  `SleepNightEntity.confidenceLevel` (que es exactamente `confidence.name`), evitando recomputar.
+- **El patrón Worker+Scheduler ya está canonizado** (`DailyClosureWorkScheduler` +
+  `DailyClosureWorker`, `DeviceTelemetryWorkScheduler` + `DeviceTelemetryDrainWorker`). El
+  slice lo SIGUE para la Notif A; para la Notif B reUSA el worker existente (la spec lo exige
+  explícitamente, §139-141: "MUST NOT crear un Worker nuevo solo para esta verificación").
+
+## S5.2 — Decisiones de diseño (Slice 5)
+
+### S5-D1 — Separación dominio puro vs plataforma (el corazón TDD)
+
+El invariante de arquitectura del proyecto (hechos→dominio→estado→Compose) exige separar la
+**decisión** (testeable JVM puro, sin Android) de la **entrega** (plataforma: canales,
+`NotificationManager`, permiso, Worker). La pieza pura es `SleepNotificationPolicy`.
+
+```kotlin
+// domain/notifications/SleepNotificationPolicy.kt (New — dominio puro, sin Android)
+object SleepNotificationPolicy {
+
+    /** Umbral de noches consecutivas sin datos que dispara la Notif B.
+     *  Calibrable con datos reales (gemelo de la deuda D1 de decisiones-diseno-sueno-v1.md §9).
+     *  Cambiar este valor cambia el umbral sin tocar la lógica de disparo. */
+    const val NIGHTS_WITHOUT_DATA_THRESHOLD: Int = 3
+
+    /** Notif A — Wind-Down. Programar si y solo si hay consentimiento explícito (true)
+     *  y existe una hora de dormir válida (HH:mm parseable). consent null/false ⇒ false. */
+    fun shouldScheduleWindDown(windDownConsent: Boolean?, targetSleepAt: String?): Boolean =
+        windDownConsent == true && isValidTime(targetSleepAt)
+
+    /** Notif B — Sleep Data Alert. Recibe la confianza de las últimas noches cerradas,
+     *  MÁS reciente primero (o un orden estable documentado). Dispara cuando las últimas
+     *  [threshold] noches son TODAS NoData (o ausentes ⇒ tratadas como NoData).
+     *  Una sola noche con dato en la ventana ⇒ no dispara (contador "se resetea"). */
+    fun shouldFireDataAlert(
+        recentNightConfidences: List<SleepConfidence?>,   // null = noche ausente = sin datos
+        threshold: Int = NIGHTS_WITHOUT_DATA_THRESHOLD,
+    ): Boolean {
+        if (threshold <= 0) return false
+        val window = recentNightConfidences.take(threshold)
+        if (window.size < threshold) return false          // aún no hay N noches de historia
+        return window.all { it == null || it == SleepConfidence.NoData }
+    }
+
+    private fun isValidTime(value: String?): Boolean =
+        value != null && runCatching { java.time.LocalTime.parse(value) }.getOrNull() != null
+}
+```
+
+Decisiones de modelado dentro de la policy:
+- **`shouldFireDataAlert` recibe la lista de confianzas, NO consulta Room.** El acceso a
+  `getSleepNightsInRange` lo hace la capa plataforma (Worker/repo) y le PASA la lista a la
+  función pura. Así la decisión es 100% testeable sin Android ni Room (Strict TDD).
+- **Noche ausente == NoData.** La spec (§125-128) define "sin telemetría" como
+  `confidence == NoData` **o** noche sin segmentos/fila. Mapear `null → sin datos` en la
+  policy cubre el caso "no se materializó fila" de forma uniforme.
+- **El umbral es parámetro con default = constante**, para que los tests prueben tanto el
+  valor canónico (3) como umbrales arbitrarios (1, 5) sin tocar la constante.
+
+> **Por qué NO se cuenta con un contador incremental en prefs:** derivar de las últimas N
+> filas de `sleep_nights` es O(N) trivial (N=3), idempotente, y AUTO-RESETEA naturalmente
+> (si una noche tiene dato, `all { NoData }` es false). Un contador en prefs introduciría un
+> segundo estado a mantener sincronizado con la verdad (las filas), justo el anti-patrón que
+> el invariante hechos→dominio combate. La spec deja esta optimización abierta (§256-257);
+> se elige la opción sin estado extra. **Invariante "sin Room nuevo" satisfecho sin prefs.**
+
+### S5-D2 — Notif A: Worker periódico anclado a `targetSleepAt` (sigue el patrón Scheduler)
+
+La Notif A es un recordatorio diario a la hora de dormir. Se modela con el patrón canónico
+Worker+Scheduler, espejo exacto de `DailyClosureWorkScheduler`:
+
+- **`WindDownNotificationScheduler`** (`data/worker/`, plataforma):
+  - `schedule(context, targetSleepAt, zoneId)`: calcula el `initialDelay` hasta la próxima
+    ocurrencia de `targetSleepAt` (misma técnica que `DailyClosureSchedulePolicy.initialDelay`
+    — se reUSA o se escribe un policy puro gemelo `WindDownSchedulePolicy.initialDelay(now,
+    targetSleepAt)` testeable). Encola un `PeriodicWorkRequest<WindDownNotificationWorker>`
+    de 1 día con `enqueueUniquePeriodicWork(UNIQUE, KEEP_OR_REPLACE, request)`.
+  - `cancel(context)`: `WorkManager.cancelUniqueWork(UNIQUE)` — usado cuando el consentimiento
+    es false/null o no hay `targetSleepAt` válido.
+  - **`UNIQUE = "wind_down_reminder"`**. Política: `REPLACE` (no `KEEP`) — si el usuario cambia
+    su `targetSleepAt`, reprogramar con la hora nueva. (Difiere de `DailyClosure` que usa
+    `KEEP`: ahí la hora es fija medianoche; acá depende de config del usuario.)
+- **`WindDownNotificationWorker`** (`CoroutineWorker`): en `doWork()` re-verifica la condición
+  contra la fuente de verdad (lee `sleep_wind_down_consent` + `targetSleepAt` del repo y pasa
+  por `SleepNotificationPolicy.shouldScheduleWindDown`). Si sigue válido y el permiso está
+  concedido, postea la notificación (`SleepNotifier.postWindDown(context)`). Si el permiso NO
+  está concedido, NO postea y NO pide permiso (S5-D5: el permiso no se pide en background);
+  simplemente no muestra nada — el pedido perezoso se difiere a la próxima apertura (S5-D5).
+  - **Re-verificación en `doWork` (no solo en el scheduler):** evita una notif obsoleta si el
+    usuario revocó el consentimiento entre la programación y el disparo.
+  - **NO es foreground-service.** Es un recordatorio: usa `NotificationManagerCompat.notify`,
+    NO `setForegroundAsync`/`ForegroundInfo` (Context7: estos recordatorios no son foreground
+    work). El Worker computa la condición y postea una notificación normal.
+
+**Quién llama al scheduler de la Notif A:** al entrar al Dashboard tras completar el
+onboarding (y en cada `onCreate` como garantía idempotente, junto al
+`DailyClosureWorkScheduler.schedule` ya presente), `MainActivity` evalúa
+`shouldScheduleWindDown(consent, targetSleepAt)`:
+- `true` ⇒ `WindDownNotificationScheduler.schedule(...)` + dispara el flujo de permiso
+  perezoso (S5-D5) si falta.
+- `false` ⇒ `WindDownNotificationScheduler.cancel(...)` (cubre los escenarios "consent
+  false/null no programa" y "sin targetSleepAt no programa, sin crash").
+
+### S5-D3 — Notif B: reUSA `DailyClosureWorker` (sin Worker nuevo)
+
+La spec PROHÍBE un worker nuevo para la Notif B (§139-141). Se agrega un paso al final de
+`DailyClosureWorker.doWork()`, DESPUÉS de `materializeSleepNight` (para que la noche recién
+cerrada ya esté en `sleep_nights`) y del snapshot:
+
+```kotlin
+// data/worker/DailyClosureWorker.kt (Modified — un bloque nuevo al final del runCatching)
+repository.materializeSleepNight(nightDate = today, zoneId = zoneId)
+repository.refreshCurrentWeeklyScoreSnapshot(today = today)
+
+// Slice 5: evaluar Notif B (sleep data alert) tras materializar la noche
+repository.maybeFireSleepDataAlert(today = today, zoneId = zoneId)   // ← nuevo
+```
+
+`maybeFireSleepDataAlert` (en `AutonomiaRepository`, capa plataforma que orquesta dato→dominio):
+1. Lee las últimas `NIGHTS_WITHOUT_DATA_THRESHOLD` noches: `dao.getSleepNightsInRange(from, to)`
+   sobre el rango `[today - (threshold-1), today]` (mapeando fechas a `String` ISO como ya hace
+   el resto del repo). Reconstruye la lista ordenada (más reciente primero) de
+   `confidenceLevel`, mapeando fila ausente → `null`.
+2. Llama `SleepNotificationPolicy.shouldFireDataAlert(confidences)` (dominio puro).
+3. Si `true` Y el permiso `POST_NOTIFICATIONS` está concedido ⇒ `SleepNotifier.postDataAlert`.
+   Si el permiso NO está concedido, NO postea NI pide permiso desde el Worker (S5-D5); el
+   pedido se difiere a la próxima apertura (donde `MainActivity` reevalúa).
+4. **Anti-spam (decisión propia, no contradice spec):** para no postear la Notif B cada
+   medianoche mientras siga la racha NoData, se guarda una pref liviana
+   `sleep_data_alert_last_fired_date` (String ISO) y solo se postea si la fecha de hoy difiere
+   de la última. Esto NO es "estado del contador" (sigue derivado de Room) — es solo
+   deduplicación de la notificación. Si esto se considera fuera de alcance, el fallback es
+   postear con un `notificationId` fijo (Android colapsa la misma id), que ya evita
+   duplicados visuales sin pref. **Decisión del apply según budget.**
+
+> **Por qué la lectura va en el repo y no en el Worker:** el `DailyClosureWorker` ya delega
+> TODA su lógica de datos al repo (`closeElapsedActivityDays`, `materializeSleepNight`, etc.).
+> Mantener `maybeFireSleepDataAlert` en el repo respeta esa convención y deja el Worker como
+> orquestador delgado. La DECISIÓN sigue siendo pura (`SleepNotificationPolicy`); el repo solo
+> recolecta los hechos y pasa el resultado al notifier de plataforma.
+
+### S5-D4 — Dos canales de notificación, inicializados en `MainActivity.onCreate`
+
+Decisión cerrada del orquestador: **DOS canales** (el usuario puede silenciar cada tipo por
+separado desde Ajustes del sistema). `channelId`s de la spec (§28-31):
+
+| Canal | `channelId` | Importancia | Nombre visible | Descripción |
+|-------|-------------|-------------|----------------|-------------|
+| Compromiso (Notif A) | `sleep_wind_down` | `IMPORTANCE_DEFAULT` | "Recordatorio de descanso" | "Aviso cuando se acerca tu hora de dormir" |
+| Informativo (Notif B) | `sleep_data_alert` | `IMPORTANCE_DEFAULT` | "Datos de sueño" | "Avisos sobre datos de sueño incompletos" |
+
+- **`SleepNotificationChannels`** (`platform/notifications/`, plataforma):
+  `ensureCreated(context)` crea ambos canales vía `NotificationManager.createNotificationChannel`
+  SOLO en `Build.VERSION.SDK_INT >= O` (Context7). Idempotente: re-crear un canal con el mismo
+  id no borra ni duplica (contrato Android). En API < 26 es no-op (no hay canales).
+- **Dónde se inicializa:** en `MainActivity.onCreate`, junto al `DailyClosureWorkScheduler.schedule`
+  ya presente (línea 45):
+  ```kotlin
+  override fun onCreate(savedInstanceState: Bundle?) {
+      super.onCreate(savedInstanceState)
+      SleepNotificationChannels.ensureCreated(applicationContext)   // ← nuevo, idempotente
+      DailyClosureWorkScheduler.schedule(applicationContext)
+      ...
+  }
+  ```
+  Esto satisface "canales creados en cada arranque, idempotente" (escenarios §37-48) sin
+  introducir una `Application` propia.
+
+> **Por qué NO una `Application` propia:** registrar canales en `Application.onCreate` sería el
+> lugar "canónico", PERO el repo NO tiene `<application android:name>` propia (verificado en el
+> manifest) y el scheduling actual YA vive en `MainActivity.onCreate`. Agregar una `Application`
+> es un cambio estructural transversal desproporcionado para este slice; `MainActivity.onCreate`
+> corre en todo arranque con UI (único contexto donde una notif tiene sentido de mostrarse) y es
+> consistente con el patrón ya presente. Si en el futuro se necesita inicialización sin UI, migrar
+> a `Application` es un refactor aparte. (Riesgo: si un Worker en background fuera el PRIMER código
+> en correr tras un proceso muerto, el canal podría no existir aún → mitigado en S5-D2/D3: ambos
+> workers llaman `SleepNotificationChannels.ensureCreated(context)` defensivamente antes de postear.)
+
+### S5-D5 — Permiso `POST_NOTIFICATIONS` perezoso, desde `MainActivity` en foreground
+
+Decisión cerrada del orquestador: el permiso se pide SOLO desde la Activity en foreground,
+NUNCA desde un Worker (Android 13+ no permite pedir runtime permissions en background). Patrón
+(Context7 + precedente del repo en `MainActivity`):
+
+- **Manifest:** declarar `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />`
+  (S5-D7). En API < 33 el sistema lo ignora; no es runtime permission ahí.
+- **API < 33 ⇒ tratado como concedido.** La comprobación de plataforma:
+  ```kotlin
+  fun isPostNotificationsGranted(context: Context): Boolean =
+      Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+      ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+          PackageManager.PERMISSION_GRANTED
+  ```
+  En API < 33 devuelve `true` sin pedir nada (escenario §212-217 "el permiso no se pide").
+- **Launcher perezoso en `MainActivity`** (mismo mecanismo que el `adminLauncher`/permiso ya
+  cableado, líneas 68-72):
+  ```kotlin
+  val postNotificationsLauncher = rememberLauncherForActivityResult(
+      ActivityResultContracts.RequestPermission()
+  ) { /* granted: Boolean → no-op; denegación NO bloquea (S5-D6) */ }
+  ```
+- **Gatillo perezoso (no en onboarding):** el `launch(POST_NOTIFICATIONS)` ocurre SOLO cuando
+  la primera notif tiene sentido para ese usuario:
+  - **Para Notif A:** al entrar al Dashboard tras el onboarding con
+    `shouldScheduleWindDown == true` y permiso aún no concedido (API ≥ 33) ⇒ se lanza el
+    diálogo. (Escenario §77-83 / §196-201.)
+  - **Para Notif B:** el Worker NO puede pedirlo (background). La spec (decisión abierta
+    D-GATILLO-B) acepta diferir a la próxima apertura. ⇒ Si el Worker detecta N noches NoData
+    y el permiso falta, NO postea; en la siguiente apertura, `MainActivity` —que ya reevalúa el
+    estado de sueño— detecta "racha NoData activa + permiso faltante" y lanza el diálogo. (Se
+    reusa la misma evaluación que ya corre para la Notif A; un único punto de pedido perezoso.)
+  - **NUNCA durante el onboarding** (bloques 0-4): el gate de `MainActivity` muestra
+    `AppScreen.Onboarding`; el pedido de permiso está atado a la entrada al Dashboard, no a los
+    pasos del onboarding (escenario §219-224).
+- **Idempotencia del pedido:** se pide UNA vez por gatillo; si el usuario deniega, NO se
+  reintenta en cada arranque (spec §194). Se usa una pref liviana
+  `post_notifications_requested` (Boolean) para no relanzar el diálogo automáticamente tras una
+  denegación. (`shouldShowRequestPermissionRationale` puede consultarse para decidir mostrar un
+  rationale suave, opcional — no bloqueante.)
+
+### S5-D6 — Denegación NO bloqueante (invariante de robustez)
+
+Si el usuario deniega `POST_NOTIFICATIONS` (o silencia un canal):
+- La app sigue funcionando normal; el Dashboard carga.
+- Las notificaciones simplemente no aparecen. `NotificationManagerCompat.notify` con permiso
+  denegado es un no-op silencioso (no lanza) en API 33+ — pero igual se **guarda** la llamada
+  detrás de `isPostNotificationsGranted` para no depender de ese comportamiento.
+- **Cero impacto en scoring** (las notifs son una capa de presentación lateral; no tocan el
+  pipeline de hechos→dominio→score). Escenarios §203-210.
+
+### S5-D7 — Copy y tono de las notificaciones (canónico, español neutro)
+
+Capa plataforma `SleepNotifier` (`platform/notifications/`) construye las notifs con
+`NotificationCompat.Builder(context, channelId)` + `setContentTitle/Text/SmallIcon/ContentIntent`
+y postea con `NotificationManagerCompat.from(context).notify(id, n)` (Context7). El **copy** es
+contrato (tono adulto funcional compasivo, INVITA no ordena, español neutro):
+
+- **Notif A (wind-down)** — canal `sleep_wind_down`:
+  - Título: "Se acerca tu hora de descanso"
+  - Texto: "Es un buen momento para empezar a bajar el ritmo."
+  - PROHIBIDO: "deberías", "fallaste", "no olvidaste", signos de exclamación de alarma
+    (escenario §97-103). El nombre visible usa "Autonomía sin límites", no "Vocal" (§70).
+- **Notif B (data alert)** — canal `sleep_data_alert`:
+  - Título: "Faltan datos de sueño"
+  - Texto: "No detectamos datos de sueño en los últimos días. Puedes revisar el permiso de
+    uso en la configuración." (español neutro, §134)
+  - `ContentIntent` SHOULD llevar a la config de sueño / permiso; si no se implementa, abre la
+    app (spec §137).
+  - PROHIBIDO: "fallaste", "no registraste", "olvidaste", "anotar", "marcar el sueño",
+    diagnóstico (Requirements "no culpabiliza" §158-163 y "sin registro nocturno manual"
+    §228-243). El copy habla de "datos de sueño" / "permiso de uso", NUNCA de acciones del
+    usuario.
+
+> El copy vive en `strings.xml` (recursos), no hardcodeado, consistente con el resto de la app.
+> Como es texto/strings, NO requiere compilar para validar (regla de proyecto), pero el
+> contenido SÍ debe pasar la compuerta de tono.
+
+### S5-D8 — Claves de prefs nuevas (mínimas, sin Room)
+
+Patrón canónico `prefs.getX / prefs.edit { }` (como slices 1-4). Solo dos, ambas opcionales
+según budget (S5-D3.4 / S5-D5):
+
+| Pref key (snake_case) | Tipo | Significado | ¿Imprescindible? |
+|-----------------------|------|-------------|------------------|
+| `post_notifications_requested` | Boolean | El diálogo de permiso ya se mostró (no relanzar tras denegación). | Sí (spec §194: no reintentar). |
+| `sleep_data_alert_last_fired_date` | String? | Fecha ISO del último disparo de Notif B (dedup anti-spam). | No — fallback: `notificationId` fijo (S5-D3.4). |
+
+**NINGUNA pref guarda el contador de noches sin datos** (se deriva de `sleep_nights`, S5-D1).
+**NINGUNA migración Room, NINGUNA entidad nueva** (S5.9).
+
+## S5.3 — Componentes nuevos / modificados (Slice 5)
+
+| Componente | Tipo | Rol |
+|------------|------|-----|
+| `domain/notifications/SleepNotificationPolicy.kt` | New | **Dominio puro**: umbral N (constante calibrable), `shouldScheduleWindDown`, `shouldFireDataAlert` (S5-D1) |
+| `domain/notifications/SleepNotificationPolicyTest.kt` | New | **TDD**: umbral exacto, reset con una noche con dato, consent null/false, API<33, ausente=NoData (S5.4) |
+| `domain/closure/WindDownSchedulePolicy.kt` | New (opcional) | Puro: `initialDelay(now, targetSleepAt)` (gemelo de `DailyClosureSchedulePolicy`); testeable. Puede plegarse si se reUSA la técnica existente |
+| `platform/notifications/SleepNotificationChannels.kt` | New | Plataforma: `ensureCreated(context)` (2 canales, API≥26, idempotente) (S5-D4) |
+| `platform/notifications/SleepNotifier.kt` | New | Plataforma: construye y postea Notif A/B con `NotificationCompat` (S5-D7) |
+| `platform/notifications/PostNotificationsPermission.kt` | New | Plataforma: `isGranted(context)` (API<33 ⇒ true) (S5-D5) |
+| `data/worker/WindDownNotificationScheduler.kt` | New | Programa/cancela la Notif A (patrón `DailyClosureWorkScheduler`) (S5-D2) |
+| `data/worker/WindDownNotificationWorker.kt` | New | `CoroutineWorker`: re-verifica condición y postea Notif A (S5-D2) |
+| `data/worker/DailyClosureWorker.kt` | Modified | Agrega `maybeFireSleepDataAlert(today)` al final (Notif B, reUSA worker) (S5-D3) |
+| `AutonomiaRepository.kt` | Modified | `maybeFireSleepDataAlert` (lee `getSleepNightsInRange` → policy → notifier) + 1-2 prefs (S5-D3/D8) |
+| `MainActivity.kt` | Modified | `SleepNotificationChannels.ensureCreated` + launcher `POST_NOTIFICATIONS` perezoso + evaluación Notif A al entrar al Dashboard (S5-D4/D5) |
+| `AndroidManifest.xml` | Modified | `<uses-permission POST_NOTIFICATIONS />` (S5-D7) |
+| `res/values/strings.xml` | Modified | Copy canónico Notif A/B + nombres/descripciones de canales (S5-D7) |
+
+## S5.4 — Unidades de dominio puro testeables (Strict TDD, tests primero)
+
+El corazón TDD del slice es `SleepNotificationPolicy` (JVM puro, sin Android, sin Room). Tests
+ANTES del wiring (Strict TDD activo). Casos:
+
+1. **Umbral Notif B (exacto):**
+   - `shouldFireDataAlert([NoData, NoData, NoData])` ⇒ `true` (3 noches, default).
+   - `shouldFireDataAlert([NoData, NoData])` ⇒ `false` (solo 2 noches de historia).
+   - `shouldFireDataAlert([High, NoData, NoData])` ⇒ `false` (la más reciente tiene dato).
+   - `shouldFireDataAlert([NoData, High, NoData])` ⇒ `false` (una noche con dato resetea).
+   - `shouldFireDataAlert([null, null, null])` ⇒ `true` (noches ausentes = sin datos).
+   - `shouldFireDataAlert([NoData, NoData, NoData, NoData])` con default 3 ⇒ `true` (toma 3).
+2. **Umbral configurable (constante):**
+   - `NIGHTS_WITHOUT_DATA_THRESHOLD == 3`.
+   - `shouldFireDataAlert([NoData], threshold = 1)` ⇒ `true` (calibración a 1 para test manual).
+   - `shouldFireDataAlert(anything, threshold = 0)` ⇒ `false` (guarda defensiva).
+3. **Gating Notif A:**
+   - `shouldScheduleWindDown(true, "23:30")` ⇒ `true`.
+   - `shouldScheduleWindDown(false, "23:30")` ⇒ `false`.
+   - `shouldScheduleWindDown(null, "23:30")` ⇒ `false`.
+   - `shouldScheduleWindDown(true, null)` ⇒ `false` (sin targetSleepAt).
+   - `shouldScheduleWindDown(true, "99:99")` ⇒ `false` (hora inválida, sin crash — escenario §105-110).
+4. **Permiso API < 33 (si `PostNotificationsPermission.isGranted` admite inyección de SDK_INT
+   puro, testearlo; si depende de `Build.VERSION` real, queda para verificación runtime):**
+   se documenta que en API < 33 la lógica devuelve concedido sin pedir.
+
+> Lo que NO es dominio puro (queda para verificación por capas, capas 1-4 de
+> `verificacion-por-capas.md`): la creación de canales, el `NotificationCompat`/`notify`, el
+> launcher de permiso, el scheduling de WorkManager, la lectura de `getSleepNightsInRange`.
+> Se validan en emulador (S5.6).
+
+## S5.5 — Mapa spec → diseño (trazabilidad Slice 5)
+
+| Requirement (spec) | Resuelto por |
+|--------------------|--------------|
+| Notification Channel Registration | S5-D4 (`SleepNotificationChannels.ensureCreated`, 2 canales, API≥26, idempotente, en `MainActivity.onCreate`) |
+| Notification A — Wind-Down Reminder | S5-D2 (Worker+Scheduler anclado a `targetSleepAt`) + S5-D1 (`shouldScheduleWindDown`) + S5-D7 (copy/tono) |
+| Notification B — Sleep Data Alert | S5-D3 (reUSA `DailyClosureWorker` + `maybeFireSleepDataAlert`) + S5-D1 (`shouldFireDataAlert`, N=3 calibrable) + S5-D7 (copy/tono) |
+| POST_NOTIFICATIONS Lazy Permission | S5-D5 (launcher perezoso en `MainActivity`, API<33⇒concedido, no en onboarding) + S5-D7 (manifest) |
+| Denegación no bloqueante | S5-D6 (gate `isGranted`, cero impacto scoring) |
+| Sin registro nocturno manual | S5-D7 (copy Notif B prohíbe "registrar"/"anotar"; habla de datos/permiso) |
+| Persistencia sin Room nuevo | S5-D1 (contador derivado de `sleep_nights`) + S5-D8 (prefs mínimas) + S5.9 (invariante) |
+
+## S5.6 — Verificación runtime (capas 1-4, aplicables por ser plataforma/UI)
+
+- **API 33+:** completar onboarding con `windDownConsent = true` → al entrar al Dashboard
+  aparece el diálogo `POST_NOTIFICATIONS`. Denegarlo → app no crashea, Dashboard carga.
+  Concederlo → la Notif A aparece cerca de `targetSleepAt` al día siguiente.
+- **Notif B:** simular bajando el threshold a 1 (constante) → tras una noche NoData, el
+  `DailyClosureWorker` emite la Notif B; revertir el threshold a 3 después.
+- **API < 33:** no aparece diálogo de permiso; las notifs se muestran sin runtime permission.
+- **Logcat:** sin crashes ni "channel not registered" (canal creado en `onCreate` antes de
+  cualquier `notify`).
+- **Build/Static:** `assembleDebug` + `lintDebug` + `testDebugUnitTest` en verde. El manifest
+  con `POST_NOTIFICATIONS` no rompe el build.
+
+## S5.7 — Notas Context7 (consultadas y aplicadas)
+
+Context7 fue resuelto por el orquestador (el ejecutor no tiene la tool) y sus hallazgos están
+incorporados literalmente en el diseño:
+- `NotificationCompat.Builder(ctx, channelId)` + `NotificationManagerCompat.notify` (S5-D7),
+  NO foreground-service (S5-D2).
+- `NotificationChannel` + `createNotificationChannel` SOLO API≥26, idempotente (S5-D4).
+- `checkSelfPermission(POST_NOTIFICATIONS)` + `rememberLauncherForActivityResult(RequestPermission())`,
+  API<33 ⇒ tratar como concedido (S5-D5).
+- **Acción para el apply:** validar con Context7 la firma vigente de
+  `NotificationManagerCompat`/`NotificationChannel`/`RequestPermission` antes de fijar el código
+  (regla de proyecto), pero el diseño NO depende de detalles no resueltos.
+
+## S5.8 — Invariante "sin Room" (explícito)
+
+El slice NO agrega entidad ni migración Room. El "contador de noches sin datos" se DERIVA de
+la tabla `sleep_nights` EXISTENTE (`getSleepNightsInRange`, leyendo `confidenceLevel`), que el
+`DailyClosureWorker` ya escribe cada cierre. El estado lateral mínimo (permiso pedido, dedup de
+Notif B) va a `SharedPreferences`. Si durante el apply apareciera una necesidad real de Room (no
+la hay según este diseño), es **decisión del dueño**, NO una asunción del ejecutor (regla de
+proyecto: si creés que hace falta Room nuevo, FRENÁ y reportá).
+
+## S5.9 — Riesgos de implementación (Slice 5)
+
+- **Canal ausente si un Worker corre antes del primer `onCreate`** (proceso muerto + WorkManager
+  despierta en background). Mitigación: ambos workers llaman
+  `SleepNotificationChannels.ensureCreated(context)` defensivamente antes de `notify` (S5-D4).
+  Riesgo bajo (idempotente).
+- **Pedir permiso en background es imposible (Android 13+).** Asumido en el diseño: el Worker NO
+  pide; difiere a la próxima apertura (S5-D5). Riesgo controlado por decisión cerrada #3.
+- **`initialDelay` de la Notif A mal calculado** (cruce de medianoche, zona horaria). Mitigación:
+  encapsular el cálculo en un policy puro testeable (`WindDownSchedulePolicy`, gemelo del de
+  cierre diario) — NO inline en el scheduler. Validar con tests JVM.
+- **Spam de Notif B cada medianoche durante racha larga.** Mitigación: dedup por fecha
+  (`sleep_data_alert_last_fired_date`) o `notificationId` fijo (S5-D3.4).
+- **Budget ~400 líneas — riesgo medio.** Estimación gruesa: `SleepNotificationPolicy` (~35) +
+  tests (~90) + `SleepNotificationChannels` (~30) + `SleepNotifier` (~50) +
+  `PostNotificationsPermission` (~15) + `WindDownNotificationScheduler` (~40) + `WindDownWorker`
+  (~40) + `DailyClosureWorker`/`repo maybeFire` (~45) + `MainActivity` wiring (~50) + manifest +
+  strings (~20). Total **~415-460 líneas** → **roza/excede el budget.**
+
+  **Split propuesto si excede (por responsabilidad, cada PR testeable/coherente):**
+  1. **PR 5a (dominio + datos — el corazón TDD):** `SleepNotificationPolicy` +
+     `WindDownSchedulePolicy` + sus tests + `maybeFireSleepDataAlert` en el repo + el paso en
+     `DailyClosureWorker`. Autónomo: la decisión y la fuente de datos quedan verificadas por
+     tests JVM aunque la entrega de plataforma no exista aún (el notifier puede ser un stub
+     no-op temporal). ~180-200 líneas.
+  2. **PR 5b (infra de plataforma):** `SleepNotificationChannels` + `SleepNotifier` +
+     `WindDownNotificationScheduler` + `WindDownNotificationWorker` + manifest + strings +
+     `ensureCreated` en `onCreate`. Conecta la entrega real. ~160 líneas.
+  3. **PR 5c (permiso UI):** `PostNotificationsPermission` + launcher perezoso en `MainActivity`
+     + evaluación de la Notif A al entrar al Dashboard + gatillo perezoso de la Notif B. ~80 líneas.
+
+  El corte 5a/5b/5c es por **responsabilidad** (dominio+datos / entrega plataforma / permiso UI),
+  no move-only. Recomendación: intentar el slice completo; si el conteo real supera ~400, cortar
+  5a (dominio+datos+tests) como PR encadenado y dejar 5b+5c juntos o separados según margen.
+  Decisión final del apply con conteo real.
+
+## S5.10 — Fuera de alcance (explícito, hereda de la spec)
+
+- `digitalWindDown` / detox digital: ninguna notif relacionada (diferido D3).
+- Registro nocturno manual: la Notif B NO lo sugiere (sueño sellado por telemetría).
+- Configuración in-app de notifs (más allá del consentimiento wind-down del slice 3): la
+  desactivación se hace desde Ajustes de Android (por eso los 2 canales separados).
+- Notifs de otras features (sobriedad, anclas, actividades).
+- El N final de noches como decisión de producto: default 3, calibrable post-lanzamiento (D1).
+- Supresión proactiva de la Notif B al detectar UsageStats concedido (decisión abierta D-APAGA):
+  el reset natural por noche-con-dato ya cubre el caso; no se agrega lógica extra.
