@@ -16,10 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,9 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.domain.dashboard.DashboardSleepState
@@ -189,158 +184,7 @@ internal fun SleepConfigScreen(
     }
 }
 
-/**
- * Card for the automatic telemetry-based sleep detection mode (design §7, WU-7).
- *
- * - When OFF: toggle + explanation. User can activate.
- * - When ON: toggle + active status. User can deactivate.
- * - [showPermissionPrompt]: usage-access permission is required. Show a compassionate, two-step
- *   prompt (no crash, no silent fail). On Android 13+ an app installed from an untrusted source
- *   (e.g. `adb install`) hits **Restricted Settings**: the Usage-access toggle is greyed out
- *   until the user first allows restricted settings from the app info screen. Step 1 covers that
- *   escape hatch; step 2 is the actual Usage-access grant. See handoff follow-up 1.
- *
- * Tono: compasivo, adulto funcional (AGENTS.md).
- */
-@Composable
-private fun AutoModeCard(
-    isEnabled: Boolean,
-    showPermissionPrompt: Boolean,
-    palette: DashboardPalette,
-    onToggle: (Boolean) -> Unit,
-    onOpenUsageAccess: () -> Unit = {},
-    onOpenAppDetails: () -> Unit = {},
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(palette.bgSurface)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Deteccion automatica",
-                    color = palette.textMain,
-                    fontFamily = DashboardSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.5.sp,
-                )
-                Text(
-                    text = if (isEnabled) {
-                        "El dispositivo infiere tu descanso en segundo plano."
-                    } else {
-                        "El telefono lee tu actividad nocturna para inferir el sueno."
-                    },
-                    color = palette.textMuted,
-                    fontFamily = DashboardSans,
-                    fontSize = 12.5.sp,
-                    lineHeight = 17.sp,
-                )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Switch(
-                checked = isEnabled,
-                onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = palette.bgBase,
-                    checkedTrackColor = palette.colorCardboard,
-                    uncheckedThumbColor = palette.textMuted,
-                    uncheckedTrackColor = palette.bgSurface2,
-                ),
-            )
-        }
-
-        if (showPermissionPrompt) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = "Falta el permiso de acceso a uso de apps.",
-                    color = palette.textMain,
-                    fontFamily = DashboardSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                )
-                Text(
-                    text = "Esta es una senal, no una condena. La app nunca comparte esos datos. Son dos pasos:",
-                    color = palette.textMuted,
-                    fontFamily = DashboardSans,
-                    fontSize = 12.5.sp,
-                    lineHeight = 17.sp,
-                )
-                PermissionStep(
-                    number = "1",
-                    instruction = "Si el interruptor de Acceso de uso aparece bloqueado, abri la info de la app y, en el menu ⋮, elegi \"Permitir ajustes restringidos\".",
-                    actionLabel = "Abrir info de la app",
-                    palette = palette,
-                    onAction = onOpenAppDetails,
-                )
-                PermissionStep(
-                    number = "2",
-                    instruction = "Despues entra a Acceso de uso y concedelo a Vocal.",
-                    actionLabel = "Ir a Acceso de uso",
-                    palette = palette,
-                    onAction = onOpenUsageAccess,
-                )
-            }
-        }
-    }
-}
-
-/**
- * One numbered step inside the usage-access permission prompt: a calm instruction line plus a
- * single action button that opens the relevant system settings screen.
- */
-@Composable
-private fun PermissionStep(
-    number: String,
-    instruction: String,
-    actionLabel: String,
-    palette: DashboardPalette,
-    onAction: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "$number ·",
-                color = palette.colorCardboard,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.5.sp,
-            )
-            Text(
-                text = instruction,
-                color = palette.textMuted,
-                fontFamily = DashboardSans,
-                fontSize = 12.5.sp,
-                lineHeight = 17.sp,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .height(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(palette.colorCardboard)
-                .clickable(role = Role.Button, onClick = onAction)
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = actionLabel,
-                color = palette.bgBase,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.5.sp,
-            )
-        }
-    }
-}
+// AutoModeCard and PermissionStep extracted to SleepAutoModeCard.kt for reuse in OnboardingSleepStep.
 
 @Composable
 private fun SleepLockStatusCard(
@@ -445,69 +289,7 @@ private fun Header(
     }
 }
 
-@Composable
-private fun TimeField(
-    label: String,
-    value: String,
-    palette: DashboardPalette,
-    modifier: Modifier,
-    onValueChange: (String) -> Unit,
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            color = palette.textMuted,
-            fontFamily = DashboardSans,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.5.sp,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            textStyle = TextStyle(
-                color = palette.textMain,
-                fontFamily = DashboardSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp,
-                textAlign = TextAlign.Center,
-            ),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(palette.bgSurface2)
-                .padding(horizontal = 10.dp, vertical = 15.dp),
-        )
-    }
-}
-
-@Composable
-private fun DurationRow(
-    minutes: Int?,
-    palette: DashboardPalette,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "Duracion objetivo",
-            color = palette.textMuted,
-            fontFamily = DashboardSans,
-            fontSize = 13.sp,
-        )
-        Text(
-            text = minutes?.let(SleepPolicy::formatDuration) ?: "--",
-            color = palette.colorCardboard,
-            fontFamily = DashboardSans,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-        )
-    }
-}
+// TimeField, DurationRow, and filterTimeInput extracted to SleepWindowFields.kt for reuse in OnboardingSleepStep.
 
 @Composable
 private fun WindDownChips(
@@ -594,5 +376,4 @@ private fun SaveButton(
     }
 }
 
-private fun String.filterTimeInput(): String =
-    filter { it.isDigit() || it == ':' }.take(5)
+// filterTimeInput extracted to SleepWindowFields.kt
