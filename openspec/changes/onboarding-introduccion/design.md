@@ -408,3 +408,438 @@ para `Intention` y `Sobriety` (placeholders de slice 4). El andamiaje de navegac
   ya está probado en el repo.
 - **Escribir la ventana al avanzar:** si el usuario retrocede tras escribir y vuelve a
   avanzar, se re-escribe `sleep_config` (idempotente, upsert). Sin efecto adverso.
+
+---
+
+# Slice 4 — Bloque Intención + Bloque Sobriedad
+
+Specs: `specs/onboarding-intention/spec.md` (4 requirements), `specs/onboarding-sobriety/spec.md`
+(4 requirements), `specs/onboarding-gate-slice4-delta/spec.md` (MODIFIED `Block Navigation
+Skeleton` + ADDED `Intention-Aware State`) · Insumo conceptual:
+`meta/instructions/2026-06-02-onboarding-introduccion-diseno.md` §2.2, §2.4, §2.5, §4
+(Bloques 0.5 y 3), §7.
+
+> Estado de partida: slices 1 (gate + estado + esqueleto), 2 (anclas) y 3 (sueño)
+> implementados, verificados en emulador y commiteados. SLICE 4 = **Bloque 0.5 Intención**
+> (hoy cae en la rama `else -> OnboardingBlock(...)` con `placeholderTitle` "¿Qué te trae
+> aquí?") + **Bloque 3 Sobriedad** (hoy también `else`, título "Cuidar algo que te
+> cuesta"). Ambos placeholders se REEMPLAZAN. PR encadenado, presupuesto ~400 líneas.
+
+## S4.1 — Contexto y hallazgo clave (qué ya existe, qué cambia)
+
+El **corazón del slice no es UI sino dominio puro**: hoy `OnboardingFlow.next/previous`
+recorren `OnboardingStep.entries` en orden LINEAL sin ramificar (verificado en
+`OnboardingState.kt` líneas 36-46). La spec de gate (delta) exige que la secuencia dependa
+de la **intención persistida**: la ruta estándar SALTA `Sobriety`; la ruta sobriedad lo
+incluye. Eso obliga a cambiar la firma de `next/previous` y a modelar la intención.
+
+Hallazgos que evitan reinventar:
+
+- **El repo YA persiste tracks de abstinencia sin tocar Room nuevo.**
+  `AutonomiaRepository.createCustomAbstinenceTrack(name)` (líneas 445-462) reusa
+  `AbstinencePolicy.createCustomDraft(name)` (retorna `null` si el nombre normalizado es
+  blanco) e inserta en la tabla EXISTENTE `AbstinenceTrackEntity` con `dao.upsertAbstinenceTrack`,
+  aplicando los defaults del draft (`severity=Moderate`, `contributionRole=Protective`,
+  `importanceTier=High`, `active=true`). El `DashboardViewModel` ya lo expone como
+  `createCustomAbstinenceTrack` (cableado en `MainActivity` línea 275 para el dashboard).
+  **El Bloque Sobriedad reusa exactamente este camino — cero Room nuevo, cero migración.**
+- **El patrón de prefs sin Room está canonizado** (slices 1-3): `MutableStateFlow(prefs.getX(...))`
+  + `asStateFlow()` + `suspend set...()` con `prefs.edit { }`. La intención usa este mismo patrón.
+- **El precedente de los slices 2-3 (decisión del orquestador, NO re-abrir):** NO se reusa
+  la pantalla de config completa cuando arrastra UI fuera de alcance; se hace un step
+  dedicado que reusa **dominio + datos**. `SobrietyConfigScreen` trae gestión de tracks,
+  presets, registro diario y borrado — todo fuera del alcance del onboarding (que solo
+  ofrece crear UN track custom por nombre). Por lo tanto: **`OnboardingSobrietyStep`
+  dedicado** que reusa `AbstinencePolicy` + el writer del repo, NO la pantalla completa.
+
+## S4.2 — Decisiones de diseño (Slice 4)
+
+### S4-D1 — La intención se modela como campo de `OnboardingState` (no como overloads)
+
+Decisión de modelado (la instrucción dejó la firma a criterio del ejecutor; se elige la
+opción más limpia y la documenta). Se introduce un enum de dominio puro y se agrega como
+campo del estado:
+
+```kotlin
+// domain/onboarding/OnboardingIntention.kt (New)
+enum class OnboardingIntention { STANDARD, PROTECTION }
+
+// domain/onboarding/OnboardingState.kt (Modified)
+data class OnboardingState(
+    val completed: Boolean,
+    val currentStep: OnboardingStep,
+    val intention: OnboardingIntention = OnboardingIntention.STANDARD,  // default seguro
+)
+```
+
+Por qué campo y no overloads sueltos de `next(step, intention)`:
+
+- `next/previous` leen la ruta DESDE el estado (`state.intention`), de modo que el
+  ViewModel y los tests trabajan con un único valor de verdad. Evita propagar el parámetro
+  `intention` por toda la cadena de llamadas y mantiene la firma de navegación estable.
+- **Ausencia de intención = `STANDARD`** (delta spec, ADDED "Intention-Aware State"): el
+  default del campo y el fallback de `resolve` garantizan que evaluar el flujo ANTES de que
+  el usuario pase por el Bloque 0.5 nunca crashea y nunca muestra `Sobriety` por accidente.
+
+> **Firma elegida (NOTA de impacto en tests, S4.4):** `next`/`previous` reciben la
+> intención. Para no romper a ciegas el contrato y mantener testabilidad pura, se exponen
+> como `fun next(step, intention)` / `fun previous(step, intention)`. El ViewModel pasa
+> `onboardingState.value.intention`. Esto **cambia el contrato de slice 1** → los tests
+> `OnboardingFlowTest` que llaman `next(step)` / `previous(step)` sin intención DEBEN
+> migrarse (detalle en S4.4). No se dejan overloads de compatibilidad: arrastrar una firma
+> sin-intención invita a olvidar la ramificación. La migración de tests es parte del slice.
+
+### S4-D2 — `resolve` aprende a leer la intención persistida
+
+`OnboardingFlow.resolve` gana un tercer parámetro para hidratar el campo `intention` desde
+prefs (string nominal → enum, con fallback seguro a `STANDARD` ante null/valor inválido,
+espejando el clamp de paso inválido ya existente):
+
+```kotlin
+fun resolve(
+    completed: Boolean,
+    persistedStepName: String?,
+    persistedIntention: String?,   // "STANDARD" | "PROTECTION" | null/inválido → STANDARD
+): OnboardingState
+```
+
+La conversión usa `runCatching { OnboardingIntention.valueOf(it) }.getOrNull() ?: STANDARD`,
+idéntico patrón al `OnboardingStep.valueOf` actual. Esto resuelve los escenarios de
+reanudación ("Reanudación con intención persistida respeta la ruta") sin lógica en Compose.
+
+### S4-D3 — Tabla de transiciones ramificadas (`next`/`previous`)
+
+La ramificación solo aplica de `Sleep` en adelante (delta spec). El resto de la secuencia
+es lineal. Tabla canónica de transiciones que `OnboardingFlow` debe implementar:
+
+| Paso actual | `next` STANDARD | `next` PROTECTION | `previous` STANDARD | `previous` PROTECTION |
+|-------------|-----------------|-------------------|---------------------|-----------------------|
+| Welcome     | Intention       | Intention         | Welcome (clamp)     | Welcome (clamp)       |
+| Intention   | Anchors         | Anchors           | Welcome             | Welcome               |
+| Anchors     | Sleep           | Sleep             | Intention           | Intention             |
+| **Sleep**   | **Closing**     | **Sobriety**      | Anchors             | Anchors               |
+| **Sobriety**| Closing¹        | Closing           | Sleep¹              | **Sleep**             |
+| **Closing** | Closing (clamp) | Closing (clamp)   | **Sleep**           | **Sobriety**          |
+
+¹ En ruta `STANDARD`, `Sobriety` no debería ser alcanzable por navegación normal (se
+saltea). Si por reanudación con paso persistido `Sobriety` + intención `STANDARD` se evalúa,
+`next(Sobriety, STANDARD)=Closing` y `previous(Sobriety, STANDARD)=Sleep` lo tratan como un
+paso "de paso" coherente (no crashea). Caso de borde defensivo, no de flujo feliz.
+
+Implementación recomendada (dominio puro, sin reflexión frágil sobre ordinales): un `when`
+explícito sobre `(step, intention)` para los pasos ramificados (`Sleep`, `Sobriety`,
+`Closing`) y el recorrido lineal de `entries` para el resto. El `when` explícito es más
+legible y testeable que filtrar dinámicamente la lista de entries.
+
+### S4-D4 — Persistencia de la intención en prefs (sin Room)
+
+Nueva clave de pref con el patrón canónico, en `AutonomiaRepository`:
+
+| Pref key (snake_case) | Tipo | Valores | Significado |
+|-----------------------|------|---------|-------------|
+| `onboarding_intention` | String? | `"STANDARD"` \| `"PROTECTION"` \| `null` | Ruta elegida en Bloque 0.5. `null` = aún no elegida (se trata como STANDARD en `resolve`). |
+
+```kotlin
+private val _onboardingIntention = MutableStateFlow(prefs.getString("onboarding_intention", null))
+fun onboardingIntentionFlow(): StateFlow<String?> = _onboardingIntention.asStateFlow()
+suspend fun setOnboardingIntention(value: String) {
+    prefs.edit { putString("onboarding_intention", value) }
+    _onboardingIntention.value = value
+}
+```
+
+Se persiste por **nombre del enum** (no ordinal), mismo criterio que `onboarding_current_step`.
+Decisión cerrada #1 incorporada: la intención SOLO se usa para ramificar; teñir tono/ofertas
+queda documentado como FUTURO (ver S4.7 "Fuera de alcance").
+
+### S4-D5 — `OnboardingViewModel`: ramifica leyendo el estado, persiste la intención
+
+`OnboardingViewModel` combina ahora TRES flows (agrega `onboardingIntentionFlow`) y pasa
+la intención a `resolve`. `advance`/`back` leen la ruta del estado:
+
+```kotlin
+val onboardingState: StateFlow<OnboardingState> =
+    combine(
+        repository.isInitialConfigurationCompleteFlow(),
+        repository.onboardingCurrentStepFlow(),
+        repository.onboardingIntentionFlow(),
+    ) { completed, stepName, intentionName ->
+        OnboardingFlow.resolve(completed, stepName, intentionName)
+    }.stateIn(/* initialValue = resolve(.value, .value, .value) — síncrono, sin flicker */)
+
+fun advance() {
+    val s = onboardingState.value
+    val next = OnboardingFlow.next(s.currentStep, s.intention)
+    viewModelScope.launch { repository.setOnboardingCurrentStep(next.name) }
+}
+fun back() {
+    val s = onboardingState.value
+    val previous = OnboardingFlow.previous(s.currentStep, s.intention)
+    viewModelScope.launch { repository.setOnboardingCurrentStep(previous.name) }
+}
+
+/** Nuevo: persiste la elección del Bloque 0.5 ANTES de avanzar. */
+fun selectIntention(intention: OnboardingIntention) {
+    viewModelScope.launch { repository.setOnboardingIntention(intention.name) }
+}
+```
+
+`combine` con 3 fuentes mantiene el patrón existente; el `initialValue` síncrono evita
+flicker igual que en slice 1. El ViewModel NO contiene reglas de ramificación: solo lee
+`s.intention` y delega en `OnboardingFlow` (dominio puro).
+
+### S4-D6 — `OnboardingIntentionStep` (Bloque 0.5) — Composable dedicado
+
+Nuevo `ui/onboarding/OnboardingIntentionStep.kt`. Reemplaza la rama `else` para
+`OnboardingStep.Intention`. Estructura (copy v3 §4 "Bloque 0.5", español neutro, estilo
+oscuro orgánico / coral mate / serif en título):
+
+1. **Encabezado**: "¿Qué te trae aquí?" (serif) + aviso "No hay respuesta correcta. Podrás
+   cambiarla cuando quieras." (sans, `textMuted`).
+2. **Dos opciones seleccionables** (tarjetas planas, sin bordes duros): "Quiero ordenar mi
+   día a día" (→ `STANDARD`) y "Quiero cuidarme de algo que me cuesta" (→ `PROTECTION`).
+   La opción tocada queda con feedback visual (resalte coral); el estado de selección es UI
+   local (`remember { mutableStateOf<OnboardingIntention?>(...) }`), sembrado de
+   `state.intention` si ya había elección persistida (soporta el escenario "cambiada al
+   volver atrás").
+3. **Botón "Continuar"**: `enabled = selección != null`, espejando `OnboardingPrimaryButton(enabled=...)`
+   ya usado en sleep/anchors. Sin selección → deshabilitado, SIN mensaje culpabilizador
+   (escenario "Sin selección, avance bloqueado").
+4. **"Volver"** opcional (mismo patrón que `OnboardingBlock`).
+
+Callback hacia arriba: `onSelectAndContinue: (OnboardingIntention) -> Unit` que, en
+`MainActivity`, persiste la intención (`onboardingViewModel.selectIntention(it)`) y LUEGO
+avanza (`onboardingViewModel.advance()`). Orden importa: persistir la intención ANTES de
+`advance`, para que `next(Sleep, intention)` —cuando se llegue— ya lea la ruta correcta.
+
+> **Regla de avance (dominio puro testeable):** la habilitación del botón es una función
+> pura `OnboardingIntentionRule.canAdvance(selection: OnboardingIntention?): Boolean =
+> selection != null`, análoga a `OnboardingAnchorsRule`/`OnboardingSleepRule`. Mantiene la
+> regla fuera del Composable y le da un test JVM directo (criterio de aceptación de la spec
+> de intención). Si se considera demasiado trivial para un objeto propio, se admite
+> testearla como parte de `OnboardingFlowTest`; decisión final del apply, pero la regla NO
+> vive inline en Compose.
+
+### S4-D7 — `OnboardingSobrietyStep` (Bloque 3) — Composable dedicado + creación de track
+
+Nuevo `ui/onboarding/OnboardingSobrietyStep.kt`. Reemplaza la rama `else` para
+`OnboardingStep.Sobriety`. Aparece SOLO en ruta `PROTECTION` (la ramificación de S4-D3
+garantiza que en `STANDARD` nunca se navega a él). Estructura (copy v3 §4 "Bloque 3"):
+
+1. **Encabezado**: "Cuidar algo que te cuesta" (serif) + el cuerpo literario v3 ("A veces
+   hay un hábito oscuro… solo el ejercicio de tu libertad…") + el mensaje de tono canónico
+   **literal**: "Una recaída no es un fracaso. Es una señal, no una condena." (escenario de
+   tono lo exige textual).
+2. **Pregunta**: "¿Quieres llevar el registro de algo que estás cuidando?" con dos acciones:
+   **"Sí, agregar"** y **"Ahora no"**. Ninguna bloquea el avance (ambas llevan a `Closing`).
+3. **"Sí, agregar"** revela un **formulario mínimo** (un solo `TextField` para nombrar lo
+   que se está cuidando) + botón confirmar. Estado UI local: `showForm: Boolean`,
+   `trackName: String`. Al confirmar:
+   - Validación vía `AbstinencePolicy.createCustomDraft(name)`: si retorna `null` (nombre
+     en blanco/solo espacios), NO avanza ni crea nada; mensaje neutral opcional (sin
+     "fallaste"/diagnóstico — escenario "nombre en blanco rechazado sin culpa").
+   - Si es válido: `onCreateTrack(name)` → repo crea el track + `advance()`.
+4. **"Ahora no"**: `onSkip()` → `advance()` directo, sin crear nada.
+5. **"Volver"** opcional.
+
+Callbacks hacia arriba (cableados en `MainActivity`, igual patrón que slice 3):
+
+- `onCreateTrackAndContinue: (name: String) -> Unit` →
+  `scope.launch { repository.createCustomAbstinenceTrack(name); onboardingViewModel.advance() }`.
+  **Reusa el writer existente** (S4.1): inserta en `AbstinenceTrackEntity`, cero Room nuevo.
+  Alternativa equivalente: `dashboardViewModel.createCustomAbstinenceTrack(name)` (ya
+  expuesto) + `advance()`. Se prefiere ir directo al `repository` dentro del `scope.launch`
+  para encadenar con `advance()` de forma secuencial (el track existe antes de salir del
+  bloque), igual que `onSleepContinue` encadena `saveSleepConfig` + `advance`.
+- `onSkipSobriety: () -> Unit` → `onboardingViewModel.advance()`.
+
+> **Validación de nombre = dominio puro YA testeado.** `AbstinencePolicy.createCustomDraft`
+> ya existe y se testea como núcleo TDD del slice (nombre vacío → `null`; nombre válido →
+> draft con defaults `Moderate`/`Protective`/`High`). No se reimplementa validación en
+> Compose: el Composable solo llama y reacciona a `null` vs no-`null`.
+
+### S4-D8 — Track huérfano se MANTIENE (decisión cerrada #2)
+
+Si el usuario crea un track en ruta `PROTECTION`, vuelve atrás al Bloque 0.5 y cambia a
+`STANDARD`, el track **NO se destruye**. No se agrega lógica de borrado: regla de no
+destruir datos del usuario; la Sobriedad sigue accesible desde el Dashboard tras completar
+el onboarding. El cambio de intención solo afecta la **secuencia de navegación** (re-evalúa
+la ruta), nunca los datos ya creados. Esto es consistente con S3-D3 (los valores se
+mantienen al retroceder).
+
+## S4.3 — Componentes nuevos / modificados (Slice 4)
+
+| Componente | Tipo | Rol |
+|------------|------|-----|
+| `domain/onboarding/OnboardingIntention.kt` | New | Enum `STANDARD`/`PROTECTION` (dominio puro) |
+| `domain/onboarding/OnboardingState.kt` | Modified | Campo `intention` + `resolve(.., persistedIntention)` + `next/previous` ramificados (S4-D1/D2/D3) |
+| `domain/onboarding/OnboardingIntentionRule.kt` | New (opcional) | `canAdvance(selection): Boolean` puro (S4-D6); puede plegarse en `OnboardingFlow` |
+| `domain/onboarding/OnboardingFlowTest.kt` | Modified | Migrar firmas `next/previous` + casos de ramificación (S4.4) |
+| `AutonomiaRepository.kt` | Modified | Pref `onboarding_intention` (flow/setter, S4-D4). Reusa `createCustomAbstinenceTrack` existente (sin cambio) |
+| `ui/onboarding/OnboardingViewModel.kt` | Modified | `combine` 3 flows + `selectIntention` + `advance/back` leen `state.intention` (S4-D5) |
+| `ui/onboarding/OnboardingIntentionStep.kt` | New | Bloque 0.5 dedicado (reemplaza placeholder) |
+| `ui/onboarding/OnboardingSobrietyStep.kt` | New | Bloque 3 dedicado (reemplaza placeholder) + creación de track |
+| `ui/onboarding/OnboardingScreen.kt` | Modified | Ramas explícitas `Intention -> ...` y `Sobriety -> ...` antes del `else`; nuevos parámetros/callbacks |
+| `MainActivity.kt` | Modified | Wiring: `selectIntention`+`advance` (Bloque 0.5); `createCustomAbstinenceTrack`+`advance` / skip (Bloque 3) |
+
+## S4.4 — Unidades de dominio puro testeables (Strict TDD, tests primero)
+
+**El corazón TDD del slice es la ramificación de `OnboardingFlow`.** Tests escritos ANTES
+del wiring (Strict TDD activo). Casos:
+
+1. **Ramificación `next` (delta spec, los 4 escenarios canónicos):**
+   - `next(Sleep, STANDARD)` ⇒ `Closing` (Sobriety se saltea).
+   - `next(Sleep, PROTECTION)` ⇒ `Sobriety`.
+   - `next(Sobriety, PROTECTION)` ⇒ `Closing`.
+   - (borde) `next(Sobriety, STANDARD)` ⇒ `Closing` (defensivo, no crashea).
+2. **Ramificación `previous`:**
+   - `previous(Closing, STANDARD)` ⇒ `Sleep` (no `Sobriety`).
+   - `previous(Closing, PROTECTION)` ⇒ `Sobriety`.
+   - `previous(Sobriety, PROTECTION)` ⇒ `Sleep`.
+3. **Intención ausente no crashea:** `next(Welcome, intention=STANDARD)` (y cualquier paso
+   < Sleep) ⇒ paso siguiente lineal sin excepción (ADDED "Intention-Aware State"). Como el
+   campo tiene default `STANDARD`, evaluar con intención por defecto cubre el escenario.
+4. **`resolve` con intención:** `resolve(false, "Sleep", "PROTECTION").intention == PROTECTION`;
+   `resolve(false, null, null).intention == STANDARD`; `resolve(false, null, "basura").intention == STANDARD`
+   (fallback seguro).
+5. **Regla de avance de intención:** `OnboardingIntentionRule.canAdvance(null) == false`;
+   `canAdvance(STANDARD) == true`; `canAdvance(PROTECTION) == true`.
+6. **Validación del track (cobertura existente, se referencia):** `AbstinencePolicy.createCustomDraft("")`
+   ⇒ `null`; `createCustomDraft("  ")` ⇒ `null`; `createCustomDraft("Alcohol")` ⇒ draft con
+   `severity=Moderate`, `contributionRole=Protective`, `importanceTier=High`. Si ya hay test
+   de `AbstinencePolicy`, no se duplica; si no, se agrega (es núcleo TDD del Bloque 3).
+
+### Migración de `OnboardingFlowTest` (impacto del cambio de contrato — explícito)
+
+El cambio de firma de S4-D1 ROMPE los tests de slice 1 que llaman `next(step)` /
+`previous(step)` sin intención. Tests a migrar (de `OnboardingFlowTest.kt`):
+
+| Test (slice 1) | Acción de migración |
+|----------------|---------------------|
+| `next avanza al bloque siguiente` | Agregar `intention` → `next(Welcome, STANDARD)` (sigue ⇒ `Intention`). |
+| `next en el ultimo bloque se mantiene` | `next(Closing, STANDARD)` ⇒ `Closing`. |
+| `next recorre la secuencia completa hasta Closing` | **Reescribir**: con `STANDARD` la secuencia es Welcome→…→Sleep→**Closing** (sin Sobriety, 5 pasos). Agregar un caso gemelo con `PROTECTION` que SÍ incluye Sobriety (6 pasos). El assert `entries.toList()` ya NO es válido como secuencia: ahora hay dos secuencias según ruta. |
+| `previous retrocede al bloque anterior` | `previous(Sleep, STANDARD)` ⇒ `Anchors` (sin cambio de valor, solo firma). |
+| `previous en el primer bloque se mantiene` | `previous(Welcome, STANDARD)` ⇒ `Welcome`. |
+| `resolve …` (4 tests) | Agregar el tercer argumento `persistedIntention` (puede ser `null` → STANDARD; los asserts de `currentStep`/`completed` no cambian). |
+| `shouldStartOnboarding …` (2 tests) | Sin cambio (no tocan `next/previous`); si construyen `OnboardingState`, el nuevo campo tiene default → siguen compilando. |
+
+Esta migración es **parte del slice** y entra en el conteo de líneas. Es el costo
+inevitable de ramificar el contrato; documentarlo evita que el apply lo descubra tarde.
+
+> Lo que NO es dominio puro (queda para verificación por capas, capas 1-4): la persistencia
+> en prefs, el feedback visual de selección, el formulario de track y la inserción real en
+> `AbstinenceTrackEntity`. Se validan en emulador.
+
+## S4.5 — Invariante "sin Room" (explícito)
+
+El slice NO agrega entidad ni migración Room. La **intención** va a `SharedPreferences`
+(`onboarding_intention`). El **track de sobriedad** reusa el writer existente
+`createCustomAbstinenceTrack` → `dao.upsertAbstinenceTrack` sobre la tabla EXISTENTE
+`AbstinenceTrackEntity` (insert, NO migración). La spec "Sin modelo de datos nuevo" prohíbe
+entidad/migración NUEVA, no escribir en una tabla existente. Si durante el apply apareciera
+una necesidad real de Room (no la hay según este diseño), es **decisión del dueño**, NO una
+asunción del ejecutor (regla de proyecto: si creés que hace falta Room nuevo, FRENÁ y
+reportá).
+
+## S4.6 — Cómo los bloques reemplazan sus placeholders
+
+Hoy `OnboardingScreen` enruta tanto `Intention` como `Sobriety` a la rama genérica `else ->
+OnboardingBlock(...)`, con `placeholderTitle` devolviendo "¿Qué te trae aquí?" y "Cuidar
+algo que te cuesta" respectivamente. El cambio:
+
+- Agregar **antes del `else`** dos ramas explícitas:
+  `OnboardingStep.Intention -> OnboardingIntentionStep(...)` y
+  `OnboardingStep.Sobriety -> OnboardingSobrietyStep(...)`.
+- Tras esto, **el `else` queda sin pasos reales** (Welcome/Closing/Anchors/Sleep/Intention/
+  Sobriety ya tienen rama propia). Se puede dejar el `else` como salvaguarda defensiva
+  (futuros pasos) o eliminarlo; se recomienda dejarlo mínimo. `placeholderTitle` queda sin
+  consumidores → se elimina (limpieza).
+- El andamiaje de navegación (`advance`/`back`/persistencia de `onboarding_current_step`)
+  NO se reescribe: ya funciona; solo `advance/back` ahora leen `state.intention` (S4-D5).
+- Nuevos parámetros de `OnboardingScreen` (siguiendo el patrón de slice 3): `intention`
+  actual (para sembrar la selección), `onSelectIntention: (OnboardingIntention) -> Unit`,
+  `onCreateSobrietyTrack: (name: String) -> Unit`, `onSkipSobriety: () -> Unit`. Todos con
+  default no-op para no romper call-sites/previews.
+
+## S4.7 — Fuera de alcance (documentado como futuro)
+
+- **Teñir tono/ofertas según la intención** (mensajes del dashboard, sugerencias): la
+  intención se persiste pero SOLO ramifica el onboarding (decisión #1). Adaptar el dashboard
+  según la ruta es trabajo FUTURO, fuera de este slice.
+- **Presets de tracks** (`presetTrackIds`): el onboarding solo crea track custom por nombre;
+  los presets viven en el Dashboard.
+- **Configuración fina del track** (severidad, tier, rol): toma defaults del draft; se
+  ajusta después desde el Dashboard.
+- **Borrado del track huérfano** al cambiar de ruta: NO se hace (decisión #2, S4-D8).
+- **Cambiar la intención tras completar el onboarding:** fuera de v1.
+- **Modo riesgo** (`RiskEventEntity`): no se ofrece ni menciona.
+
+## S4.8 — Notas Context7 (validar en apply)
+
+La ramificación del flujo (Kotlin puro) NO requiere Context7. Si durante el apply surge una
+duda de mejores prácticas al cablear la creación del track o el `TextField` del formulario:
+
+- **Validar con Context7 en apply:** el `TextField`/formulario de nombre del Bloque 3 es
+  Compose estándar (Material3 `OutlinedTextField` o equivalente del design system del repo);
+  si se introduce un patrón Compose nuevo (p. ej. manejo de foco/IME del campo), validar la
+  firma vigente con Context7 antes de fijarlo. La inserción del track NO toca un DAO nuevo
+  (reusa `createCustomAbstinenceTrack` suspend ya escrito), así que no hay duda Room nueva.
+
+## S4.9 — Mapa spec → diseño (trazabilidad Slice 4)
+
+| Requirement (spec) | Resuelto por |
+|--------------------|--------------|
+| (intention) Presentación de las dos rutas | S4-D6 (`OnboardingIntentionStep`, copy v3, feedback visual, gate de avance) |
+| (intention) Persistencia de la intención en prefs | S4-D4 (`onboarding_intention`) + S4-D5 (`selectIntention`) |
+| (intention) Tono y nombres canónicos | S4-D6 (copy neutro, sin clínico; "Sobriedad" canónico) |
+| (intention/sobriety) Sin modelo de datos nuevo | S4-D4 (prefs) + S4.5 (writer existente) |
+| (sobriety) Oferta opcional de track | S4-D7 (`OnboardingSobrietyStep`, ambas acciones avanzan, validación `createCustomDraft`) |
+| (sobriety) Exclusividad de ruta | S4-D3 (tabla de transiciones: `next(Sleep,STANDARD)=Closing`) |
+| (sobriety) Tono sin culpa | S4-D7 (mensaje canónico literal) |
+| (gate delta) Block Navigation Skeleton ramificado | S4-D1/D2/D3 (`OnboardingFlow` ramificado) + S4-D5 (ViewModel pasa intención) |
+| (gate delta) Intention-Aware State | S4-D1 (campo + default STANDARD) + S4-D2 (`resolve` fallback) |
+
+## S4.10 — Riesgos de implementación (Slice 4)
+
+- **Budget de ~400 líneas — riesgo medio-alto.** El slice agrupa DOS bloques + cambio de
+  contrato de dominio + migración de tests. Conteo estimado: `OnboardingIntention.kt` (~5),
+  cambios en `OnboardingState.kt` (~40, ramificación + resolve), `OnboardingIntentionRule.kt`
+  (~10), `OnboardingIntentionStep.kt` (~90), `OnboardingSobrietyStep.kt` (~120, incluye
+  formulario), pref en repo (~8), ViewModel (~20), `OnboardingScreen.kt` (~25),
+  `MainActivity.kt` (~25), migración + nuevos tests (~80). Total grueso **~420-440 líneas** →
+  **roza/excede el budget.**
+
+  **Split propuesto si excede (orden de corte, move-only vs lógica):**
+  1. **PR 4a (lógica/dominio — el corazón TDD):** `OnboardingIntention.kt` + ramificación de
+     `OnboardingState.kt` + `OnboardingIntentionRule.kt` + **migración completa de
+     `OnboardingFlowTest`** + pref `onboarding_intention` en repo + cambios de
+     `OnboardingViewModel` (`selectIntention`, `advance/back` ramificados). Esto es el núcleo
+     verificable por tests JVM, autónomo (la UI sigue cayendo en placeholders pero el flujo
+     ya ramifica). ~180-200 líneas.
+  2. **PR 4b (UI Intención):** `OnboardingIntentionStep.kt` + rama en `OnboardingScreen` +
+     wiring de `selectIntention` en `MainActivity`. ~140 líneas.
+  3. **PR 4c (UI Sobriedad):** `OnboardingSobrietyStep.kt` + rama en `OnboardingScreen` +
+     wiring de creación de track en `MainActivity`. ~150 líneas.
+
+  El corte 4a/4b/4c es por **responsabilidad** (dominio vs UI-intención vs UI-sobriedad),
+  no move-only: cada PR es funcionalmente coherente y testeable. Recomendación: intentar el
+  slice completo primero; si el conteo real supera ~400, cortar 4a (dominio+tests) como PR
+  encadenado y dejar 4b+4c juntos o separados según margen. Decisión final del apply con
+  conteo real.
+
+- **Migración de tests olvidada → build roto.** El cambio de firma de `next/previous` ROMPE
+  la compilación de `OnboardingFlowTest` (slice 1) si no se migra. Mitigación: la migración
+  está listada exhaustivamente en S4.4 y va en el MISMO PR que el cambio de firma (PR 4a en
+  el split). No se permite dejar overloads de compatibilidad (S4-D1).
+
+- **Orden persistir-intención-antes-de-avanzar.** Si el wiring del Bloque 0.5 llama
+  `advance()` antes de `selectIntention()`, la pref de intención podría no estar escrita
+  cuando se evalúe `next(Sleep, ...)`. Mitigación: el callback `onSelectIntention` persiste
+  PRIMERO y avanza después (S4-D6); como el avance al Bloque 1/2 no ramifica (solo Sleep en
+  adelante), hay margen, pero el orden correcto evita carreras sutiles en reanudación.
+
+- **Default `STANDARD` oculta intención no elegida.** Si el usuario llega a Sleep sin pasar
+  conscientemente por el Bloque 0.5 (no debería, es secuencial), la ruta cae a `STANDARD` y
+  no vería Sobriety. Es el comportamiento deseado por la spec (ausencia = STANDARD), pero se
+  documenta como decisión explícita, no como bug.
