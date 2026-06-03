@@ -4,7 +4,7 @@
 
 Estado: fuente de verdad tecnica viva; implementacion v0 en curso
 Fecha: 2026-05-26
-Proyecto: Autonomia sin limites
+Proyecto: Autonomía sin límites
 
 Este documento guia la implementacion del sistema de scoring completo de Autonomía sin límites.
 Reemplaza el plan operativo previo cuando haya conflicto entre una idea

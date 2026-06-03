@@ -1,4 +1,4 @@
-# Nucleo de dominio - Autonomia sin limites
+# Nucleo de dominio - Autonomía sin límites
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 

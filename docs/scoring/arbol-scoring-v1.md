@@ -4,7 +4,7 @@
 
 Estado: referencia canonica de formulas aprobadas; implementacion v0 iniciada
 Fecha: 2026-05-26
-Producto: Autonomia sin limites
+Producto: Autonomía sin límites
 
 Este documento define el arbol matematico del scoring de Autonomía sin límites. Sirve como
 guia futura para auditorias de codigo, tests, refactors y revisiones de
