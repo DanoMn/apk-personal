@@ -1,3 +1,12 @@
+# Texto de introducción — Las cinco Capas
+
+> **Estado: vivo**
+
+Copy narrativo para la introducción de la app: describe las cinco **Capas**
+(Interior, Cuerpo, Conducta, Vínculos, Proyecto) que forman la base personal.
+**No es la definición técnica** de las capas ni de las anclas — esa vive en
+`docs/dominio/` y en la tabla de nombres canónicos de `AGENTS.md`.
+
 El Interior: Esta es la biblioteca secreta, el ámbito de la penumbra donde el hombre conversa consigo mismo, donde habitan la memoria, el examen honesto y el asombro intelectual. Cuidar el Interior es ordenar los libros invisibles del espíritu para que el ruido de afuera no profane el silencio sagrado del pensamiento.
 
 El Cuerpo: El frágil navío de carne y vigilia que nos transporta a través de los años. Es la única ancla verdadera que tenemos en la tierra. Aquí reside el descanso y el sueño, que no son una indulgencia, sino el cimiento sagrado de nuestra dignidad; sin ellos, la mente pierde su lucidez y la realidad se vuelve un laberinto insoportable.
