@@ -47,4 +47,47 @@ class OnboardingSleepRuleTest {
         // Cadena vacía no es parseable → null (alimenta el "—" de la UI)
         assertNull(OnboardingSleepRule.derivedWindowMinutes("", "07:30"))
     }
+
+    // ── windowFeedback ─────────────────────────────────────────────────────
+    // El dominio decide QUÉ está mal (formato vs duración); la UI mapea a texto.
+
+    @Test
+    fun windowFeedback_bothEmpty_isNone() {
+        // Nada tecleado aún: no se molesta al usuario.
+        assertEquals(WindowFeedback.NONE, OnboardingSleepRule.windowFeedback("", ""))
+    }
+
+    @Test
+    fun windowFeedback_stillTyping_isNone() {
+        // Un campo a medio escribir (4 chars) no dispara feedback.
+        assertEquals(WindowFeedback.NONE, OnboardingSleepRule.windowFeedback("23:30", "07:3"))
+    }
+
+    @Test
+    fun windowFeedback_validWindow_isNone() {
+        // 23:30 → 07:30 = 8 h, válido: sin mensaje.
+        assertEquals(WindowFeedback.NONE, OnboardingSleepRule.windowFeedback("23:30", "07:30"))
+    }
+
+    @Test
+    fun windowFeedback_belowMinimum_isTooShort() {
+        // 23:30 → 02:00 = 2,5 h, parseable pero corta.
+        assertEquals(WindowFeedback.TOO_SHORT, OnboardingSleepRule.windowFeedback("23:30", "02:00"))
+    }
+
+    @Test
+    fun windowFeedback_unparseableButComplete_isInvalidFormat() {
+        // "99:99" tiene forma HH:mm (5 chars) pero no es una hora real → formato inválido,
+        // NO "ventana corta". Este es el bug que el mensaje engañoso ocultaba.
+        assertEquals(
+            WindowFeedback.INVALID_FORMAT,
+            OnboardingSleepRule.windowFeedback("99:99", "07:30"),
+        )
+    }
+
+    @Test
+    fun windowFeedback_exactlyMinimum_isNone() {
+        // 300 min exactos: válido (límite ≥, no estricto).
+        assertEquals(WindowFeedback.NONE, OnboardingSleepRule.windowFeedback("23:30", "04:30"))
+    }
 }

@@ -99,8 +99,14 @@ internal fun DurationRow(
 }
 
 /**
- * Filtra la entrada del usuario para un campo de hora HH:mm:
- * solo dígitos y ':', máximo 5 caracteres.
+ * Máscara de entrada para un campo de hora HH:mm. Conserva solo dígitos (máx 4) y
+ * auto-inserta el ':' después de los dos primeros, de modo que el usuario pueda
+ * teclear "0730" y obtener "07:30" sin escribir el separador a mano.
+ *
+ * Es idempotente sobre una hora ya formateada ("07:30" → "07:30") porque primero
+ * descarta cualquier ':' y lo reinserta en la posición canónica.
  */
-internal fun String.filterTimeInput(): String =
-    filter { it.isDigit() || it == ':' }.take(5)
+internal fun String.filterTimeInput(): String {
+    val digits = filter { it.isDigit() }.take(4)
+    return if (digits.length <= 2) digits else "${digits.take(2)}:${digits.drop(2)}"
+}

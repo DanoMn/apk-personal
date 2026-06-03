@@ -36,6 +36,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.panopt.autonomia.domain.onboarding.OnboardingSleepRule
+import dev.panopt.autonomia.domain.onboarding.WindowFeedback
 import dev.panopt.autonomia.platform.telemetry.TelemetryPermission
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
 import dev.panopt.autonomia.ui.dashboard.DashboardSans
@@ -175,9 +176,15 @@ internal fun OnboardingSleepStep(
         }
 
         // ── Mensaje de ventana inválida (tono neutral, sin "error") ─────────
-        if (!canAdvance && (sleepAt.length == 5 || wakeAt.length == 5)) {
+        // El dominio decide QUÉ está mal; acá solo mapeamos a texto (tono AGENTS.md).
+        val feedbackText = when (OnboardingSleepRule.windowFeedback(sleepAt, wakeAt)) {
+            WindowFeedback.NONE -> null
+            WindowFeedback.INVALID_FORMAT -> "Revisa la hora: usa el formato HH:mm."
+            WindowFeedback.TOO_SHORT -> "La ventana mínima es de 5 horas."
+        }
+        feedbackText?.let {
             Text(
-                text = "La ventana mínima es de 5 horas.",
+                text = it,
                 color = palette.textMuted,
                 fontFamily = DashboardSans,
                 fontSize = 13.sp,
