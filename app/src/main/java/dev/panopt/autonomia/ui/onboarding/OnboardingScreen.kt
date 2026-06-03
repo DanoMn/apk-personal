@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.panopt.autonomia.domain.dashboard.DashboardActivityOptionState
 import dev.panopt.autonomia.domain.dashboard.DashboardLayerState
+import dev.panopt.autonomia.domain.dashboard.DashboardSleepState
 import dev.panopt.autonomia.domain.onboarding.OnboardingState
 import dev.panopt.autonomia.domain.onboarding.OnboardingStep
 import dev.panopt.autonomia.ui.dashboard.DashboardPalette
@@ -47,6 +48,16 @@ internal fun OnboardingScreen(
     onAddAnchor: (activityId: String) -> Unit = {},
     onCreateAnchor: (name: String, layerId: String) -> Unit = { _, _ -> },
     onRemoveAnchor: (activityId: String) -> Unit = {},
+    // Bloque Sueño (slice 3)
+    sleepState: DashboardSleepState = DashboardSleepState(),
+    isAutoModeEnabled: Boolean = false,
+    sleepUsageStatsRequested: Boolean = false,
+    sleepUsageStatsSkipped: Boolean = false,
+    sleepWindDownConsent: Boolean? = null,
+    onActivateTelemetry: (onPermissionRequired: () -> Unit) -> Unit = {},
+    onSkipTelemetry: () -> Unit = {},
+    onWindDownConsent: (Boolean) -> Unit = {},
+    onSleepContinue: (sleepAt: String, wakeAt: String) -> Unit = { _, _ -> },
 ) {
     Box(
         modifier = Modifier
@@ -93,6 +104,21 @@ internal fun OnboardingScreen(
                 onRemoveAnchor = onRemoveAnchor,
                 onContinue = onAdvance,
                 onBack = onBack,
+            )
+
+            OnboardingStep.Sleep -> OnboardingSleepStep(
+                initialSleepAt = sleepState.targetSleepAt,
+                initialWakeAt = sleepState.targetWakeAt,
+                usageStatsRequested = sleepUsageStatsRequested,
+                usageStatsSkipped = sleepUsageStatsSkipped,
+                windDownConsent = sleepWindDownConsent,
+                isAutoModeEnabled = isAutoModeEnabled,
+                onActivateTelemetry = onActivateTelemetry,
+                onSkipTelemetry = onSkipTelemetry,
+                onWindDownConsent = onWindDownConsent,
+                onContinue = onSleepContinue,
+                onBack = onBack,
+                palette = palette,
             )
 
             else -> OnboardingBlock(

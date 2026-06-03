@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.SideEffect
@@ -20,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.data.worker.DailyClosureWorkScheduler
 import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_SESSION_MINUTES
 import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_WEEKLY_FREQUENCY
@@ -35,6 +37,7 @@ import dev.panopt.autonomia.ui.sleep.SleepConfigScreen
 import dev.panopt.autonomia.ui.sobriety.SobrietyConfigScreen
 import dev.panopt.autonomia.ui.supports.SupportsConfigScreen
 import dev.panopt.autonomia.ui.tasks.TasksScreen
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +45,17 @@ class MainActivity : ComponentActivity() {
         DailyClosureWorkScheduler.schedule(applicationContext)
 
         setContent {
+            val repository = remember { AppGraph.autonomiaRepository(applicationContext) }
+            val scope = rememberCoroutineScope()
+
+            // Onboarding sleep prefs (slice 3)
+            val sleepUsageStatsRequested by repository.sleepUsageStatsRequestedFlow()
+                .collectAsStateWithLifecycle()
+            val sleepUsageStatsSkipped by repository.sleepUsageStatsSkippedFlow()
+                .collectAsStateWithLifecycle()
+            val sleepWindDownConsent by repository.sleepWindDownConsentFlow()
+                .collectAsStateWithLifecycle()
+
             val devicePolicyManager = remember {
                 getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
             }
@@ -150,6 +164,32 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                    // Bloque Sueño (slice 3)
+                    sleepState = dashboardState.sleep,
+                    isAutoModeEnabled = isSleepAutoModeEnabled,
+                    sleepUsageStatsRequested = sleepUsageStatsRequested,
+                    sleepUsageStatsSkipped = sleepUsageStatsSkipped,
+                    sleepWindDownConsent = sleepWindDownConsent,
+                    onActivateTelemetry = { onPermissionRequired ->
+                        dashboardViewModel.toggleSleepAutoMode(true, onPermissionRequired)
+                        scope.launch { repository.setSleepUsageStatsRequested(true) }
+                    },
+                    onSkipTelemetry = {
+                        scope.launch { repository.setSleepUsageStatsSkipped(true) }
+                    },
+                    onWindDownConsent = { consent ->
+                        scope.launch { repository.setSleepWindDownConsent(consent) }
+                    },
+                    onSleepContinue = { sleepAt, wakeAt ->
+                        scope.launch {
+                            repository.saveSleepConfig(
+                                targetSleepAt = sleepAt,
+                                targetWakeAt = wakeAt,
+                                digitalWindDownMinutes = dashboardState.sleep.digitalWindDownMinutes,
+                            )
+                            onboardingViewModel.advance()
+                        }
+                    },
                 )
                 AppScreen.Dashboard -> DashboardScreen(
                     state = dashboardState,

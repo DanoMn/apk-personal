@@ -73,6 +73,17 @@ class AutonomiaRepository(context: Context) {
     private val _onboardingCurrentStep = MutableStateFlow(prefs.getString("onboarding_current_step", null))
     private val _isSleepAutoModeEnabled = MutableStateFlow(prefs.getBoolean("sleep_auto_mode_enabled", false))
 
+    // Onboarding sleep consent prefs (slice 3)
+    private val _sleepUsageStatsRequested = MutableStateFlow(
+        prefs.getBoolean("sleep_usage_stats_requested", false),
+    )
+    private val _sleepUsageStatsSkipped = MutableStateFlow(
+        prefs.getBoolean("sleep_usage_stats_skipped", false),
+    )
+    private val _sleepWindDownConsent = MutableStateFlow<Boolean?>(
+        if (prefs.contains("sleep_wind_down_consent")) prefs.getBoolean("sleep_wind_down_consent", false) else null,
+    )
+
     fun isDarkModeFlow(): StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     fun isSleepAutoModeEnabledFlow(): StateFlow<Boolean> = _isSleepAutoModeEnabled.asStateFlow()
@@ -85,6 +96,18 @@ class AutonomiaRepository(context: Context) {
     /** Nombre del [OnboardingStep] en curso para reanudar el onboarding; null si nunca avanzó. */
     fun onboardingCurrentStepFlow(): StateFlow<String?> =
         _onboardingCurrentStep.asStateFlow()
+
+    /** El usuario tocó "Activar" para el permiso UsageStats en el onboarding (slice 3). */
+    fun sleepUsageStatsRequestedFlow(): StateFlow<Boolean> = _sleepUsageStatsRequested.asStateFlow()
+
+    /** El usuario tocó "Más tarde" en la oferta de telemetría del onboarding (slice 3). */
+    fun sleepUsageStatsSkippedFlow(): StateFlow<Boolean> = _sleepUsageStatsSkipped.asStateFlow()
+
+    /**
+     * Consentimiento explícito al recordatorio de descanso (wind-down, slice 3).
+     * null = todavía no respondió; true = Sí; false = No.
+     */
+    fun sleepWindDownConsentFlow(): StateFlow<Boolean?> = _sleepWindDownConsent.asStateFlow()
 
     suspend fun setDarkMode(enabled: Boolean) {
         prefs.edit { putBoolean("dark_mode", enabled) }
@@ -104,6 +127,21 @@ class AutonomiaRepository(context: Context) {
     suspend fun setOnboardingCurrentStep(stepName: String) {
         prefs.edit { putString("onboarding_current_step", stepName) }
         _onboardingCurrentStep.value = stepName
+    }
+
+    suspend fun setSleepUsageStatsRequested(requested: Boolean) {
+        prefs.edit { putBoolean("sleep_usage_stats_requested", requested) }
+        _sleepUsageStatsRequested.value = requested
+    }
+
+    suspend fun setSleepUsageStatsSkipped(skipped: Boolean) {
+        prefs.edit { putBoolean("sleep_usage_stats_skipped", skipped) }
+        _sleepUsageStatsSkipped.value = skipped
+    }
+
+    suspend fun setSleepWindDownConsent(consent: Boolean) {
+        prefs.edit { putBoolean("sleep_wind_down_consent", consent) }
+        _sleepWindDownConsent.value = consent
     }
 
     fun allActivityLogsFlow(): Flow<List<ActivityLog>> =
