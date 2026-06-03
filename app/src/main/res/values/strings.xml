@@ -2,4 +2,18 @@
     <string name="app_name">Autonomía sin límites</string>
     <string name="sleep_device_admin_label">Bloqueo de sueño</string>
     <string name="sleep_device_admin_explanation">Permite que Vocal bloquee la pantalla cuando tocas Ir a dormir. No borra datos ni cambia tu clave.</string>
+
+    <!-- Notification channels (slice 5) -->
+    <string name="notif_channel_wind_down_name">Recordatorio de descanso</string>
+    <string name="notif_channel_wind_down_desc">Aviso cuando se acerca tu hora de dormir</string>
+    <string name="notif_channel_data_alert_name">Datos de sueño</string>
+    <string name="notif_channel_data_alert_desc">Avisos sobre datos de sueño incompletos</string>
+
+    <!-- Notification copy — Notif A: wind-down reminder -->
+    <string name="notif_wind_down_title">Se acerca tu hora de descanso</string>
+    <string name="notif_wind_down_text">Es un buen momento para empezar a bajar el ritmo.</string>
+
+    <!-- Notification copy — Notif B: sleep data alert -->
+    <string name="notif_data_alert_title">Faltan datos de sueño</string>
+    <string name="notif_data_alert_text">No detectamos datos de sueño en los últimos días. Puedes revisar el permiso de uso en la configuración.</string>
 </resources>

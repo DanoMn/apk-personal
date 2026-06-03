@@ -85,6 +85,11 @@ class AutonomiaRepository(context: Context) {
         if (prefs.contains("sleep_wind_down_consent")) prefs.getBoolean("sleep_wind_down_consent", false) else null,
     )
 
+    // Notification prefs (slice 5)
+    private val _isPostNotificationsRequested = MutableStateFlow(
+        prefs.getBoolean("post_notifications_requested", false),
+    )
+
     fun isDarkModeFlow(): StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     fun isSleepAutoModeEnabledFlow(): StateFlow<Boolean> = _isSleepAutoModeEnabled.asStateFlow()
@@ -151,6 +156,36 @@ class AutonomiaRepository(context: Context) {
     suspend fun setSleepWindDownConsent(consent: Boolean) {
         prefs.edit { putBoolean("sleep_wind_down_consent", consent) }
         _sleepWindDownConsent.value = consent
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Notification prefs (slice 5)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Whether the POST_NOTIFICATIONS runtime-permission dialog has been shown at least once. */
+    fun isPostNotificationsRequestedFlow(): StateFlow<Boolean> =
+        _isPostNotificationsRequested.asStateFlow()
+
+    suspend fun setPostNotificationsRequested(requested: Boolean) {
+        prefs.edit { putBoolean("post_notifications_requested", requested) }
+        _isPostNotificationsRequested.value = requested
+    }
+
+    /**
+     * ISO date string of the last time the sleep data alert (Notif B) was fired.
+     * Returns null if never fired. Used for dedup (fire at most once per day).
+     */
+    fun getSleepDataAlertLastFiredDate(): String? =
+        prefs.getString("sleep_data_alert_last_fired_date", null)
+
+    suspend fun setSleepDataAlertLastFiredDate(date: String?) {
+        prefs.edit {
+            if (date != null) {
+                putString("sleep_data_alert_last_fired_date", date)
+            } else {
+                remove("sleep_data_alert_last_fired_date")
+            }
+        }
     }
 
     fun allActivityLogsFlow(): Flow<List<ActivityLog>> =
@@ -719,8 +754,11 @@ class AutonomiaRepository(context: Context) {
         return true
     }
 
-    private suspend fun currentSleepConfig(): SleepConfig =
+    /** Returns the current sleep configuration, or the policy default if not yet saved. */
+    suspend fun getSleepConfig(): SleepConfig =
         dao.getSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID)?.toDomain() ?: SleepPolicy.defaultConfig()
+
+    private suspend fun currentSleepConfig(): SleepConfig = getSleepConfig()
 
     suspend fun createTask(
         title: String,
@@ -934,6 +972,53 @@ class AutonomiaRepository(context: Context) {
         if (config != null && config.activityType == ActivitySurface.Support.name) {
             dao.deleteUserActivityConfig(activityId)
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Notifications — Slice 5
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Evaluates whether the sleep data alert (Notif B) should fire for [today].
+     *
+     * Reads the last [SleepNotificationPolicy.NIGHTS_WITHOUT_DATA_THRESHOLD] nights from
+     * Room (no new entity, no migration), passes them to the policy, and posts via
+     * [SleepNotifier] if the condition is met. Anti-spam: fires at most once per calendar
+     * day using the [getSleepDataAlertLastFiredDate] preference.
+     *
+     * Does NOT request the POST_NOTIFICATIONS permission; if missing, posting silently
+     * fails (system-level no-op). The permission is requested lazily from [MainActivity].
+     */
+    @Suppress("unused") // called from DailyClosureWorker
+    suspend fun maybeFireSleepDataAlert(today: LocalDate) {
+        val threshold = dev.panopt.autonomia.domain.notifications.SleepNotificationPolicy.NIGHTS_WITHOUT_DATA_THRESHOLD
+        val from = today.minusDays((threshold - 1).toLong())
+        val to = today
+
+        // Fetch existing night records for the window
+        val nights = dao.getSleepNightsInRange(from.toString(), to.toString())
+            .associateBy { it.nightDate }
+
+        // Build confidence list for [today, today-1, today-2] (most recent first)
+        val confidences = (0 until threshold).map { daysAgo ->
+            val date = today.minusDays(daysAgo.toLong()).toString()
+            val entity = nights[date]
+            if (entity == null) {
+                null // absent record → treated as NoData by the policy
+            } else {
+                runCatching {
+                    dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence.valueOf(entity.confidenceLevel)
+                }.getOrElse { dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence.NoData }
+            }
+        }
+
+        if (!dev.panopt.autonomia.domain.notifications.SleepNotificationPolicy.shouldFireDataAlert(confidences)) return
+
+        // Anti-spam: skip if already fired today
+        if (getSleepDataAlertLastFiredDate() == today.toString()) return
+
+        dev.panopt.autonomia.platform.notifications.SleepNotifier.postDataAlert(appContext)
+        setSleepDataAlertLastFiredDate(today.toString())
     }
 }
 
