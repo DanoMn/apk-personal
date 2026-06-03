@@ -21,8 +21,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.Manifest
+import android.os.Build
 import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.data.worker.DailyClosureWorkScheduler
+import dev.panopt.autonomia.data.worker.WindDownNotificationScheduler
+import dev.panopt.autonomia.domain.notifications.SleepNotificationPolicy
+import dev.panopt.autonomia.platform.notifications.PostNotificationsPermission
+import dev.panopt.autonomia.platform.notifications.SleepNotificationChannels
 import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_SESSION_MINUTES
 import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_WEEKLY_FREQUENCY
 import dev.panopt.autonomia.sleep.SleepDeviceAdminReceiver
@@ -43,6 +49,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DailyClosureWorkScheduler.schedule(applicationContext)
+        SleepNotificationChannels.ensureCreated(applicationContext)
 
         setContent {
             val repository = remember { AppGraph.autonomiaRepository(applicationContext) }
@@ -54,6 +61,8 @@ class MainActivity : ComponentActivity() {
             val sleepUsageStatsSkipped by repository.sleepUsageStatsSkippedFlow()
                 .collectAsStateWithLifecycle()
             val sleepWindDownConsent by repository.sleepWindDownConsentFlow()
+                .collectAsStateWithLifecycle()
+            val isPostNotificationsRequested by repository.isPostNotificationsRequestedFlow()
                 .collectAsStateWithLifecycle()
 
             val devicePolicyManager = remember {
@@ -70,6 +79,14 @@ class MainActivity : ComponentActivity() {
             ) {
                 isSleepLockActive = devicePolicyManager.isAdminActive(sleepAdmin)
             }
+
+            // Slice 5: lazy POST_NOTIFICATIONS permission launcher.
+            // The request fires only once (guarded by isPostNotificationsRequested pref)
+            // and only after the first real notification is about to be scheduled.
+            // Never shown during onboarding.
+            val postNotificationsLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission(),
+            ) { /* granted: Boolean — denial is non-blocking; no retry */ }
             DisposableEffect(Unit) {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_RESUME) {
@@ -133,6 +150,38 @@ class MainActivity : ComponentActivity() {
                 applySystemBars(isDarkMode = isDarkMode, bgColor = palette.bgBase.toArgb())
             }
 
+            // Slice 5: schedule or cancel Notif A based on current consent + config.
+            // Called idempotently from both the onboarding-complete callback and a
+            // LaunchedEffect that fires each time currentScreen == Dashboard.
+            val scheduleOrCancelWindDown: () -> Unit = {
+                scope.launch {
+                    val consent = repository.sleepWindDownConsentFlow().value
+                    val config = repository.getSleepConfig()
+                    val targetSleepAt = config.targetSleepAt
+                    if (SleepNotificationPolicy.shouldScheduleWindDown(consent, targetSleepAt)) {
+                        WindDownNotificationScheduler.schedule(applicationContext, targetSleepAt)
+                        // Lazy permission request: only if not yet shown and not already granted
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            !PostNotificationsPermission.isGranted(applicationContext) &&
+                            !isPostNotificationsRequested
+                        ) {
+                            repository.setPostNotificationsRequested(true)
+                            postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    } else {
+                        WindDownNotificationScheduler.cancel(applicationContext)
+                    }
+                }
+            }
+
+            // Run Notif A evaluation every time the Dashboard is shown
+            // (idempotent — WorkManager REPLACE dedups the schedule).
+            if (currentScreen == AppScreen.Dashboard) {
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    scheduleOrCancelWindDown()
+                }
+            }
+
             when (currentScreen) {
                 AppScreen.Onboarding -> OnboardingScreen(
                     state = onboardingState,
@@ -142,6 +191,10 @@ class MainActivity : ComponentActivity() {
                     onComplete = {
                         onboardingViewModel.complete()
                         currentScreen = AppScreen.Dashboard
+                        // Schedule Notif A now that onboarding is complete.
+                        // The LaunchedEffect on Dashboard will also run, but calling here
+                        // avoids a frame delay and is idempotent.
+                        scheduleOrCancelWindDown()
                     },
                     // Bloque Intención (slice 4) — la intención se persiste PRIMERO, luego avanza
                     intention = onboardingState.intention,
