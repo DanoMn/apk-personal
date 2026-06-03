@@ -1,4 +1,4 @@
-# Vocal / Autonomía sin límites — Mapa de componentes v0.2
+# Autonomía sin límites — Mapa de componentes v0.2
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
@@ -102,11 +102,11 @@ UsageStats (Android)
 
 El núcleo no debe confundirse con una lista de features.
 
-El núcleo del negocio es el sistema mínimo que hace posible que Vocal mida y represente estabilidad.
+El núcleo del negocio es el sistema mínimo que hace posible que Autonomía sin límites mida y represente estabilidad.
 
 ### 3.1 Core obligatorio
 
-Estos componentes son obligatorios porque sin ellos la app no puede funcionar como Vocal.
+Estos componentes son obligatorios porque sin ellos la app no puede funcionar como Autonomía sin límites.
 
 | Componente                       | Rol                          | Por qué es core                                                              |
 | -------------------------------- | ---------------------------- | ---------------------------------------------------------------------------- |
@@ -120,7 +120,7 @@ Estos componentes son obligatorios porque sin ellos la app no puede funcionar co
 Conclusión:
 
 ```text
-Anclas + sueño + capas + score + estado + tono = núcleo mínimo de Vocal.
+Anclas + sueño + capas + score + estado + tono = núcleo mínimo de Autonomía sin límites.
 ```
 
 ---
@@ -556,7 +556,7 @@ Ejemplos relevantes para estabilidad:
 Regla:
 
 ```text
-Las tasks no deben ser necesarias para que un usuario base use Vocal.
+Las tasks no deben ser necesarias para que un usuario base use Autonomía sin límites.
 ```
 
 Pero pueden enriquecer el score de usuarios más comprometidos.
@@ -688,7 +688,7 @@ Sirve para pensar cómo cambia la configuración y el score según el nivel de n
 Definición:
 
 ```text
-Usuario que descarga Vocal porque está en un mal momento y busca una ayuda simple para salir del pozo.
+Usuario que descarga Autonomía sin límites porque está en un mal momento y busca una ayuda simple para salir del pozo.
 ```
 
 Configuración probable:

@@ -23,7 +23,7 @@
   `SleepSessionStateEntity`. Interpretación en `domain/sleep/interpretation/`
   (`SleepInterpreter`). Scoring de sueño = 4 componentes: duración 0.40, continuidad
   0.25, alineación 0.20, interrupción digital 0.15 (ver `domain/scoring/` y
-  `docs/scoring/arbol-scoring-vocal-v1.md`).
+  `docs/scoring/arbol-scoring-v1.md`).
 - **Telemetría (local, sin red/backend)**: `DeviceActivityEventEntity`
   (device_activity_events) + `TelemetryCollectionLeaseEntity` (telemetry_collection_lease).
   Captura uso del dispositivo (UsageStats), drenada por worker. Capa
@@ -83,7 +83,7 @@
   implementado vía telemetría); actualizar a tablas v12.
 - **Leer**: `MainActivity.kt` (enum `AppScreen`).
 
-## Doc 4 — `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md`
+## Doc 4 — `docs/frontend/mapa_componentes_v_0_2_borrador.md`
 - **Mal**: al mapa de componentes le falta la capa `platform/telemetry`,
   `domain/sleep/interpretation`, y el modelo `SleepNight`/`SleepSegment`.
 - **Hacer**: agregar esas capas/componentes al mapa, ubicándolas en la arquitectura.

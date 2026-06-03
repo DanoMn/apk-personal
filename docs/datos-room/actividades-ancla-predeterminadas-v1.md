@@ -1,4 +1,4 @@
-# Actividades ancla predeterminadas — Vocal / Autonomía sin límites
+# Actividades ancla predeterminadas — Autonomía sin límites
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
@@ -32,7 +32,7 @@ Si una acción es rápida, puntual, administrativa, mecánica o simplemente “t
 
 ## 2. Tono de comunicación para las anclas
 
-Las descripciones deben seguir la voz de Vocal:
+Las descripciones deben seguir la voz de Autonomía sin límites:
 
 **El Cuidador Lúcido**.
 

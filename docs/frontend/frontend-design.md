@@ -2,7 +2,7 @@
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
-Este documento es la guia visual vigente de `Vocal / Autonomia sin limites`.
+Este documento es la guia visual vigente de `Autonomía sin límites`.
 Reemplaza cualquier direccion anterior tipo cyberpunk, terminal, neon o
 corporativa fria.
 
@@ -13,7 +13,7 @@ La fuente visual viva esta en:
 
 ## Filosofia principal
 
-Vocal es una herramienta personal de salud mental, autonomia y estructura
+Autonomía sin límites es una herramienta personal de salud mental, autonomia y estructura
 diaria. La interfaz debe transmitir:
 
 - tranquilidad;

@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-25
-Producto: Vocal / Autonomia sin limites
+Producto: Autonomía sin límites
 Estado: canonico para la configuracion de anclas y su panel rapido.
 
 Este documento cierra el patron UX/UI vigente de **Mis anclas**. Si entra en

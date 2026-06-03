@@ -1,12 +1,12 @@
-# Arbol de scoring Vocal v1
+# Arbol de scoring Autonomía sin límites v1
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Estado: referencia canonica de formulas aprobadas; implementacion v0 iniciada
 Fecha: 2026-05-26
-Producto: Vocal / Autonomia sin limites
+Producto: Autonomia sin limites
 
-Este documento define el arbol matematico del scoring de Vocal. Sirve como
+Este documento define el arbol matematico del scoring de Autonomía sin límites. Sirve como
 guia futura para auditorias de codigo, tests, refactors y revisiones de
 producto.
 
@@ -244,7 +244,7 @@ AnchorBaseScore =
 Regla:
 
 ```text
-La frecuencia pesa mas que el valor porque Vocal premia constancia antes que
+La frecuencia pesa mas que el valor porque Autonomía sin límites premia constancia antes que
 acumulacion.
 ```
 
@@ -700,7 +700,7 @@ pero el `weeklyBaseScore` usa solo los `baseScore` de capas. Los bonus de supera
 y `TaskMomentum` mejoran el margen visible de la capa pero NO compensan una capa
 estructuralmente caida ni alteran la banda de estado.
 
-Razon: Vocal premia constancia, no acumulacion puntual. Un dia de superavit no
+Razon: Autonomía sin límites premia constancia, no acumulacion puntual. Un dia de superavit no
 rescata una capa con anclas incumplidas durante la semana.
 
 Esta asimetria es intencional y no debe eliminarse en refactors futuros.

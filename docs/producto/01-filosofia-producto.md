@@ -1,4 +1,4 @@
-# Vocal / Autonomía sin límites — Filosofía de producto
+# Autonomía sin límites — Filosofía de producto
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
@@ -10,7 +10,7 @@ Propósito: ordenar la teoría interna del producto antes de cerrar configuraci�
 
 ## 1. Idea central
 
-Vocal parte de una intuición práctica:
+Autonomía sin límites parte de una intuición práctica:
 
 ```text
 Una persona se parece a una mesa.
@@ -41,7 +41,7 @@ Ejemplos:
 - aparece alcohol, evasión, impulsividad o autosabotaje;
 - el proyecto que parecía avanzar termina cayendo también.
 
-Vocal existe para detectar ese patrón antes de que se vuelva una bola de nieve.
+Autonomía sin límites existe para detectar ese patrón antes de que se vuelva una bola de nieve.
 
 La app no dice:
 
@@ -189,9 +189,9 @@ Por ejemplo, dejar de beber puede ser un proyecto personal, pero dentro del sist
 
 ---
 
-## 5. Qué mide Vocal
+## 5. Qué mide Autonomía sin límites
 
-Vocal no mide salud mental en sentido clínico.
+Autonomía sin límites no mide salud mental en sentido clínico.
 
 Mide una lectura operativa de base:
 
@@ -290,7 +290,7 @@ Esto evita que el usuario sienta que la app está “muerta” al inicio, pero t
 
 ## 8. Tono de producto
 
-La comunicación de Vocal es parte del producto.
+La comunicación de Autonomía sin límites es parte del producto.
 
 La voz base es:
 
@@ -341,9 +341,9 @@ La app debe actuar como una cuerda, no como un juez.
 
 ---
 
-## 10. Qué no es Vocal
+## 10. Qué no es Autonomía sin límites
 
-Vocal no es:
+Autonomía sin límites no es:
 
 - un terapeuta;
 - un diagnóstico;
@@ -354,7 +354,7 @@ Vocal no es:
 - una moral universal;
 - una vigilancia punitiva.
 
-Vocal es:
+Autonomía sin límites es:
 
 ```text
 Una estructura de cuidado personal configurable para sostener la base de una persona.
@@ -399,7 +399,7 @@ Esto significa:
 
 ## 13. Principio de mínima fricción
 
-La aplicación está pensada para sostener al usuario, especialmente en sus momentos más difíciles, de desbalance o recaídas. Por lo tanto, la fricción que debe generar la interacción debe ser mínima. Usar Vocal no puede sentirse como una tarea pesada o una obligación agotadora.
+La aplicación está pensada para sostener al usuario, especialmente en sus momentos más difíciles, de desbalance o recaídas. Por lo tanto, la fricción que debe generar la interacción debe ser mínima. Usar Autonomía sin límites no puede sentirse como una tarea pesada o una obligación agotadora.
 
 Para lograr esto, el producto se estructura en diferentes herramientas de uso ágil:
 
@@ -414,13 +414,13 @@ Además, para mantener la motivación y reducir la carga psicológica, el produc
 
 ## 14. Personalización profunda
 
-Vocal nace de una necesidad personal: la ausencia en el mercado de una aplicación con un nivel de complejidad y personalización que se adapte realmente a las necesidades de cada individuo.
+Autonomía sin límites nace de una necesidad personal: la ausencia en el mercado de una aplicación con un nivel de complejidad y personalización que se adapte realmente a las necesidades de cada individuo.
 
 Aunque el núcleo del producto siempre serán las **Cinco Capas** y las **actividades base** (que ayudan a construir hábitos y mantienen la base de estabilidad, teniendo predeterminadamente el mayor peso), el resto del sistema es altamente personalizable.
 
 - **Configuración por usuario:** No todas las personas necesitan las mismas features. Alguien lidiando con depresión profunda podría necesitar solo unas pocas checklists principales y ningún seguimiento de sobriedad.
 - **Pesos dinámicos:** El progreso y las métricas se miden en base a cómo el usuario configure sus features y el peso que decida darle a cada una dentro de sus dimensiones de vida.
-- **Adaptabilidad:** Cada checklist y herramienta puede crearse y moldearse en relación al dominio del producto, permitiendo que Vocal se adapte a lo que el usuario considera vital en ese momento.
+- **Adaptabilidad:** Cada checklist y herramienta puede crearse y moldearse en relación al dominio del producto, permitiendo que Autonomía sin límites se adapte a lo que el usuario considera vital en ese momento.
 
 ---
 

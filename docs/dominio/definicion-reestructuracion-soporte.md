@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-25
-Proyecto: Vocal / Autonomía sin límites
+Proyecto: Autonomía sin límites
 Scope: Reestructuración completa del feature Soporte (configuración, dominio, dashboard)
 
 Fuentes:

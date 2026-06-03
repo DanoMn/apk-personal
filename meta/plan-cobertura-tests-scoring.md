@@ -1,7 +1,7 @@
 # Mapa de cobertura de tests — scoring
 
 > Plan de trabajo (no es contrato vivo). Foto al 2026-06-01 tras auditar el motor
-> de scoring contra el contrato `docs/scoring/arbol-scoring-vocal-v1.md`.
+> de scoring contra el contrato `docs/scoring/arbol-scoring-v1.md`.
 
 ## Veredicto de la auditoría
 
@@ -58,6 +58,6 @@ Queda aparte (UI, no scoring): el onboarding que OBLIGA a configurar esas 3 capa
 ## Estado: cobertura COMPLETA (2026-06-02)
 
 Todos los agujeros del mapa están cerrados. El motor de scoring tiene red de
-regresión completa contra el contrato `arbol-scoring-vocal-v1.md`. No quedan ítems
+regresión completa contra el contrato `arbol-scoring-v1.md`. No quedan ítems
 ALTA/MEDIA/BAJA pendientes. Lo que resta es trabajo de UI (onboarding de 3 capas +
 sueño, notificaciones) — ver `meta/pendientes.md`, NO es scoring.

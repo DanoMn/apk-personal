@@ -135,8 +135,8 @@ Hechos Room
   → Compose (resumen en DashboardScreen / detalle en ScoringScreen "Estado Base")
 ```
 
-- El contrato matemático está en `docs/scoring/arbol-scoring-vocal-v1.md` (fórmulas
-  canónicas) y `docs/scoring/plan-tecnico-scoring-vocal.md` (plan técnico, estado por
+- El contrato matemático está en `docs/scoring/arbol-scoring-v1.md` (fórmulas
+  canónicas) y `docs/scoring/plan-tecnico-scoring.md` (plan técnico, estado por
   fases, decisiones). Al tocar scoring, esos docs son el spec.
 - La historia semanal es un **cache derivado y versionado**
   (`WeeklyScoreSnapshotEntity` vía `WeeklyScoreSnapshotWriter`), nunca verdad

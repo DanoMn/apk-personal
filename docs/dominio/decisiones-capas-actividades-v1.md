@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-20  
-Proyecto: Vocal / Autonomía sin límites  
+Proyecto: Autonomía sin límites  
 Objetivo: normalizar la estructura conceptual y de datos antes de ajustar Room, dominio y UI.
 
 ---
@@ -920,7 +920,7 @@ La app debe permitir dos caminos:
 Flujo sugerido:
 
 ```text
-1. Explicar que Vocal organiza la base diaria en capas.
+1. Explicar que Autonomía sin límites organiza la base diaria en capas.
 2. Mostrar las 5 capas.
 3. Elegir 3 a 5 actividades para checklist principal.
 4. Elegir acciones opcionales para checklist secundaria.

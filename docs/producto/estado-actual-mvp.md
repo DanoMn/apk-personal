@@ -6,7 +6,7 @@ Fecha de referencia: 2026-05-20.
 
 ## Que es la app
 
-`Vocal / Autonomia sin limites` es una APK Android local-first para sostener la
+`Autonomía sin límites` es una APK Android local-first para sostener la
 base diaria del usuario: cuerpo, cuidado personal, interior, conducta,
 alimentacion/casa, vinculos y proyecto.
 

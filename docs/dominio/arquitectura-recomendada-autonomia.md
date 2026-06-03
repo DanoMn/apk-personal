@@ -1,4 +1,4 @@
-# Arquitectura recomendada - Vocal / Autonomia sin limites
+# Arquitectura recomendada - Autonomía sin límites
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
@@ -9,7 +9,7 @@ Fecha: 2026-05-22.
 
 ## Resumen ejecutivo
 
-La arquitectura recomendada para Vocal es:
+La arquitectura recomendada para Autonomía sin límites es:
 
 ```text
 MVVM Android
@@ -33,7 +33,7 @@ proyecto puede terminar con demasiadas interfaces, carpetas y casos de uso
 vacíos antes de tener estabilidad real.
 
 Tampoco recomiendo seguir con un MVVM simple donde el ViewModel o la UI armen
-las reglas del producto. Vocal ya tiene suficiente dominio propio como para
+las reglas del producto. Autonomía sin límites ya tiene suficiente dominio propio como para
 merecer una capa de dominio clara: scoring, sueño, abstinencias, anclas,
 señales, tono, recomendaciones y dashboard.
 
@@ -50,7 +50,7 @@ Esta recomendacion parte de:
 
 - `AGENTS.md`;
 - `docs/producto/nucleo-dominio-autonomia.md`;
-- `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md`;
+- `docs/frontend/mapa_componentes_v_0_2_borrador.md`;
 - `docs/datos-room/definicion-tablas-room-v1.md`;
 - `docs/producto/estado-actual-mvp.md`;
 - codigo actual en `app/src/main/java/dev/panopt/autonomia`;
@@ -65,7 +65,7 @@ Context7 / Android Developers refuerza estos principios:
 - `Flow` / `StateFlow` para datos observables;
 - dominio opcional cuando hay logica compleja o reutilizable.
 
-En Vocal, el dominio no es opcional en la practica. El sistema de scoring y
+En Autonomía sin límites, el dominio no es opcional en la practica. El sistema de scoring y
 lectura de base ya es demasiado importante para vivir en Compose o en Room.
 
 ## Diagnostico del codigo actual
@@ -117,7 +117,7 @@ Riesgo:
 Veredicto:
 
 ```text
-Insuficiente para Vocal.
+Insuficiente para Autonomía sin límites.
 ```
 
 MVVM debe seguir existiendo, pero solo como arquitectura de presentacion.
@@ -143,7 +143,7 @@ Veredicto:
 Buena como inspiracion, mala si se aplica de forma ceremonial.
 ```
 
-Vocal necesita el espiritu de Clean Architecture, no su cosplay completo.
+Autonomía sin límites necesita el espiritu de Clean Architecture, no su cosplay completo.
 
 ### 3. Arquitectura hexagonal
 
@@ -192,7 +192,7 @@ Recomendada.
 
 ## Decision recomendada
 
-Vocal debe usar una arquitectura local-first con dominio modular:
+Autonomía sin límites debe usar una arquitectura local-first con dominio modular:
 
 ```text
 UI

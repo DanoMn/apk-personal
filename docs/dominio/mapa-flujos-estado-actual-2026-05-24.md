@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-24
-Proyecto: Vocal / Autonomia sin limites
+Proyecto: Autonomía sin límites
 Proposito: dejar una referencia visual clara de como fluye la app despues de la
 reestructuracion de dashboard Fases 1-3.
 

@@ -9,7 +9,7 @@ import kotlin.math.exp
 /**
  * Computes the 4-component sleep score from a [NightTimeline].
  *
- * Sealed formula (arbol-scoring-vocal-v1.md §11.2, design §2):
+ * Sealed formula (arbol-scoring-v1.md §11.2, design §2):
  *   SleepWeeklyScore = 0.40·DurationScore
  *                    + 0.25·ContinuityScore
  *                    + 0.20·ScheduleAlignmentScore

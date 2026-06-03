@@ -120,7 +120,7 @@ internal fun AutoModeCard(
                 )
                 PermissionStep(
                     number = "2",
-                    instruction = "Despues entra a Acceso de uso y concedelo a Vocal.",
+                    instruction = "Despues entra a Acceso de uso y concedelo a Autonomía sin límites.",
                     actionLabel = "Ir a Acceso de uso",
                     palette = palette,
                     onAction = onOpenUsageAccess,

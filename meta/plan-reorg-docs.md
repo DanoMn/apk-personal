@@ -24,7 +24,7 @@ Leyenda acción: **mover** (a carpeta temática) · **archivar** (a `old/`) · *
 · ⚠️ = referenciado (actualizar ref al mover). Estado del cruce con código entre ( ).
 
 ### `docs/producto/`
-- `vocal-01-filosofia-producto.md` — mover (vigente)
+- `01-filosofia-producto.md` — mover (vigente)
 - `estado-actual-mvp.md` ⚠️AGENTS — mover (DRIFT → actualizar contenido luego)
 - `nucleo-dominio-autonomia.md` ⚠️AGENTS — mover (DRIFT: modelo sueño viejo → actualizar luego)
 - `tono-comunicacion.md` ⚠️AGENTS — mover (vigente)
@@ -35,7 +35,7 @@ Leyenda acción: **mover** (a carpeta temática) · **archivar** (a `old/`) · *
 - `frontend-design.md` ⚠️AGENTS — mover (vigente)
 - `mis-anclas-ux-canon-v1.md` — mover (vigente)
 - `mis-soportes-ux-canon-v1.md` — mover (vigente)
-- `vocal_mapa_componentes_v_0_2_borrador.md` ⚠️AGENTS — mover (DRIFT → actualizar luego)
+- `mapa_componentes_v_0_2_borrador.md` ⚠️AGENTS — mover (DRIFT → actualizar luego)
 - `prototipo/` ⚠️AGENTS (index.html, dashboard.html) — mover carpeta entera (vigente)
 
 ### `docs/dominio/`
@@ -53,8 +53,8 @@ Leyenda acción: **mover** (a carpeta temática) · **archivar** (a `old/`) · *
 - `presets-actividades-v1.md` ⚠️CLAUDE — mover (vigente)
 
 ### `docs/scoring/`
-- `arbol-scoring-vocal-v1.md` ⚠️CLAUDE — mover (vigente)
-- `plan-tecnico-scoring-vocal.md` ⚠️CLAUDE — mover (vigente)
+- `arbol-scoring-v1.md` ⚠️CLAUDE — mover (vigente)
+- `plan-tecnico-scoring.md` ⚠️CLAUDE — mover (vigente)
 
 ### `docs/sueno/`
 - `decisiones-diseno-sueno-v1.md` — mover (vigente)

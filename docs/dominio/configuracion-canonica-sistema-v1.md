@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-23
-Proyecto: Vocal / Autonomía sin límites
+Proyecto: Autonomía sin límites
 Propósito: definir cómo se configura cada feature del dominio desde la capa de
 configuración. Este documento es vinculante para cualquier implementación futura.
 

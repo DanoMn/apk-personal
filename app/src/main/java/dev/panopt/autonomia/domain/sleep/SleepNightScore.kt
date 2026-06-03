@@ -5,7 +5,7 @@ import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 /**
  * The 4-component sleep score for a single night.
  *
- * Sealed formula (arbol-scoring-vocal-v1.md §11.2):
+ * Sealed formula (arbol-scoring-v1.md §11.2):
  *   sleepScore = 0.40·duration + 0.25·continuity + 0.20·alignment + 0.15·digitalInterruption
  *
  * sleepScore is null when confidence == NoData (do NOT coerce to 0 — see ADR-3).

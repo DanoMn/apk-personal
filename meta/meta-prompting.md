@@ -6,7 +6,7 @@ Este documento sirve como registro y bitacora de diseno para las instrucciones c
 
 Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectura que surgen durante la traduccion de peticiones de usuario a soluciones tecnicas.
 
-### Conceptos del Dominio (APK-Personal / Vocal)
+### Conceptos del Dominio (APK-Personal / Autonomía sin límites)
 
 * **Dashboard Components (UI)**:
   * `LayerPill`: Representa "Capas de hoy". Requiere centrado vertical y barras de progreso mas grandes.
@@ -76,7 +76,7 @@ Aqui se documentan conceptos tecnicos, terminos de dominio y dudas de arquitectu
 
 ### Identidad, Privacidad y Portabilidad (22/05/2026)
 
-* **Auth opcional**: Vocal podra usar Google, Auth0, Credential Manager u otro proveedor en el futuro, pero el login no debe ser obligatorio para usar la app local.
+* **Auth opcional**: Autonomía sin límites podra usar Google, Auth0, Credential Manager u otro proveedor en el futuro, pero el login no debe ser obligatorio para usar la app local.
 * **Cuenta no equivale a nube**: `RemoteIdentity` representa identidad externa opcional. No reemplaza `LocalProfile` ni toma propiedad de logs, score, sueno, recaidas, abstinencias o uso digital.
 * **Datos sensibles locales**: Los registros personales viven en el dispositivo. Un servidor remoto no debe ser fuente de verdad de datos sensibles.
 * **Export/import cifrado**: La portabilidad entre dispositivos se resuelve con `ExportPackage` cifrado por defecto, manifest de version/integridad y validacion en import.

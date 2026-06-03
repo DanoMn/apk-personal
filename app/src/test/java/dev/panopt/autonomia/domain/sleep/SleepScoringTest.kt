@@ -15,7 +15,7 @@ import java.time.LocalDate
 /**
  * TDD RED phase — WU-4: SleepScoring refactor (2→4 components, no surplus decay).
  *
- * Sealed formula (arbol-scoring-vocal-v1.md §11.2):
+ * Sealed formula (arbol-scoring-v1.md §11.2):
  *   SleepWeeklyScore = 0.40·Duration + 0.25·Continuity + 0.20·Alignment + 0.15·DigitalInterruption
  *
  * Tests reference SleepScoring.scoreNight() which needs to be refactored to accept

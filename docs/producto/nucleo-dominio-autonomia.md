@@ -4,7 +4,7 @@
 
 Estado: puente de nucleo en desarrollo
 
-Este documento define el centro operativo de Vocal para seguir construyendo
+Este documento define el centro operativo de Autonomía sin límites para seguir construyendo
 features de backend local, dominio, scoring y UI sin mezclar conceptos.
 
 No es un documento maestro de todo el producto. Es la brujula minima para que
@@ -12,8 +12,8 @@ el codigo respete el dominio.
 
 Fuentes relacionadas:
 
-- `docs/producto/vocal-01-filosofia-producto.md`
-- `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md`
+- `docs/producto/01-filosofia-producto.md`
+- `docs/frontend/mapa_componentes_v_0_2_borrador.md`
 - `docs/dominio/decisiones-capas-actividades-v1.md`
 - `docs/datos-room/definicion-tablas-room-v1.md`
 - `docs/frontend/prototipo/score-states.html`
@@ -21,10 +21,10 @@ Fuentes relacionadas:
 
 ## Idea central
 
-Vocal no mide felicidad abstracta, valor personal, productividad ni salud
+Autonomía sin límites no mide felicidad abstracta, valor personal, productividad ni salud
 mental clinica.
 
-Vocal mide una lectura practica:
+Autonomía sin límites mide una lectura practica:
 
 ```text
 Que tanto esta sosteniendo el usuario su base personal configurada.
@@ -43,7 +43,7 @@ base.
 
 ## Nucleo operativo
 
-El nucleo operativo de Vocal es:
+El nucleo operativo de Autonomía sin límites es:
 
 ```text
 Cinco capas
@@ -262,7 +262,7 @@ Que tanto esta sosteniendo el usuario la base que configuro.
 
 La comunicacion es parte del dominio.
 
-Vocal habla como un adulto funcional y compasivo. Nombra hechos sin convertirlos
+Autonomía sin límites habla como un adulto funcional y compasivo. Nombra hechos sin convertirlos
 en identidad.
 
 Evitar:
@@ -373,7 +373,7 @@ No debe servir para:
 - leer sueno, recaidas, uso digital o abstinencias;
 - calcular score en servidor;
 - reemplazar el perfil local;
-- obligar al usuario a iniciar sesion para usar Vocal.
+- obligar al usuario a iniciar sesion para usar Autonomía sin límites.
 
 Tipos conceptuales:
 
@@ -416,7 +416,7 @@ El flujo de entrada debe permitir dos caminos:
 
 Flujo esperado:
 
-1. Explicar brevemente que Vocal organiza la base diaria en capas.
+1. Explicar brevemente que Autonomía sin límites organiza la base diaria en capas.
 2. Mostrar las 5 capas.
 3. Pedir al usuario elegir al menos 3 activities para `Mis anclas`.
 4. Permitir filtrar o elegir activities por capa.
@@ -781,7 +781,7 @@ El documento debe sostener estos escenarios:
 - metas de anclas semanales ayudan a `Plenitude`/`Unbreakable`, pero no
   reemplazan la base diaria;
 - tasks neutrales no suman al score.
-- usuario usa Vocal sin iniciar sesion;
+- usuario usa Autonomía sin límites sin iniciar sesion;
 - usuario inicia sesion con Google/Auth0 y sus logs siguen solo en el
   dispositivo;
 - usuario migra a otro telefono con export/import cifrado;

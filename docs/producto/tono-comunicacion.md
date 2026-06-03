@@ -2,7 +2,7 @@
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
-La comunicacion de Vocal es parte del producto. No es decoracion.
+La comunicacion de Autonomía sin límites es parte del producto. No es decoracion.
 
 La app aparece cuando el usuario puede estar cansado, disperso, avergonzado,
 ansioso o cerca de repetir un ciclo. Por eso el lenguaje debe bajar defensas y
@@ -10,7 +10,7 @@ abrir accion, no aumentar culpa.
 
 ## Voz base
 
-La personalidad de comunicacion de Vocal es **El Cuidador Lúcido**.
+La personalidad de comunicacion de Autonomía sin límites es **El Cuidador Lúcido**.
 
 Es una voz compasiva, directa y madura. No regaña, no humilla y no diagnostica,
 pero tampoco permite que la inacción prolongada se disfrace de descanso. Cuida

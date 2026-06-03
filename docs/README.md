@@ -8,7 +8,7 @@ conflicto entre documentos, lo vigente manda sobre lo archivado (`old/`).
 
 - `producto/estado-actual-mvp.md`: snapshot del producto, alcance y próximas decisiones.
 - `producto/nucleo-dominio-autonomia.md`: centro conceptual de la app.
-- `producto/vocal-01-filosofia-producto.md`: filosofía de producto ("patas de la mesa").
+- `producto/01-filosofia-producto.md`: filosofía de producto ("patas de la mesa").
 - `producto/tono-comunicacion.md`: voz de la app y reglas para mensajes.
 - `producto/plan-maestro-roadmap.md`: hoja de ruta viva por feature.
 - `producto/research-apps-similares.md`: investigación de apps similares (material de apoyo).
@@ -18,7 +18,7 @@ conflicto entre documentos, lo vigente manda sobre lo archivado (`old/`).
 - `frontend/frontend-design.md`: reglas visuales actuales (orgánico/editorial; reemplaza cualquier idea cyberpunk/neón).
 - `frontend/mis-anclas-ux-canon-v1.md`: patrón cerrado de UX/UI para Mis anclas.
 - `frontend/mis-soportes-ux-canon-v1.md`: patrón cerrado de UX/UI para Soportes.
-- `frontend/vocal_mapa_componentes_v_0_2_borrador.md`: mapa de componentes y nombres canónicos.
+- `frontend/mapa_componentes_v_0_2_borrador.md`: mapa de componentes y nombres canónicos.
 - `frontend/prototipo/`: prototipos HTML vivos (`index.html`, `dashboard.html`, `score-states.html`, `styles.css`).
 
 ## `dominio/` — modelo conceptual y reglas
@@ -39,8 +39,8 @@ conflicto entre documentos, lo vigente manda sobre lo archivado (`old/`).
 
 ## `scoring/` — motor de puntuación
 
-- `scoring/arbol-scoring-vocal-v1.md`: contrato matemático canónico (fórmulas).
-- `scoring/plan-tecnico-scoring-vocal.md`: plan técnico vivo del scoring.
+- `scoring/arbol-scoring-v1.md`: contrato matemático canónico (fórmulas).
+- `scoring/plan-tecnico-scoring.md`: plan técnico vivo del scoring.
 
 ## `sueno/` — feature Sueño
 

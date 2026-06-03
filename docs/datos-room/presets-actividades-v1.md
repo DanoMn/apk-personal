@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-23
-Proyecto: Vocal / Autonomía sin límites
+Proyecto: Autonomía sin límites
 Fuente canónica: `docs/datos-room/actividades-ancla-predeterminadas-v1.md`
 Propósito: generar `ActivityDefinitionEntity` seeds. Sin targets, sin metas, sin
 configuración de usuario. Solo definiciones inmutables del catálogo.

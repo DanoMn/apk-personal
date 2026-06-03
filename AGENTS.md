@@ -4,7 +4,7 @@
 
 Proyecto local: `APK-Personal`
 
-Producto: `Vocal / Autonomia sin limites`
+Producto: `Autonomía sin límites` (antes `Vocal`)
 
 Proyecto canonico en Engram: `apk-personal`
 
@@ -54,7 +54,7 @@ La fuente de verdad de producto/dominio esta en:
 
 ## Nombres canonicos del frontend
 
-Fuente: `docs/frontend/vocal_mapa_componentes_v_0_2_borrador.md` y `docs/producto/nucleo-dominio-autonomia.md`.
+Fuente: `docs/frontend/mapa_componentes_v_0_2_borrador.md` y `docs/producto/nucleo-dominio-autonomia.md`.
 
 Usa estos nombres para TODOS los textos visibles en la UI. No uses los nombres tecnicos en la interfaz.
 

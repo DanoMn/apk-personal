@@ -1,4 +1,4 @@
-# Vocal / Autonomia sin limites
+# Autonomía sin límites
 
 APK Android local-first para sostener la base diaria del usuario: dashboard,
 checklist por capas, abstinencias configurables, modo riesgo y progreso basico.

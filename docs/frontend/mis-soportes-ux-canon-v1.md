@@ -3,7 +3,7 @@
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Fecha: 2026-05-25
-Producto: Vocal / Autonomía sin límites
+Producto: Autonomía sin límites
 Estado: canónico para la configuración rápida de soportes y su panel.
 
 Este documento cierra el patrón UX/UI vigente de **Soportes** dentro del flujo de la configuración rápida en el Dashboard. Si entra en conflicto con propuestas anteriores, este documento es la única fuente de verdad.

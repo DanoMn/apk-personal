@@ -24,7 +24,7 @@ cierra, se marca `[x]` o se mueve a su doc/commit correspondiente.
   con el código vía 6 Sonnet en paralelo + verificación: `definicion-tablas-room-v1`
   (v12, 22 entidades, historial de migraciones), `nucleo-dominio-autonomia`,
   `estado-actual-mvp`, `mapa-flujos-estado-actual-2026-05-24`, `plan-maestro-roadmap`,
-  `vocal_mapa_componentes`. Plan: `meta/plan-update-drift-docs.md`.
+  `mapa_componentes`. Plan: `meta/plan-update-drift-docs.md`.
 - [ ] **AGENTS.md cita `especificacion-actividades-sobriedad-v1.md`** como fuente de
   verdad, pero ese doc está en `old/` (deprecated). Decidir si se deja de citar o se
   reemplaza por los docs que lo absorbieron (`nucleo-dominio` + `configuracion-canonica`).

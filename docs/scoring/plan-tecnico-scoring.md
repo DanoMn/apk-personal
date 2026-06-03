@@ -1,19 +1,19 @@
-# Plan tecnico del sistema de scoring de Vocal
+# Plan tecnico del sistema de scoring de Autonomía sin límites
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
 Estado: fuente de verdad tecnica viva; implementacion v0 en curso
 Fecha: 2026-05-26
-Proyecto: Vocal / Autonomia sin limites
+Proyecto: Autonomia sin limites
 
-Este documento guia la implementacion del sistema de scoring completo de Vocal.
+Este documento guia la implementacion del sistema de scoring completo de Autonomía sin límites.
 Reemplaza el plan operativo previo cuando haya conflicto entre una idea
 conceptual y la realidad del codigo.
 
 La referencia canonica de formulas, variables y arbol matematico esta en:
 
 ```text
-docs/scoring/arbol-scoring-vocal-v1.md
+docs/scoring/arbol-scoring-v1.md
 ```
 
 Los documentos `sistema-scoring-semanal-vocal-v1.md` y
@@ -158,7 +158,7 @@ refactor inmediata.
 ## 2.1 Nucleo conceptual por feature
 
 Esta seccion recoge decisiones de diseno de producto que afectan directamente
-al scoring. No son detalles secundarios: son el contrato de como Vocal entiende
+al scoring. No son detalles secundarios: son el contrato de como Autonomía sin límites entiende
 la base personal del usuario.
 
 ### 2.1.1 Configuracion inicial y base personal
@@ -177,7 +177,7 @@ Reglas:
 
 Lectura conceptual:
 
-Vocal no debe castigar al usuario por ser honesto sobre su punto de partida.
+Autonomía sin límites no debe castigar al usuario por ser honesto sobre su punto de partida.
 Si declara una base previa baja y luego define objetivos ambiciosos, el sistema
 debe explicar que hay distancia entre origen y objetivo sin convertir esa
 distancia en una condena inicial.
@@ -219,7 +219,7 @@ Reglas:
 - no existe ausencia moldeable para anclas despues del cierre;
 - la frecuencia semanal se calcula como dias `Done`.
 
-Conceptualmente, Vocal premia constancia antes que acumulacion. Un dia enorme
+Conceptualmente, Autonomía sin límites premia constancia antes que acumulacion. Un dia enorme
 no reemplaza el ritmo semanal. El superhabit existe, pero no debe tapar capas
 caidas ni empujar al usuario a subir metas sin decision propia.
 
@@ -265,7 +265,7 @@ Decision conceptual:
 Tasks no deben estar en el denominador duro del `WeeklyBaseScore`. Deben ser
 una senal positiva acotada de agencia y avance para la capa asociada. Si se
 metieran como obligacion, una task movible se volveria castigo encubierto, que
-contradice el tono y la filosofia de Vocal.
+contradice el tono y la filosofia de Autonomía sin límites.
 
 ### 2.1.5 Sueno
 
@@ -322,7 +322,7 @@ Reglas:
 - puede activar recomendaciones si se sostiene semanal o quincenalmente;
 - el usuario decide si aumenta su meta.
 
-Conceptualmente, Vocal no determina el progreso del usuario. Lo observa y le
+Conceptualmente, Autonomía sin límites no determina el progreso del usuario. Lo observa y le
 devuelve una lectura para que el usuario decida.
 
 ### 2.1.8 Estado Base y reporte
