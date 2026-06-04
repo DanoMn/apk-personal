@@ -60,7 +60,39 @@ class AbstinenceRelapseMaterializationPolicyTest {
         assertEquals(today.minusDays(6), ranges[1].endDate)
     }
 
-    private fun track(createdAt: LocalDate): AbstinenceTrack =
+    @Test
+    fun inactiveTracksAreNeverMaterialized() {
+        val ranges = AbstinenceRelapseMaterializationPolicy.assumedRanges(
+            tracks = listOf(track(createdAt = today.minusDays(10), active = false)),
+            logs = emptyList(),
+            today = today,
+            zoneId = zoneId,
+        )
+
+        assertTrue(ranges.isEmpty())
+    }
+
+    @Test
+    fun confirmedRelapseLogsAreNotReMaterialized() {
+        val relapseDate = today.minusDays(7)
+        val ranges = AbstinenceRelapseMaterializationPolicy.assumedRanges(
+            tracks = listOf(track(createdAt = today.minusDays(9))),
+            logs = listOf(log(date = relapseDate, status = AbstinenceStatus.Relapse)),
+            today = today,
+            zoneId = zoneId,
+        )
+
+        // Un día ya registrado (aunque sea recaída) no se vuelve a materializar:
+        // parte el rango asumido igual que un día limpio confirmado.
+        assertEquals(2, ranges.size)
+        assertEquals(today.minusDays(9), ranges[0].startDate)
+        assertEquals(today.minusDays(8), ranges[0].endDate)
+        assertEquals(today.minusDays(6), ranges[1].startDate)
+        assertEquals(today.minusDays(6), ranges[1].endDate)
+        assertTrue(ranges.none { range -> relapseDate in range.dates })
+    }
+
+    private fun track(createdAt: LocalDate, active: Boolean = true): AbstinenceTrack =
         AbstinenceTrack(
             id = "trk_custom",
             name = "Custom",
@@ -68,7 +100,7 @@ class AbstinenceRelapseMaterializationPolicyTest {
             severity = AbstinenceSeverity.Critical,
             contributionRole = ContributionRole.Protective,
             importanceTier = ImportanceTier.Critical,
-            active = true,
+            active = active,
             sortOrder = 10,
             createdAt = createdAt.atStartOfDay(zoneId).toInstant().toEpochMilli(),
             updatedAt = createdAt.atStartOfDay(zoneId).toInstant().toEpochMilli(),

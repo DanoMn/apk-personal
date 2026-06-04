@@ -33,6 +33,7 @@ private val DashboardSerif = FontFamily.Serif
 @Composable
 internal fun TopBar(
     palette: DashboardPalette,
+    dateLabel: String,
     onOpenDrawer: () -> Unit,
 ) {
     Row(
@@ -51,7 +52,7 @@ internal fun TopBar(
         }
 
         Text(
-            text = "Miercoles 20 de mayo",
+            text = dateLabel,
             modifier = Modifier.weight(1f),
             color = palette.colorCardboard,
             fontFamily = DashboardSerif,

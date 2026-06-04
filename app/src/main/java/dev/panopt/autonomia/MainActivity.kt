@@ -129,6 +129,19 @@ class MainActivity : ComponentActivity() {
             val isSleepAutoModeEnabled by dashboardViewModel.isSleepAutoModeEnabled.collectAsStateWithLifecycle()
             val palette = dashboardPalette(isDarkMode)
 
+            // La fecha "de hoy" del dashboard debe seguir al calendario real, no quedar
+            // congelada al construir el ViewModel: al volver del background tras cruzar
+            // la medianoche refrescamos la fecha viva (ver DashboardViewModel.onResumed).
+            DisposableEffect(dashboardViewModel) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        dashboardViewModel.onResumed()
+                    }
+                }
+                lifecycle.addObserver(observer)
+                onDispose { lifecycle.removeObserver(observer) }
+            }
+
             val onboardingViewModel: OnboardingViewModel = viewModel(
                 factory = OnboardingViewModel.Factory(applicationContext),
             )

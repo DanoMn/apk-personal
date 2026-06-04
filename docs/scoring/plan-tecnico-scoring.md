@@ -357,6 +357,16 @@ Reglas:
 - permite que `Inquebrantable` no salga de una sola semana;
 - no se debe persistir como verdad primaria.
 
+Registro y back-fill (implementado): `WeeklyScoreSnapshotWriter.refreshCurrentWeek`
+recalcula el snapshot de la semana en curso (lunes -> hoy); `closeElapsedWeeks`
+rellena las semanas vencidas que falten dentro de una ventana de 6 semanas
+(`MAX_BACKFILL_WEEKS`), analogo semanal del cierre diario. Es conservador: solo
+rellena semanas con al menos un hecho real (log de actividad o sobriedad), porque
+el back-fill usa la configuracion actual y snapshotear semanas vacias/previas al
+uso fabricaria historia falsa. Se procesan de la mas vieja a la mas nueva para que
+cada semana vea como memoria solo a las anteriores (estabilidad correcta). Corre en
+el cierre diario (`DailyClosureWorker`) y como garantia al abrir/reanudar la app.
+
 Conceptualmente, lo inteligente no es guardar un numero y creerle para siempre.
 Lo inteligente es conservar hechos, derivar memoria y poder explicar por que el
 sistema leyo una semana de cierta forma.

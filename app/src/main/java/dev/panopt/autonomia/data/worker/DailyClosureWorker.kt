@@ -28,6 +28,7 @@ class DailyClosureWorker(
             // WU-6: materialize sleep night BEFORE the weekly score snapshot
             // so that the scored segments are available before telemetry purge.
             repository.materializeSleepNight(nightDate = today, zoneId = zoneId)
+            repository.closeElapsedWeeklyScoreSnapshots(today = today)
             repository.refreshCurrentWeeklyScoreSnapshot(today = today)
 
             // Slice 5: evaluate and optionally fire Notif B (sleep data alert).

@@ -108,6 +108,7 @@ internal fun DashboardScreen(
         ) {
             TopBar(
                 palette = palette,
+                dateLabel = state.headerDate,
                 onOpenDrawer = { isDrawerOpen = true },
             )
             StatusCard(palette = palette, status = state.status)
