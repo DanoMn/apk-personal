@@ -49,15 +49,13 @@ abstract class AutonomiaDatabase : RoomDatabase() {
                     AutonomiaDatabase::class.java,
                     "autonomia_db"
                 )
-                    // Development phase (AGENTS.md #29, CLAUDE.md): dev data is
-                    // disposable, so any schema/migration mismatch recreates the DB
-                    // instead of crashing the app on open.
-                    //
-                    // MIGRATION_11_12 is registered and correctly written (index names
-                    // match Room's `index_<table>_<col>` convention, no spurious DEFAULTs).
-                    // MigrationTestHelper covers this migration (see SleepMigration11To12Test).
-                    // The destructive fallback remains active for other historical migrations
-                    // (1-10) that still carry the `idx_*` bug — those are dev-only paths.
+                    // Development phase (AGENTS.md #29, CLAUDE.md "Camino A"): dev data is
+                    // disposable. We do NOT hand-write/maintain migrations during dev — any
+                    // schema change is absorbed by recreating the DB from the current schema
+                    // (clean reinstall + destructive fallback below). Hand-written migrations
+                    // start only from the release baseline, not in this phase.
+                    // The pre-existing MIGRATION_* objects are legacy and harmless: dev never
+                    // exercises the upgrade path (we reinstall clean on schema changes).
                     .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
                     .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()

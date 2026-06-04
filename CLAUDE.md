@@ -34,16 +34,26 @@ de `AGENTS.md`). Trabajá sin miedo a romper datos de dev:
   preservarse (`AGENTS.md` #21). "Romper datos de dev" = filas de usuario en la DB;
   nunca = el seed/catálogo canónico.
 
-Pero esto **NO** te exime de la corrección de migraciones para el eventual
-release:
+### Migraciones Room en esta fase — Camino A (regla única, sin ambigüedad)
 
-- Las migraciones igual deben quedar correctas. Los `gradlew test` de dominio
-  **NO** ejercen migraciones reales de Room — un esquema mal migrado pasa los
-  tests en verde y recién crashea en el dispositivo al actualizar.
-- Si tocás entidades o migraciones Room, agregá cobertura con
-  `MigrationTestHelper`. Patrón conocido a vigilar: los índices de migración
-  deben llamarse `index_<tabla>_<col>` (no `idx_*`) para coincidir con los que
-  Room genera desde `Index(...)` en las entidades.
+**En desarrollo NO se escriben ni se testean migraciones Room. Punto.**
+
+- Cambiaste entidades/esquema → **reinstalación limpia** (`dev.sh run -clean` o
+  `adb uninstall` + `adb install`). La DB se reconstruye desde el esquema actual con
+  todas las tablas y se re-siembra. No hay nada que migrar porque no hay datos que salvar.
+- **NO** agregues objetos `Migration`, **NO** bumpees `version` "para crear tablas", **NO**
+  escribas tests con `MigrationTestHelper`, **NO** persigas esquemas históricos (`N.json`).
+  La red de seguridad ya está puesta: `fallbackToDestructiveMigration(dropAllTables = true)`
+  en `AutonomiaDatabase.kt` recrea la DB ante cualquier desajuste. Una tabla nueva declarada
+  como `@Entity` aparece sola en la próxima instalación limpia.
+- Los objetos `MIGRATION_*` que ya existen son **legacy**: no los toques ni los repliques.
+  Dev nunca ejercita el camino de upgrade (siempre reinstalamos limpio).
+
+**El interruptor de release (todavía NO):** el día que se decida lanzar, se fija un esquema
+**baseline** limpio y *desde ahí* sí se escriben migraciones para cada cambio (con su
+`MigrationTestHelper`, índices `index_<tabla>_<col>`, etc.). Eso se activa una sola vez, cuando
+toque — **no antes**. Si una tarea SDD propone "arreglar/crear migraciones" en esta fase,
+**está mal**: frená y aplicá Camino A.
 
 ## Build & test
 
