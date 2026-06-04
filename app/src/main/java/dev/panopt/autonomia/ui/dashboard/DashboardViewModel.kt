@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import dev.panopt.autonomia.AutonomiaRepository
 import dev.panopt.autonomia.ActivityCadence
 import dev.panopt.autonomia.ActivityRole
 import dev.panopt.autonomia.ActivitySurface
@@ -22,24 +21,35 @@ import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
 import dev.panopt.autonomia.domain.dashboard.DashboardState
 import dev.panopt.autonomia.domain.dashboard.weekStartKey
+import dev.panopt.autonomia.domain.phrase.DayPhasePolicy
 import dev.panopt.autonomia.domain.sleep.SleepAutoModeResult
-import dev.panopt.autonomia.todayKey
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.UUID
 
 internal class DashboardViewModel(
-    private val repository: AutonomiaRepository,
+    private val repository: DashboardRepository,
+    private val clock: () -> LocalDate = { LocalDate.now() },
 ) : ViewModel() {
-    private val today = LocalDate.now()
-    private val dateKey = todayKey()
-    private val weekStartDateKey = weekStartKey(today)
-    private val monthStartDateKey = today.withDayOfMonth(1).toString()
+    /**
+     * Fecha calendario VIVA. Antes esto era un `val` capturado al construir el VM, que
+     * quedaba congelado al día de creación: como el proceso/VM sobrevive a la medianoche
+     * (app en background/recents), el dashboard seguía operando sobre el día anterior y
+     * la tarjeta de racha —que es un toggle— borraba el log de ayer al "marcar hoy",
+     * reseteando la racha a 0. Ahora la fecha es reactiva: se refresca en [onResumed] y
+     * todos los flows date-bound se reconstruyen vía [flatMapLatest].
+     */
+    private val currentDate = MutableStateFlow(clock())
+
+    private fun dateKey(): String = currentDate.value.toString()
 
     private val activities: StateFlow<List<ActivityDefinition>> =
         repository.observeConfiguredActivities()
@@ -49,49 +59,54 @@ internal class DashboardViewModel(
         repository.observeCatalogActivities()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val activityLogs =
-        combine(
-            repository.activityLogsForDateFlow(dateKey),
-            repository.activityLogsBetweenFlow(weekStartDateKey, dateKey),
-            repository.activityLogsBetweenFlow(monthStartDateKey, dateKey),
-        ) { todayActivityLogs, weekActivityLogs, periodActivityLogs ->
-            DashboardActivityLogSnapshot(
-                todayActivityLogs = todayActivityLogs,
-                weekActivityLogs = weekActivityLogs,
-                periodActivityLogs = periodActivityLogs,
-            )
-        }
-
-    private val sleepSnapshot =
-        combine(
-            repository.sleepNightForDateFlow(dateKey),
-            repository.sleepConfigFlow(),
-            repository.sleepSessionStateFlow(),
-        ) { sleepNight, sleepConfig, sleepSession ->
-            DashboardSleepSnapshot(night = sleepNight, config = sleepConfig, session = sleepSession)
-        }
-
     val isDarkMode: StateFlow<Boolean> = repository.isDarkModeFlow()
 
     val isSleepAutoModeEnabled: StateFlow<Boolean> = repository.isSleepAutoModeEnabledFlow()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val dashboardState: StateFlow<DashboardState> =
-        combine(
-            repository.layersFlow(),
-            activities,
-            activityLogs,
-            repository.abstinenceTracksFlow(),
-        ) { layers, activities, activityLogs, abstinenceTracks ->
-            DashboardCoreSnapshot(
-                layers = layers,
-                activities = activities,
-                todayActivityLogs = activityLogs.todayActivityLogs,
-                weekActivityLogs = activityLogs.weekActivityLogs,
-                periodActivityLogs = activityLogs.periodActivityLogs,
-                abstinenceTracks = abstinenceTracks,
-            )
-        }.let { coreFlow ->
-            combine(
+        currentDate.flatMapLatest { date ->
+            val dateKey = date.toString()
+            val weekStartDateKey = weekStartKey(date)
+            val monthStartDateKey = date.withDayOfMonth(1).toString()
+
+            val activityLogsFlow = combine(
+                repository.activityLogsForDateFlow(dateKey),
+                repository.activityLogsBetweenFlow(weekStartDateKey, dateKey),
+                repository.activityLogsBetweenFlow(monthStartDateKey, dateKey),
+            ) { todayActivityLogs, weekActivityLogs, periodActivityLogs ->
+                DashboardActivityLogSnapshot(
+                    todayActivityLogs = todayActivityLogs,
+                    weekActivityLogs = weekActivityLogs,
+                    periodActivityLogs = periodActivityLogs,
+                )
+            }
+
+            val sleepSnapshotFlow = combine(
+                repository.sleepNightForDateFlow(dateKey),
+                repository.sleepConfigFlow(),
+                repository.sleepSessionStateFlow(),
+            ) { sleepNight, sleepConfig, sleepSession ->
+                DashboardSleepSnapshot(night = sleepNight, config = sleepConfig, session = sleepSession)
+            }
+
+            val coreFlow = combine(
+                repository.layersFlow(),
+                activities,
+                activityLogsFlow,
+                repository.abstinenceTracksFlow(),
+            ) { layers, activities, activityLogs, abstinenceTracks ->
+                DashboardCoreSnapshot(
+                    layers = layers,
+                    activities = activities,
+                    todayActivityLogs = activityLogs.todayActivityLogs,
+                    weekActivityLogs = activityLogs.weekActivityLogs,
+                    periodActivityLogs = activityLogs.periodActivityLogs,
+                    abstinenceTracks = abstinenceTracks,
+                )
+            }
+
+            val factFlow = combine(
                 coreFlow,
                 repository.abstinenceLogsForDateFlow(dateKey),
                 repository.allAbstinenceLogsFlow(),
@@ -106,18 +121,29 @@ internal class DashboardViewModel(
                     tasks = tasks,
                 )
             }
-        }.let { factFlow ->
-            combine(factFlow, repository.weeklyScoreHistoryFlow()) { facts, weeklyHistory ->
-                facts.copy(weeklyHistory = weeklyHistory)
-            }
-        }.let { factFlow ->
-            combine(
-                factFlow,
-                catalogActivities,
+
+            val factWithHistoryFlow =
+                combine(factFlow, repository.weeklyScoreHistoryFlow()) { facts, weeklyHistory ->
+                    facts.copy(weeklyHistory = weeklyHistory)
+                }
+
+            // Combine anchorPhrases + slot flow into one snapshot to keep outer combine at 5.
+            val anchorPhraseSnapshotFlow = combine(
                 repository.anchorPhrasesFlow(),
-                sleepSnapshot,
+                repository.anchorPhraseSlotFlow(dateKey),
+            ) { phrases, slots ->
+                val currentPhase = DayPhasePolicy.phaseFor(java.time.LocalDateTime.now())
+                val phraseId = slots.firstOrNull { it.dayPhase == currentPhase.name }?.phraseId
+                DashboardAnchorPhraseSnapshot(phrases = phrases, phraseId = phraseId)
+            }
+
+            combine(
+                factWithHistoryFlow,
+                catalogActivities,
+                anchorPhraseSnapshotFlow,
+                sleepSnapshotFlow,
                 repository.focusSignalActivityIdFlow(),
-            ) { facts, catalogActivities, anchorPhrases, sleepSnapshot, focusSignalActivityId ->
+            ) { facts, catalogActivities, anchorSnapshot, sleepSnapshot, focusSignalActivityId ->
                 DashboardEngine.buildState(
                     layers = facts.core.layers,
                     activityDefinitions = facts.core.activities,
@@ -130,13 +156,14 @@ internal class DashboardViewModel(
                     allAbstinenceLogs = facts.allAbstinenceLogs,
                     riskEvents = facts.riskEvents,
                     tasks = facts.tasks,
-                    anchorPhrases = anchorPhrases,
+                    anchorPhrases = anchorSnapshot.phrases,
+                    anchorPhrasePhraseId = anchorSnapshot.phraseId,
                     sleepNight = sleepSnapshot.night,
                     sleepConfig = sleepSnapshot.config,
                     sleepSession = sleepSnapshot.session,
                     weeklyHistory = facts.weeklyHistory,
                     focusSignalActivityId = focusSignalActivityId,
-                    today = today,
+                    today = date,
                 )
             }
         }.stateIn(
@@ -146,14 +173,41 @@ internal class DashboardViewModel(
         )
 
     init {
-        viewModelScope.launch {
-            repository.ensureSeeded()
-            repository.materializeAssumedAbstinenceRelapses(today = today)
-            repository.closeElapsedActivityDays(today = today)
-            // WU-6: guarantee — materialize sleep night on app open (idempotent)
-            repository.materializeSleepNight(nightDate = today)
-            repository.refreshCurrentWeeklyScoreSnapshot(today = today)
+        viewModelScope.launch { runDailyMaintenance(currentDate.value) }
+    }
+
+    /**
+     * Lo llama [dev.panopt.autonomia.MainActivity] en ON_RESUME. Si el calendario avanzó
+     * (típicamente: la app estuvo en background cruzando la medianoche), refresca la fecha
+     * viva —lo que reconstruye todos los flows date-bound— y re-corre el mantenimiento
+     * diario para el nuevo día.
+     */
+    fun onResumed() {
+        val now = clock()
+        if (now != currentDate.value) {
+            currentDate.value = now
+            viewModelScope.launch { runDailyMaintenance(now) }
+        } else {
+            // Date unchanged, but the day phase may have shifted (e.g. app returned from
+            // background after 15:00 crossing). Re-resolve incondicionalmente: the resolver
+            // does a cheap early-return if the slot is still valid.
+            viewModelScope.launch {
+                repository.resolveAnchorPhraseForToday(today = now, now = java.time.LocalDateTime.now())
+            }
         }
+    }
+
+    private suspend fun runDailyMaintenance(date: LocalDate) {
+        repository.ensureSeeded()
+        repository.materializeAssumedAbstinenceRelapses(today = date)
+        repository.closeElapsedActivityDays(today = date)
+        // WU-6: guarantee — materialize sleep night on app open (idempotent)
+        repository.materializeSleepNight(nightDate = date)
+        // Rellena snapshots de semanas vencidas que falten, luego refresca la semana actual.
+        repository.closeElapsedWeeklyScoreSnapshots(today = date)
+        repository.refreshCurrentWeeklyScoreSnapshot(today = date)
+        // Resolve anchor phrase AFTER the snapshot is fresh (ADR-3).
+        repository.resolveAnchorPhraseForToday(today = date, now = java.time.LocalDateTime.now())
     }
 
     fun setDarkMode(enabled: Boolean) {
@@ -165,14 +219,14 @@ internal class DashboardViewModel(
     fun toggleActivity(activityId: String, completed: Boolean) {
         val activity = activities.value.firstOrNull { it.id == activityId } ?: return
         viewModelScope.launch {
-            repository.setActivityCompleted(activity = activity, completed = completed, date = dateKey)
+            repository.setActivityCompleted(activity = activity, completed = completed, date = dateKey())
         }
     }
 
     fun saveActivityValue(activityId: String, actualValue: Int) {
         val activity = activities.value.firstOrNull { it.id == activityId } ?: return
         viewModelScope.launch {
-            repository.setActivityValue(activity = activity, actualValue = actualValue, date = dateKey)
+            repository.setActivityValue(activity = activity, actualValue = actualValue, date = dateKey())
         }
     }
 
@@ -185,9 +239,9 @@ internal class DashboardViewModel(
     fun toggleAbstinenceClean(trackId: String, isMarkedCleanToday: Boolean) {
         viewModelScope.launch {
             if (isMarkedCleanToday) {
-                repository.clearAbstinenceLog(trackId = trackId, date = dateKey)
+                repository.clearAbstinenceLog(trackId = trackId, date = dateKey())
             } else {
-                repository.markAbstinenceClean(trackId = trackId, date = dateKey)
+                repository.markAbstinenceClean(trackId = trackId, date = dateKey())
             }
         }
     }
@@ -195,9 +249,9 @@ internal class DashboardViewModel(
     fun toggleAbstinenceRelapse(trackId: String, isRelapseToday: Boolean) {
         viewModelScope.launch {
             if (isRelapseToday) {
-                repository.clearAbstinenceLog(trackId = trackId, date = dateKey)
+                repository.clearAbstinenceLog(trackId = trackId, date = dateKey())
             } else {
-                repository.markAbstinenceRelapse(trackId = trackId, date = dateKey)
+                repository.markAbstinenceRelapse(trackId = trackId, date = dateKey())
             }
         }
     }
@@ -379,14 +433,14 @@ internal class DashboardViewModel(
         viewModelScope.launch {
             val activity = activities.value.firstOrNull { it.id == activityId } ?: return@launch
             // Get current completed state from today's logs
-            val todayLogs = repository.activityLogsForDateFlow(dateKey).first()
+            val todayLogs = repository.activityLogsForDateFlow(dateKey()).first()
             val log = todayLogs.firstOrNull { it.activityId == activityId }
             val currentlyCompleted = log?.completed == true
             // INVERTED: flip the completed flag
             repository.setActivityCompleted(
                 activity = activity,
                 completed = !currentlyCompleted,
-                date = dateKey,
+                date = dateKey(),
             )
         }
     }
@@ -399,7 +453,7 @@ internal class DashboardViewModel(
                     repository.setActivityCompleted(
                         activity = activity,
                         completed = false,
-                        date = dateKey,
+                        date = dateKey(),
                     )
                 }
         }
@@ -424,7 +478,7 @@ internal class DashboardViewModel(
             }
             if (supports.isEmpty()) return@launch
 
-            val todayLogs = repository.activityLogsForDateFlow(dateKey).first()
+            val todayLogs = repository.activityLogsForDateFlow(dateKey()).first()
             val supportLogs = todayLogs.filter { log ->
                 supports.any { it.id == log.activityId }
             }
@@ -437,7 +491,7 @@ internal class DashboardViewModel(
                 repository.setActivityCompleted(
                     activity = support,
                     completed = !hasOmissions, // flip: if any omitted, mark all as done; else mark all as omitted
-                    date = dateKey,
+                    date = dateKey(),
                 )
             }
         }
@@ -454,7 +508,9 @@ internal class DashboardViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
-                return DashboardViewModel(AppGraph.autonomiaRepository(context)) as T
+                return DashboardViewModel(
+                    AutonomiaDashboardRepository(AppGraph.autonomiaRepository(context)),
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
@@ -489,4 +545,11 @@ private data class DashboardFactSnapshot(
     val riskEvents: List<dev.panopt.autonomia.RiskEvent>,
     val tasks: List<dev.panopt.autonomia.Task>,
     val weeklyHistory: List<dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry> = emptyList(),
+)
+
+/** Snapshot combining the anchor phrase catalog + the resolved phraseId for the current phase. */
+private data class DashboardAnchorPhraseSnapshot(
+    val phrases: List<dev.panopt.autonomia.AnchorPhrase>,
+    /** phraseId resolved from the daily slot for the current day-phase; null if no slot yet. */
+    val phraseId: String?,
 )

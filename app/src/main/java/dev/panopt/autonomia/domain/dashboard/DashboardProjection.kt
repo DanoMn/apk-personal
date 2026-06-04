@@ -46,6 +46,8 @@ internal fun buildDashboardState(
     riskEvents: List<RiskEvent>,
     tasks: List<Task>,
     anchorPhrases: List<AnchorPhrase>,
+    /** phraseId resolved from the daily slot for the current day-phase. Null = no slot yet. */
+    anchorPhrasePhraseId: String? = null,
     sleepNight: SleepNight?,
     sleepConfig: SleepConfig = SleepPolicy.defaultConfig(),
     sleepSession: SleepSessionState? = null,
@@ -138,6 +140,7 @@ internal fun buildDashboardState(
 
     return DashboardState(
         isLoading = false,
+        headerDate = DashboardHeaderDate.format(today),
         status = DashboardStatusState(
             scoreState = scoreState,
             title = scoreTitle(scoreState),
@@ -153,7 +156,7 @@ internal fun buildDashboardState(
             pendingLabel = pendingLabel(pendingCount),
             activeLayersLabel = "${activeLayerIds.size} de ${activeLayers.size} capas activas",
         ),
-        anchorPhrase = selectAnchorPhrase(anchorPhrases),
+        anchorPhrase = selectAnchorPhrase(anchorPhrasePhraseId, anchorPhrases),
         layers = layerStates,
         signals = buildSignals(
             activities = timeActivities,
@@ -360,20 +363,27 @@ private fun scoreBody(state: ScoreState): String =
         ScoreState.Unbreakable -> "Tu cuerpo, conducta y proyectos estan alineados por continuidad."
     }
 
-private fun selectAnchorPhrase(phrases: List<AnchorPhrase>): DashboardAnchorPhraseState {
-    val phrase = phrases
-        .filter { it.active && !it.authorReference.isNullOrBlank() }
-        .sortedBy { it.sortOrder }
-        .firstOrNull()
-
-    return if (phrase == null) {
-        DashboardAnchorPhraseState()
-    } else {
-        DashboardAnchorPhraseState(
-            text = phrase.text,
-            authorReference = phrase.authorReference.orEmpty(),
-        )
-    }
+/**
+ * Pure lookup: given the phraseId resolved by [AnchorPhraseResolver] for the current
+ * day-phase, find the phrase in the in-memory catalog and map it to UI state.
+ *
+ * This function performs NO selection logic — selection already happened in the resolver.
+ * It only maps (phraseId, catalog) → (text, authorReference).
+ *
+ * Returns empty/neutral state when:
+ * - [phraseId] is null (no slot written yet for this phase)
+ * - [phraseId] is not found in [catalog] (e.g., catalog not yet loaded)
+ */
+private fun selectAnchorPhrase(
+    phraseId: String?,
+    catalog: List<AnchorPhrase>,
+): DashboardAnchorPhraseState {
+    if (phraseId == null) return DashboardAnchorPhraseState()
+    val phrase = catalog.firstOrNull { it.id == phraseId } ?: return DashboardAnchorPhraseState()
+    return DashboardAnchorPhraseState(
+        text = phrase.text,
+        authorReference = phrase.authorReference.orEmpty(),
+    )
 }
 
 private fun buildDimensions(

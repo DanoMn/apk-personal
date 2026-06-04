@@ -10,9 +10,12 @@ import dev.panopt.autonomia.AbstinenceLog
 import dev.panopt.autonomia.AbstinenceSeverity
 import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.AbstinenceTrack
+import dev.panopt.autonomia.AnchorPhrase
+import dev.panopt.autonomia.AttributionStatus
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
+import dev.panopt.autonomia.PhraseFamily
 import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.TargetPeriod
@@ -22,6 +25,7 @@ import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -402,6 +406,95 @@ class DashboardProjectionTest {
     }
 
     @Test
+    fun `relapse today on critical track projects restoration`() {
+        val track = abstinenceTrack(id = "trk_alcohol", active = true, severity = AbstinenceSeverity.Critical)
+        val logs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse))
+
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = listOf(track),
+            todayAbstinenceLogs = logs.filter { it.date == dateKey },
+            allAbstinenceLogs = logs,
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = emptyList(),
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        val projected = state.sobrietyTracks.single()
+        assertTrue(projected.isRelapseToday)
+        assertFalse(projected.isMarkedCleanToday)
+        assertEquals(DashboardDimensionStatus.Restoration, projected.status)
+        assertEquals("senal registrada", projected.meta)
+        assertEquals(0, projected.days)
+    }
+
+    @Test
+    fun `relapse today on non-critical track projects attention`() {
+        val track = abstinenceTrack(id = "trk_alcohol", active = true, severity = AbstinenceSeverity.Moderate)
+        val logs = listOf(abstinenceLog(track.id, today, AbstinenceStatus.Relapse))
+
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = listOf(track),
+            todayAbstinenceLogs = logs.filter { it.date == dateKey },
+            allAbstinenceLogs = logs,
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = emptyList(),
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        val projected = state.sobrietyTracks.single()
+        assertTrue(projected.isRelapseToday)
+        assertEquals(DashboardDimensionStatus.Attention, projected.status)
+    }
+
+    @Test
+    fun `relapse in the middle breaks the clean streak`() {
+        val track = abstinenceTrack(id = "trk_alcohol", active = true)
+        val logs = listOf(
+            abstinenceLog(track.id, today, AbstinenceStatus.Clean),
+            abstinenceLog(track.id, today.minusDays(1), AbstinenceStatus.Clean),
+            abstinenceLog(track.id, today.minusDays(2), AbstinenceStatus.Relapse),
+            abstinenceLog(track.id, today.minusDays(3), AbstinenceStatus.Clean),
+        )
+
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = listOf(track),
+            todayAbstinenceLogs = logs.filter { it.date == dateKey },
+            allAbstinenceLogs = logs,
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = emptyList(),
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        // La racha cuenta hacia atrás solo hasta la recaída: hoy + ayer = 2, el día limpio
+        // anterior a la recaída no se acumula.
+        assertEquals(2, state.sobrietyTracks.single().days)
+    }
+
+    @Test
     fun `sleep signal asks to register when there is no night`() {
         val state = emptyDashboardState(sleepNight = null)
         val signal = state.signals.first { it.kind == DashboardSignalKind.Sleep }
@@ -447,6 +540,111 @@ class DashboardProjectionTest {
         assertEquals("en descanso", signal.meta)
         assertEquals(DashboardDimensionStatus.Motion, signal.status)
         assertEquals(true, state.sleep.isSessionOpen)
+    }
+
+    // --- anchor phrase projection tests (Slice 6, DASH-REQ-1 / DASH-REQ-2) ---
+
+    @Test
+    fun `slot present with phraseId in catalog returns matching text and authorReference`() {
+        val catalogPhrase = anchorPhrase(
+            id = "phrase_001",
+            text = "Cada dia es una oportunidad nueva.",
+            authorReference = "Proverbio anonimo",
+        )
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = emptyList(),
+            todayAbstinenceLogs = emptyList(),
+            allAbstinenceLogs = emptyList(),
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = listOf(catalogPhrase),
+            anchorPhrasePhraseId = "phrase_001",
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        assertEquals("Cada dia es una oportunidad nueva.", state.anchorPhrase.text)
+        assertEquals("Proverbio anonimo", state.anchorPhrase.authorReference)
+    }
+
+    @Test
+    fun `no slot produces empty neutral anchor phrase state without Kierkegaard`() {
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = emptyList(),
+            todayAbstinenceLogs = emptyList(),
+            allAbstinenceLogs = emptyList(),
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = emptyList(),
+            anchorPhrasePhraseId = null,
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        // Must NOT contain the old hardcoded Kierkegaard text
+        assertFalse(
+            "anchorPhrase.text must not contain 'Kierkegaard' or attributed text when no slot",
+            state.anchorPhrase.text.contains("Kierkegaard") || state.anchorPhrase.authorReference.contains("Kierkegaard"),
+        )
+        // Default state should be empty/neutral
+        assertEquals("", state.anchorPhrase.text)
+        assertEquals("", state.anchorPhrase.authorReference)
+    }
+
+    @Test
+    fun `slot phraseId not found in catalog returns graceful empty fallback`() {
+        val catalogPhrase = anchorPhrase(
+            id = "phrase_exists",
+            text = "Una frase valida.",
+            authorReference = "Autor conocido",
+        )
+        val state = buildDashboardState(
+            layers = defaultLayers(),
+            activities = emptyList(),
+            todayActivityLogs = emptyList(),
+            weekActivityLogs = emptyList(),
+            periodActivityLogs = emptyList(),
+            abstinenceTracks = emptyList(),
+            todayAbstinenceLogs = emptyList(),
+            allAbstinenceLogs = emptyList(),
+            riskEvents = emptyList(),
+            tasks = emptyList(),
+            anchorPhrases = listOf(catalogPhrase),
+            anchorPhrasePhraseId = "phrase_missing",
+            sleepNight = null,
+            focusSignalActivityId = null,
+            today = today,
+        )
+
+        // phrase not found → graceful empty, no crash
+        assertEquals("", state.anchorPhrase.text)
+        assertEquals("", state.anchorPhrase.authorReference)
+    }
+
+    @Test
+    fun `DashboardAnchorPhraseState default constructor has no Kierkegaard text`() {
+        val defaultState = DashboardAnchorPhraseState()
+        assertNotEquals(
+            "Default anchorPhrase text must not be the old Kierkegaard quote",
+            "Life can only be understood backwards; but it must be lived forwards.",
+            defaultState.text,
+        )
+        assertFalse(
+            "Default anchorPhrase authorReference must not contain 'Kierkegaard'",
+            defaultState.authorReference.contains("Kierkegaard"),
+        )
     }
 
     // --- helpers ---
@@ -579,4 +777,21 @@ class DashboardProjectionTest {
             note = "",
             source = "auto",
         )
+
+    private fun anchorPhrase(
+        id: String,
+        text: String,
+        authorReference: String,
+    ): AnchorPhrase = AnchorPhrase(
+        id = id,
+        text = text,
+        authorReference = authorReference,
+        family = PhraseFamily.Containment,
+        language = "es",
+        attributionStatus = AttributionStatus.Clear,
+        active = true,
+        sortOrder = 10,
+        createdAt = 0L,
+        updatedAt = 0L,
+    )
 }

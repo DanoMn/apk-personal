@@ -144,6 +144,12 @@ interface AutonomiaDao {
     @Query("SELECT * FROM anchor_phrase_daily_slots WHERE date = :date AND dayPhase = :dayPhase LIMIT 1")
     suspend fun getAnchorPhraseDailySlot(date: String, dayPhase: String): AnchorPhraseDailySlotEntity?
 
+    @Query("SELECT * FROM anchor_phrase_impressions WHERE date BETWEEN :start AND :end")
+    suspend fun getAnchorPhraseImpressionsBetween(start: String, end: String): List<AnchorPhraseImpressionEntity>
+
+    @Query("SELECT * FROM anchor_phrase_daily_slots WHERE date = :date")
+    fun observeAnchorPhraseDailySlots(date: String): Flow<List<AnchorPhraseDailySlotEntity>>
+
     // --- Sleep (v12+: sleep_nights + sleep_segments) ---
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

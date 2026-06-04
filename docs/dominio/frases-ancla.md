@@ -580,6 +580,8 @@ La frase debe sentirse como una presencia editorial, no como un consejo generado
 
 ## 17. No implementar todavia
 
+Los siguientes items siguen fuera de alcance. No los marca el motor de rotacion actual:
+
 - Editor de frases propias.
 - Personalizacion manual de familias.
 - Explicacion visible de desbloqueos.
@@ -589,12 +591,22 @@ La frase debe sentirse como una presencia editorial, no como un consejo generado
 
 ---
 
-## 18. Pendientes inmediatos para implementacion
+## 18. Motor de rotacion — implementado
 
-1. Crear enums `PhraseFamily`, `DayPhase` y `PhraseAttributionStatus`.
-2. Crear entidades Room `AnchorPhrase`, `AnchorPhraseStateRule`, `AnchorPhrasePhaseRule`, `AnchorPhraseImpression` y opcionalmente `AnchorPhraseDailySlot`.
-3. Crear seed del catalogo activo.
-4. Crear selector de frase por `date + dayPhase + scoreState`.
-5. Integrar selector al ViewModel del dashboard.
-6. Actualizar `dashboard.html` para mostrar visualmente score-state, progreso diario y frase ancla en el orden final.
-7. Mantener `contemplacion` como recompensa sutil de estados altos.
+El motor de rotacion de frases ancla fue implementado completo como parte del cambio `anchor-phrase-rotation`. Los siete puntos que estaban pendientes quedaron resueltos:
+
+| Item | Estado | Artefacto |
+| --- | --- | --- |
+| Enums `PhraseFamily`, `DayPhase`, `AttributionStatus` | Implementado | `Models.kt` |
+| 5 entidades Room (`anchor_phrase*`) | Implementado | `Entities.kt`; declaradas en el esquema DB v12. Sin migracion hand-written (Camino A: fase dev, instalacion limpia — ver `CLAUDE.md`) |
+| Seed canonico (83 frases, reglas derivadas de mapas) | Implementado | `data/local/seed/AnchorPhraseSeed.kt` |
+| Selector puro ponderado por `date + dayPhase + scoreState` | Implementado | `domain/phrase/AnchorPhraseSelector.kt` + `DayPhasePolicy.kt` |
+| Resolver + wiring en `runDailyMaintenance` / `onResumed` | Implementado | `data/phrase/AnchorPhraseResolver.kt`; cablea en `AutonomiaRepository` y `DashboardViewModel` |
+| Integracion dashboard (slot flow → lookup puro; hardcode eliminado) | Implementado | `DashboardProjection.kt`, `DashboardViewModel.kt`, `DashboardState.kt` |
+| Contemplacion como recompensa de estados altos | Implementado | `AnchorPhraseSelector` — gate `allowedFamiliesByState`; pesos en `AnchorPhraseSeed` |
+
+### Nota de diseno ADR-3 — estabilidad de frase vs. estado live
+
+El resolver ancla la seleccion de frase al campo `state` del `WeeklyScoreSnapshotEntity` de la semana actual (escrito justo antes por `refreshCurrentWeeklyScoreSnapshot`). El dashboard recalcula el estado live con `ScoreEngine` a partir de flujos reactivos — ambos llegan al mismo resultado en el momento de apertura, pero divergen si el usuario registra actividades durante la sesion.
+
+Esta divergencia es **intencional**: la frase no debe cambiar cada vez que el score sube o baja unos puntos a mitad de sesion. La estabilidad dentro de la fase (ADR-1) requiere un punto de anclaje inmutable; el snapshot cumple ese rol. La frase solo cambia al inicio de una nueva fase del dia o al dia siguiente.

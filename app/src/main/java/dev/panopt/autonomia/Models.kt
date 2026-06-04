@@ -159,6 +159,47 @@ enum class AbstinenceStatus { Unknown, Clean, Relapse }
 enum class TaskStatus { Pending, Done, Archived }
 enum class PhraseFamily { Containment, MinimalAction, RegulationClarity, Persistence, IdentityValues, Recognition, Contemplation }
 enum class AttributionStatus { Clear, Traditional, Disputed, NeedsReview }
+
+/** Two-phase day split used by the anchor-phrase rotation system (frases-ancla.md §7). */
+enum class DayPhase {
+    /** Morning phase: 05:00–14:59 local time. */
+    Dawn,
+    /** Evening/night phase: 15:00–04:59 local time. */
+    Dusk,
+}
+
+/**
+ * The phrase chosen by [domain.phrase.DayPhasePolicy] / [domain.phrase.AnchorPhraseSelector]
+ * for the current session slot. Carries all context needed to log the impression.
+ */
+data class AnchorPhraseSelection(
+    val phraseId: String,
+    val text: String,
+    val authorReference: String,
+    val family: PhraseFamily,
+    val scoreState: ScoreState,
+    val dayPhase: DayPhase,
+)
+
+/**
+ * Domain model for a state-based weight rule (derived from [data.AnchorPhraseStateRuleEntity]).
+ * Expresses how strongly a phrase should be preferred when the current [scoreState] applies.
+ */
+data class AnchorPhraseStateRule(
+    val phraseId: String,
+    val scoreState: ScoreState,
+    val weight: Int,
+)
+
+/**
+ * Domain model for a day-phase weight rule (derived from [data.AnchorPhrasePhaseRuleEntity]).
+ * Expresses how strongly a phrase should be preferred during the given [dayPhase].
+ */
+data class AnchorPhrasePhaseRule(
+    val phraseId: String,
+    val dayPhase: DayPhase,
+    val weight: Int,
+)
 enum class SleepQuality { Low, Acceptable, Good }
 
 fun todayKey(): String = LocalDate.now().toString()

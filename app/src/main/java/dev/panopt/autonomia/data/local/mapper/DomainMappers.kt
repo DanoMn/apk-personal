@@ -11,13 +11,17 @@ import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.ActivityType
 import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.AnchorPhrase
+import dev.panopt.autonomia.AnchorPhrasePhaseRule
+import dev.panopt.autonomia.AnchorPhraseStateRule
 import dev.panopt.autonomia.AttributionStatus
 import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.DailyActivityStatus
+import dev.panopt.autonomia.DayPhase
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.PhraseFamily
 import dev.panopt.autonomia.RiskEvent
+import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.SleepConfig
 import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
@@ -29,6 +33,8 @@ import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.ActivityLogEntity
 import dev.panopt.autonomia.data.AnchorPhraseEntity
+import dev.panopt.autonomia.data.AnchorPhrasePhaseRuleEntity
+import dev.panopt.autonomia.data.AnchorPhraseStateRuleEntity
 import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.RiskEventEntity
@@ -262,4 +268,26 @@ internal fun SleepSessionStateEntity.toDomain(): SleepSessionState =
         date = date,
         startedAt = startedAt,
         updatedAt = updatedAt,
+    )
+
+/**
+ * Maps a [AnchorPhraseStateRuleEntity] to its domain counterpart [AnchorPhraseStateRule].
+ * Falls back to [ScoreState.NoData] if the persisted name is unknown (forward-compatibility guard).
+ */
+internal fun AnchorPhraseStateRuleEntity.toDomain(): AnchorPhraseStateRule =
+    AnchorPhraseStateRule(
+        phraseId = phraseId,
+        scoreState = runCatching { ScoreState.valueOf(scoreState) }.getOrDefault(ScoreState.NoData),
+        weight = weight,
+    )
+
+/**
+ * Maps a [AnchorPhrasePhaseRuleEntity] to its domain counterpart [AnchorPhrasePhaseRule].
+ * Falls back to [DayPhase.Dawn] if the persisted name is unknown (forward-compatibility guard).
+ */
+internal fun AnchorPhrasePhaseRuleEntity.toDomain(): AnchorPhrasePhaseRule =
+    AnchorPhrasePhaseRule(
+        phraseId = phraseId,
+        dayPhase = runCatching { DayPhase.valueOf(dayPhase) }.getOrDefault(DayPhase.Dawn),
+        weight = weight,
     )

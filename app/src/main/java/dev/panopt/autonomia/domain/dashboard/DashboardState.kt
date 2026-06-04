@@ -4,6 +4,7 @@ import dev.panopt.autonomia.ScoreState
 
 internal data class DashboardState(
     val isLoading: Boolean = true,
+    val headerDate: String = "",
     val status: DashboardStatusState = DashboardStatusState(),
     val dailyProgress: DashboardDailyProgressState = DashboardDailyProgressState(),
     val anchorPhrase: DashboardAnchorPhraseState = DashboardAnchorPhraseState(),
@@ -40,8 +41,8 @@ internal data class DashboardDailyProgressState(
 )
 
 internal data class DashboardAnchorPhraseState(
-    val text: String = "Life can only be understood backwards; but it must be lived forwards.",
-    val authorReference: String = "Soren Kierkegaard",
+    val text: String = "",
+    val authorReference: String = "",
 )
 
 internal data class DashboardLayerState(

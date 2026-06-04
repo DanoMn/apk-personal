@@ -15,12 +15,14 @@ import dev.panopt.autonomia.data.SleepNightEntity
 import dev.panopt.autonomia.data.SleepSessionStateEntity
 import dev.panopt.autonomia.data.TaskEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
+import dev.panopt.autonomia.data.scoring.DaoWeeklySnapshotDataSource
 import dev.panopt.autonomia.data.scoring.WeeklyScoreSnapshotWriter
 import dev.panopt.autonomia.data.scoring.toHistoryEntry
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
+import dev.panopt.autonomia.data.local.seed.AnchorPhraseSeed
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.abstinence.AbstinenceRelapseMaterializationPolicy
@@ -61,8 +63,14 @@ import java.util.UUID
 class AutonomiaRepository(context: Context) {
     private val appContext = context.applicationContext
     private val prefs = appContext.getSharedPreferences("autonomia_prefs", Context.MODE_PRIVATE)
-    private val dao = AutonomiaDatabase.getInstance(appContext).autonomiaDao()
-    private val weeklyScoreSnapshotWriter = WeeklyScoreSnapshotWriter(dao)
+    private val db = AutonomiaDatabase.getInstance(appContext)
+    private val dao = db.autonomiaDao()
+    private val weeklyScoreSnapshotWriter =
+        WeeklyScoreSnapshotWriter(DaoWeeklySnapshotDataSource(dao))
+    private val anchorPhraseResolver =
+        dev.panopt.autonomia.data.phrase.AnchorPhraseResolver(
+            dev.panopt.autonomia.data.phrase.DaoAnchorPhraseDataSource(dao, db),
+        )
     private val telemetryRepository = TelemetryRepository(appContext)
 
     private val _isDarkMode = MutableStateFlow(prefs.getBoolean("dark_mode", true))
@@ -218,6 +226,9 @@ class AutonomiaRepository(context: Context) {
     fun anchorPhrasesFlow(): Flow<List<AnchorPhrase>> =
         dao.observeAnchorPhrases().map { phrases -> phrases.map { it.toDomain() } }
 
+    fun observeAnchorPhraseDailySlots(dateKey: String) =
+        dao.observeAnchorPhraseDailySlots(dateKey)
+
     // v12+: uses sleep_nights table. Returns SleepNight (null if no night recorded).
     fun sleepNightForDateFlow(date: String): Flow<SleepNight?> =
         dao.observeSleepNightForDate(date).map { it?.toDomain() }
@@ -249,6 +260,12 @@ class AutonomiaRepository(context: Context) {
         // reach existing installations without losing user-configured ones.
         dao.upsertActivityDefinitions(DefaultSeeds.activityDefinitions)
         dao.upsertAbstinenceTracks(DefaultSeeds.abstinenceTracks)
+
+        // Anchor phrases: canonical data (frases-ancla.md §15). Always upsert
+        // (idempotent via OnConflict.REPLACE) so updates reach existing installs.
+        dao.upsertAnchorPhrases(AnchorPhraseSeed.phrases)
+        dao.upsertAnchorPhraseStateRules(AnchorPhraseSeed.stateRules)
+        dao.upsertAnchorPhrasePhaseRules(AnchorPhraseSeed.phaseRules)
 
         if (dao.getSleepConfig(SleepPolicy.DEFAULT_CONFIG_ID) == null) {
             val config = SleepPolicy.defaultConfig()
@@ -339,6 +356,29 @@ class AutonomiaRepository(context: Context) {
         today: LocalDate = LocalDate.now(),
     ) {
         weeklyScoreSnapshotWriter.refreshCurrentWeek(today = today)
+    }
+
+    /**
+     * Rellena los snapshots de semanas vencidas que falten (hueco de historial cuando ni
+     * el worker ni la app corrieron durante una semana). Idempotente y barato en régimen:
+     * si las semanas ya tienen snapshot, no recalcula nada.
+     */
+    suspend fun closeElapsedWeeklyScoreSnapshots(
+        today: LocalDate = LocalDate.now(),
+    ) {
+        weeklyScoreSnapshotWriter.closeElapsedWeeks(today = today)
+    }
+
+    /**
+     * Determina y persiste (si corresponde) la frase ancla para [today] y la fase del día.
+     * Espejo de [refreshCurrentWeeklyScoreSnapshot] — debe llamarse DESPUÉS de ese método
+     * en [runDailyMaintenance] para que el snapshot esté fresco al derivar el estado (ADR-3).
+     */
+    suspend fun resolveAnchorPhraseForToday(
+        today: LocalDate = LocalDate.now(),
+        now: java.time.LocalDateTime = java.time.LocalDateTime.now(),
+    ) {
+        anchorPhraseResolver.resolveForToday(today, now)
     }
 
     suspend fun materializeAssumedAbstinenceRelapses(
