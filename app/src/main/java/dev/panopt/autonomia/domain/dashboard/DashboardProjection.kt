@@ -23,6 +23,7 @@ import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.isGoal
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
+import dev.panopt.autonomia.domain.scoring.PointsMappingPolicy
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import java.util.Locale
@@ -116,7 +117,13 @@ internal fun buildDashboardState(
         ),
     )
     val scoreState = scoreReport.state
-    val score = scoreReport.visibleScore ?: 0
+    // NIVEL 7 (proyección): el número visible del dashboard es el mapeo E ESTADO→PUNTOS [650,1100].
+    // Mismo cálculo de dominio puro que el motor usa para poblar el seam (PointsMappingPolicy), así
+    // dashboard y snapshot semanal nunca divergen. NoData (visibleScore == null) → sin número.
+    val visiblePoints: Int? = scoreReport.visibleScore?.let {
+        PointsMappingPolicy.points(scoreReport.estado.toDouble())
+    }
+    val score = visiblePoints ?: 0
     val layerStates = scoreReport.layerScores.map { layerScore ->
         DashboardLayerState(
             id = layerScore.layerId,
@@ -147,7 +154,7 @@ internal fun buildDashboardState(
             headline = scoreHeadline(scoreState),
             body = scoreBody(scoreState),
             score = score,
-            scoreLabel = scoreReport.visibleScore?.toString() ?: "--",
+            scoreLabel = visiblePoints?.toString() ?: "--",
             progress = scoreReport.progress,
         ),
         dailyProgress = DashboardDailyProgressState(
@@ -288,10 +295,11 @@ private fun dev.panopt.autonomia.domain.scoring.ScoreReport.toDashboardScoreRepo
     val worstLayerName = worstLayerId
         ?.let { id -> layerScores.firstOrNull { it.layerId == id }?.name }
         ?: "Sin capa baja"
+    val visiblePoints = visibleScore?.let { PointsMappingPolicy.points(estado.toDouble()) }
     return DashboardScoreReportState(
         stateTitle = scoreTitle(state),
         headline = scoreHeadline(state),
-        scoreLabel = visibleScore?.toString() ?: "--",
+        scoreLabel = visiblePoints?.toString() ?: "--",
         progress = progress,
         weeklyBaseLabel = scoreRatioLabel(weeklyBaseScore),
         weeklyScoreLabel = scoreRatioLabel(weeklyScore),

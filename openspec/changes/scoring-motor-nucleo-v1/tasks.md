@@ -243,18 +243,32 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 
 > Independiente del motor (consume `estado`); puede ir en paralelo a PR-F una vez existe
 > `ScoreReport.estado`. Cierra el `visibleScore` del seam.
+>
+> **Decisión de ubicación (apply PR-G):** el mapeo E se implementó como objeto de **dominio puro
+> reutilizable** `domain/scoring/PointsMappingPolicy.kt` (`points(estado: Double): Int`), NO como
+> función privada de `DashboardProjection`. Razón: el seam de persistencia (`ScoreEngine` poblando
+> `ScoreReport.visibleScore`) y la proyección (dashboard) DEBEN usar EXACTAMENTE el mismo cálculo;
+> duplicarlo en la proyección haría divergir snapshot y dashboard. Sigue siendo "presentación de
+> dominio" (sin Compose), coherente con el design (§"Ubicación del mapeo de puntos" = proyección
+> conceptualmente; la implementación física es un policy de dominio que la proyección llama). El
+> test vive en `domain/scoring/PointsMappingPolicyTest.kt`.
 
 ### 12. Mapeo a puntos (proyección)
-- [ ] 12.1 [TEST] `PointsMappingTest.kt` (nuevo, en proyección): PU1 (`PUNTOS(0)=650`,
-  `PUNTOS(1.5)=1100`, ±1), PU3 (`PUNTOS(1.0)=941` ±2, `PUNTOS(1.10)=1011` ±3), PU4 (monótono no
-  decreciente barriendo 0..1.5 en pasos de 0.001), PU5 (`0.40→721`, `0.62→788`, `0.85→873`, ±2).
-  Ver rojo. [→ points-mapping §"Mapeo E"]
-- [ ] 12.2 [CÓDIGO] Implementar el mapeo E en `DashboardProjection.kt` (`PointsMapping(estado)`):
-  `σ(x)=1/(1+e^−x)`, 5 hitos `(c,w,A)` de constantes, `raw(e)`, normalización
-  `650+(raw(e)−raw(0))·450/(raw(1.5)−raw(0))`, `e` clampeado a `[0,1.5]`. Verde.
-- [ ] 12.3 [CÓDIGO] Cablear `DashboardProjection`/`ScoringScreen` para usar el nuevo mapeo en
-  lugar de `VisibleScorePolicy`; pasar el `visibleScore` resultante al draft del seam (PR-F 10.4).
-- [ ] 12.4 [CÓDIGO] Borrar `VisibleScorePolicy.kt` + `VisibleScorePolicyTest.kt`. Build verde.
+- [x] 12.1 [TEST] `PointsMappingPolicyTest.kt` (nuevo, dominio scoring): PU1 (`PUNTOS(0)=650`,
+  `PUNTOS(1.5)=1100`), PU3 (`PUNTOS(1.0)=941` ±2, `PUNTOS(1.10)=1011` ±3), PU4 (monótono no
+  decreciente barriendo 0..1.5 en pasos de 0.001), PU5 (`0.40→721`, `0.62→788`, `0.85→873`, ±2),
+  + clamp fuera de `[0,1.5]`. Visto rojo (unresolved ref `PointsMappingPolicy`) → verde.
+  [→ points-mapping §"Mapeo E"]
+- [x] 12.2 [CÓDIGO] Implementado el mapeo E en `PointsMappingPolicy.kt` (`points(estado)`):
+  `σ(x)=1/(1+e^−x)`, 5 hitos `(c,w,A)` de `ScoringConstantsV2.POINTS_MILESTONES`, `raw(e)`,
+  normalización `650+(raw(e)−raw(0))·450/(raw(1.5)−raw(0))`, `e` clampeado a `[0,1.5]`. Verde.
+- [x] 12.3 [CÓDIGO] Cableado: `ScoreEngine` puebla `visibleScore = PointsMappingPolicy.points(estado)`
+  (reemplaza el `interimPoints` lineal de PR-F, ahora ELIMINADO); `DashboardProjection` deriva el
+  número visible del dashboard del mismo `PointsMappingPolicy.points(estado)` (preserva NoData →
+  `--`). Seam intacto: el `visibleScore` del draft proviene del mapeo sigmoide.
+- [x] 12.4 [CÓDIGO] `VisibleScorePolicy.kt` + su test ya estaban borrados (PR-F 11.1). Sin
+  referencias residuales (`rg 'VisibleScorePolicy|interimPoints'` = vacío). Build verde
+  (`testDebugUnitTest` suite completa + `assembleDebug`).
 
 ---
 

@@ -3,7 +3,6 @@ package dev.panopt.autonomia.domain.scoring
 import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
-import kotlin.math.roundToInt
 
 /**
  * Orquestador del motor de scoring de núcleo v1 (PR-F). Conecta el adapter de hechos con los
@@ -22,9 +21,9 @@ import kotlin.math.roundToInt
  *
  * El gate de **NoData** (sin hechos, o < [ScoringConstants.MIN_ACTIVE_LAYERS_WITH_ANCHOR] capas con
  * ancla) vive AQUÍ, en el orquestador: `BandPolicy` es puro y no lo conoce. El mapeo a puntos
- * visibles (NIVEL 7) vive en la proyección (PR-G); para que el seam de persistencia y el dashboard
- * sigan funcionando, este orquestador rellena `visibleScore` con un mapeo lineal INTERINO
- * (`[0,1.5] → [650,1100]`) que PR-G reemplaza por el sigmoide canónico.
+ * visibles (NIVEL 7) es dominio puro reutilizable ([PointsMappingPolicy]): lo consume tanto la
+ * proyección (`DashboardProjection`) para el dashboard como este orquestador al poblar
+ * `visibleScore` para el seam de persistencia semanal.
  */
 object ScoreEngine {
 
@@ -95,7 +94,7 @@ object ScoreEngine {
         val estado: Double = StateAggregationPolicy.estado(layerInputs)
         val band = BandPolicy.band(estado)
         val estadoFloat = estado.toFloat()
-        val visiblePoints = interimPoints(estado)
+        val visiblePoints = PointsMappingPolicy.points(estado)
 
         return ScoreReport(
             state = band,
@@ -129,18 +128,6 @@ object ScoreEngine {
             SOBRIETY_OPT_IN_LAYER -> sobrietyOptIn
             else -> null
         }
-
-    /**
-     * Mapeo INTERINO ESTADO → puntos (`[0,1.5] → [650,1100]`, lineal) solo para mantener vivo el
-     * seam de persistencia y el dashboard durante PR-F. PR-G instala el mapeo sigmoide canónico
-     * (NIVEL 7) en la proyección y deja este helper sin uso.
-     */
-    private fun interimPoints(estado: Double): Int {
-        val floor = ScoringConstantsV2.POINTS_FLOOR
-        val ceiling = ScoringConstantsV2.POINTS_CEILING
-        val clamped = estado.coerceIn(0.0, 1.5)
-        return (floor + (clamped / 1.5) * (ceiling - floor)).roundToInt()
-    }
 
     /** Cuenta capas activas que tienen al menos 1 ancla configurada (activa, no archivada). */
     private fun activeLayersWithAnchor(input: ScoreInput, activeLayers: List<Layer>): Int {
