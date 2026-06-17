@@ -46,16 +46,14 @@ internal object WeeklyScoringContextBuilder {
             weeklyLogsByActivity = weeklyLogsByActivity,
             activeSobrietyTracks = activeSobrietyTracks,
             sleepScore = weeklySleepScore,
-            sobrietyScore = SobrietyScoringPolicy.score(
-                tracks = activeSobrietyTracks,
-                allLogs = input.allAbstinenceLogs,
-                todayLogs = input.todayAbstinenceLogs,
-                weekDates = weekDates,
-                today = input.today,
-            ),
+            // PR-F: el motor nuevo deriva la señal de sobriedad (M_sobr) vía
+            // ScoringFactsAdapter.relapseDaysByTrack + OptInPolicy desde weeklyAbstinenceLogsByTrack;
+            // el sobrietyScore pre-computado (modelo viejo) ya no se usa.
+            sobrietyScore = null,
             completedTasksByLayer = input.tasks
                 .filter { it.isScoringTaskCompletedIn(weekStart, input.today) }
                 .groupBy { it.layerId.orEmpty() },
+            weeklyAbstinenceLogsByTrack = weeklyAbstinenceLogsByTrack,
         )
     }
 

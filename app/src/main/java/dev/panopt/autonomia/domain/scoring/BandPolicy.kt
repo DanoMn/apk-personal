@@ -18,8 +18,9 @@ import dev.panopt.autonomia.ScoreState
  *
  * Sin gates, sin worst-layer, sin histéresis, sin memoria: el ESTADO ya trae toda la historia.
  *
- * Coexiste con `BaseStatePolicy` (modelo viejo, con gates/worst-layer/histéresis) hasta el
- * recableado de PR-F.
+ * NIVEL 6 del motor núcleo v1 — única resolución de banda tras PR-F (la `BaseStatePolicy` vieja,
+ * con gates/worst-layer/histéresis, se eliminó). El gate `NoData` lo decide el orquestador
+ * [ScoreEngine], no esta función pura.
  */
 internal object BandPolicy {
 

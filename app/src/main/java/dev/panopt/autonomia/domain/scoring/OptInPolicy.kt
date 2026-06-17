@@ -22,7 +22,8 @@ import kotlin.math.pow
  * `docs/scoring/modelo-matematico-nucleo-v1.md`). Dominio puro JVM; cálculo en [Double]; todas las
  * constantes (BETA, A) salen de [ScoringConstantsV2] — NUNCA se hardcodean.
  *
- * Coexiste con `SobrietyScoringPolicy` (modelo viejo) hasta el recableado de PR-F.
+ * NIVEL 4 del motor núcleo v1 — única señal de opt-ins tras PR-F (la `SobrietyScoringPolicy` vieja
+ * se eliminó). El orquestador [ScoreEngine] cablea `sobrietySignal` a Conducta y el sueño a Cuerpo.
  */
 internal object OptInPolicy {
 

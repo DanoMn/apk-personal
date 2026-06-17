@@ -44,7 +44,7 @@ class AnchorPhraseResolverTest {
     private fun snapshotFor(state: ScoreState): WeeklyScoreSnapshotEntity = WeeklyScoreSnapshotEntity(
         weekStart = "2026-06-01",   // Monday of 2026-06-04 (Thursday)
         weekEnd = "2026-06-07",
-        scoringVersion = "weekly-base-v1",
+        scoringVersion = dev.panopt.autonomia.domain.scoring.WeeklyScoreSnapshotConstants.SCORING_VERSION,
         calculatedAt = System.currentTimeMillis(),
         configHash = "hash",
         factsHash = "hash",

@@ -40,6 +40,12 @@ data class ScoreReport(
     val layerScores: List<LayerScore>,
     val featureContributions: List<FeatureContribution>,
     val gates: List<ScoreGate>,
+    /**
+     * ESTADO crudo del NIVEL 5 (`∈ [0, 1.5]`), motor de núcleo v1. `Float` SOLO en esta frontera
+     * de salida (el cálculo interno es `Double`). `state` = `BandPolicy.band(estado)`;
+     * `weeklyBaseScore`/`weeklyScore` reflejan este ESTADO (no el rango 0–1 del modelo viejo).
+     */
+    val estado: Float = 0f,
     val weeklyBaseScore: Float = 0f,
     val weeklyScore: Float = 0f,
     val averageLayerScore: Float = 0f,
@@ -149,56 +155,9 @@ internal data class WeeklyScoringContext(
     /**
      * Logs de abstinencia de la ventana semanal por track activo (PR-E). Forma cruda que
      * [ScoringFactsAdapter.relapseDaysByTrack] consume para derivar `días_recaída` → `M_sobr`
-     * en el motor nuevo. Coexiste con `sobrietyScore` (policy vieja) hasta PR-F.
+     * en el motor nuevo. Reemplaza al `sobrietyScore` pre-computado (policy vieja eliminada en PR-F).
      */
     val weeklyAbstinenceLogsByTrack: Map<String, List<AbstinenceLog>> = emptyMap(),
-)
-
-internal data class LayerEvaluation(
-    val layerId: String,
-    val name: String,
-    val configured: Boolean,
-    val baseScore: Float,
-    val rawScore: Float,
-    val anchorScore: Float?,
-    val supportScore: Float?,
-    val anchorSurplusBonus: Float,
-    val taskMomentumBonus: Float,
-    val sleepScore: Float?,
-    val sobrietyScore: Float?,
-) {
-    fun toLayerScore(): LayerScore =
-        LayerScore(
-            layerId = layerId,
-            name = name,
-            score = rawScore.coerceIn(0f, 1f),
-            configured = configured,
-            baseScore = baseScore,
-            rawScore = rawScore,
-            anchorScore = anchorScore,
-            supportScore = supportScore,
-            anchorSurplusBonus = anchorSurplusBonus,
-            taskMomentumBonus = taskMomentumBonus,
-            sleepScore = sleepScore,
-            sobrietyScore = sobrietyScore,
-        )
-}
-
-internal data class LayerScoringResult(
-    val evaluation: LayerEvaluation,
-    val contributions: List<FeatureContribution>,
-)
-
-internal data class AnchorEvaluation(
-    val baseScore: Float,
-    val surplusBonus: Float,
-)
-
-internal data class WeeklyScoreSummary(
-    val weeklyBaseScore: Float,
-    val averageLayerScore: Float,
-    val worstLayerScore: Float,
-    val worstLayer: LayerEvaluation?,
 )
 
 internal data class StabilityEvaluation(

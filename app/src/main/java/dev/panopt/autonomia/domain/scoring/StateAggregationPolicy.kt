@@ -29,7 +29,8 @@ import kotlin.math.min
  * Sin capas → `ESTADO = 0`. Dominio puro JVM; cálculo en [Double]; constantes (`W0`, `ρ`, `BETA`)
  * desde [ScoringConstantsV2] vía [LayerWeightPolicy] / [OptInPolicy] — NUNCA se hardcodean.
  *
- * Coexiste con `WeeklyScorePolicy` / `BaseStatePolicy` (modelo viejo) hasta el recableado de PR-F.
+ * NIVEL 5 del motor núcleo v1 — única agregación tras PR-F (las policies viejas `WeeklyScorePolicy`
+ * / `BaseStatePolicy` se eliminaron). Lo invoca el orquestador [ScoreEngine].
  */
 internal object StateAggregationPolicy {
 

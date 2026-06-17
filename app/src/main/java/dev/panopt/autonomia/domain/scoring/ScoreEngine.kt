@@ -3,12 +3,41 @@ package dev.panopt.autonomia.domain.scoring
 import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
+import kotlin.math.roundToInt
 
+/**
+ * Orquestador del motor de scoring de núcleo v1 (PR-F). Conecta el adapter de hechos con los
+ * niveles 1–6 del modelo de pesos puros y emite un [ScoreReport] con el `ESTADO ∈ [0, 1.5]` crudo
+ * y su banda.
+ *
+ * Pipeline (dominio puro JVM, cálculo en `Double`):
+ * ```
+ *   WeeklyScoringContextBuilder           recolecta/dedup la ventana de 7 días
+ *     → ScoringFactsAdapter               (f, t, mins) por ancla · días sostenidos · n_tasks_hoy
+ *     → AnchorScoringPolicyV2.r           NIVEL 1: cada ancla → R
+ *     → cableado de opt-ins (PR-F)        sueño M → capa Cuerpo · sobriedad M → capa Conducta
+ *     → StateAggregationPolicy.estado     NIVELES 2–5: bolsa-global → ESTADO
+ *     → BandPolicy.band                   NIVEL 6: banda(ESTADO)
+ * ```
+ *
+ * El gate de **NoData** (sin hechos, o < [ScoringConstants.MIN_ACTIVE_LAYERS_WITH_ANCHOR] capas con
+ * ancla) vive AQUÍ, en el orquestador: `BandPolicy` es puro y no lo conoce. El mapeo a puntos
+ * visibles (NIVEL 7) vive en la proyección (PR-G); para que el seam de persistencia y el dashboard
+ * sigan funcionando, este orquestador rellena `visibleScore` con un mapeo lineal INTERINO
+ * (`[0,1.5] → [650,1100]`) que PR-G reemplaza por el sigmoide canónico.
+ */
 object ScoreEngine {
+
+    /** Capa que recibe el opt-in de sueño (NIVEL 4): el sueño arrastra a Cuerpo. */
+    private const val SLEEP_OPT_IN_LAYER = ScoringConstants.BODY_LAYER_ID
+
+    /** Capa que recibe el opt-in de sobriedad (NIVEL 4): la sobriedad arrastra a Conducta. */
+    private const val SOBRIETY_OPT_IN_LAYER = ScoringConstants.CONDUCT_LAYER_ID
+
     fun calculate(input: ScoreInput): ScoreReport {
         val activeLayers = input.layers.filter { it.active }.sortedBy { it.sortOrder }
-        // Gate de configuración mínima (árbol §7.4): se exigen ≥3 capas activas con
-        // ≥1 ancla. Sin datos suficientes (sin capas, sin hechos, o config insuficiente) → NoData.
+        // Gate de configuración mínima (árbol §7.4): ≥3 capas activas con ≥1 ancla, y al menos un
+        // hecho. Sin datos suficientes → NoData (lo decide el orquestador, no la banda pura).
         if (activeLayers.isEmpty() ||
             !WeeklyScoringContextBuilder.hasAnyFact(input) ||
             activeLayersWithAnchor(input, activeLayers) < ScoringConstants.MIN_ACTIVE_LAYERS_WITH_ANCHOR
@@ -17,57 +46,100 @@ object ScoreEngine {
         }
 
         val context = WeeklyScoringContextBuilder.build(input)
-        val layerResults = context.activeLayers.map { layer ->
-            LayerScoringPolicy.evaluate(
-                layer = layer,
-                activities = context.visibleActivities.filter { it.layerId == layer.id },
-                context = context,
-                completedTasks = context.completedTasksByLayer[layer.id].orEmpty(),
+
+        // Opt-ins (NIVEL 4): una señal M ∈ [0,1] por feature, cableada a su capa.
+        val sleepOptIn: Double? = ScoringFactsAdapter.sleepSignal(input.sleepNights)
+        val sobrietyOptIn: Double? = OptInPolicy.sobrietySignal(
+            context.activeSobrietyTracks.map { track ->
+                ScoringFactsAdapter.relapseDaysByTrack(
+                    track = track,
+                    logs = context.weeklyAbstinenceLogsByTrack[track.id].orEmpty(),
+                    weekDates = context.weekDates,
+                )
+            },
+        )
+
+        // NIVELES 1–4 (forma): cada capa activa → LayerInput con sus anclas resueltas a R, sus
+        // días de soporte, sus tasks de hoy, y su opt-in (sueño/sobriedad) si corresponde.
+        val activitiesByLayer = context.visibleActivities.groupBy { it.layerId }
+        val tasksToday = ScoringFactsAdapter.tasksTodayByLayer(input.tasks, input.today)
+        val layerInputs = context.activeLayers.map { layer ->
+            val layerActivities = activitiesByLayer[layer.id].orEmpty()
+            val anchorRs = layerActivities
+                .filter { it.activityType == ActivitySurface.Anchor }
+                .map { def ->
+                    val window = ScoringFactsAdapter.anchorWindow(
+                        def,
+                        context.weeklyLogsByActivity[def.id].orEmpty(),
+                    )
+                    AnchorScoringPolicyV2.r(window.f, window.t, window.mins)
+                }
+            val supportDays = layerActivities
+                .filter { it.activityType == ActivitySurface.Support }
+                .map { def ->
+                    ScoringFactsAdapter.sustainedSupportDays(
+                        context.weeklyLogsByActivity[def.id].orEmpty(),
+                        input.today,
+                    )
+                }
+                .ifEmpty { null }
+            StateAggregationPolicy.LayerInput(
+                anchors = anchorRs,
+                supportDays = supportDays,
+                nTasksToday = tasksToday[layer.id] ?: 0,
+                optIn = optInFor(layer.id, sleepOptIn, sobrietyOptIn),
             )
         }
-        val layerEvaluations = layerResults.map { it.evaluation }
-        val weeklySummary = WeeklyScorePolicy.summarize(layerEvaluations)
-        val visibleScore = VisibleScorePolicy.visibleScore(weeklySummary.weeklyBaseScore)
-        val stability = StabilityScoringPolicy.evaluate(
-            currentWeekStart = context.weekStart.toString(),
-            currentWeeklyBaseScore = weeklySummary.weeklyBaseScore,
-            history = input.weeklyHistory,
-        )
 
-        val previousState = input.weeklyHistory
-            .filter { it.scoringVersion == WeeklyScoreSnapshotConstants.SCORING_VERSION &&
-                      it.weekStart != context.weekStart.toString() }
-            .maxByOrNull { it.weekStart }
-            ?.state
+        // NIVEL 5: bolsa-global → ESTADO ∈ [0, 1.5]. NIVEL 6: banda(ESTADO).
+        val estado: Double = StateAggregationPolicy.estado(layerInputs)
+        val band = BandPolicy.band(estado)
+        val estadoFloat = estado.toFloat()
+        val visiblePoints = interimPoints(estado)
 
         return ScoreReport(
-            state = BaseStatePolicy.stateFor(
-                weeklyBaseScore = weeklySummary.weeklyBaseScore,
-                worstLayerScore = weeklySummary.worstLayerScore,
-                stability = stability,
-                previousState = previousState,
-                hasSleepData = context.sleepScore != null,
-            ),
-            visibleScore = visibleScore,
-            baseScore = visibleScore,
+            state = band,
+            visibleScore = visiblePoints,
+            baseScore = visiblePoints,
             goalBonus = 0,
-            progress = visibleScore / 1000f,
-            layerScores = layerEvaluations.map { it.toLayerScore() },
-            featureContributions = layerResults.flatMap { it.contributions },
+            progress = (visiblePoints.toFloat() / ScoringConstantsV2.POINTS_CEILING.toFloat()).coerceIn(0f, 1f),
+            layerScores = activeLayers.map { layer ->
+                LayerScore(layerId = layer.id, name = layer.name, score = 0f, configured = true)
+            },
+            featureContributions = emptyList(),
             gates = emptyList(),
-            weeklyBaseScore = weeklySummary.weeklyBaseScore,
-            weeklyScore = weeklySummary.weeklyBaseScore,
-            averageLayerScore = weeklySummary.averageLayerScore,
-            worstLayerScore = weeklySummary.worstLayerScore,
-            worstLayerId = weeklySummary.worstLayer?.layerId,
-            reasons = ScoreReasonPolicy.build(
-                layerEvaluations = layerEvaluations,
-                hasActiveSobriety = context.activeSobrietyTracks.isNotEmpty(),
-                sleepScore = context.sleepScore,
-            ),
-            stabilityScore = stability.stabilityScore,
-            stabilityWeeks = stability.evaluatedWeeks,
+            estado = estadoFloat,
+            // Seam de persistencia (design §"Mapeo seam"): weeklyBaseScore/weeklyScore = ESTADO;
+            // worstLayerId = null (deuda); stability* = null (aparcado, StabilityScoringPolicy inerte).
+            weeklyBaseScore = estadoFloat,
+            weeklyScore = estadoFloat,
+            averageLayerScore = 0f,
+            worstLayerScore = 0f,
+            worstLayerId = null,
+            reasons = emptyList(),
+            stabilityScore = null,
+            stabilityWeeks = 0,
         )
+    }
+
+    /** El opt-in de la capa, si la capa es la cableada para sueño o sobriedad; si no, `null`. */
+    private fun optInFor(layerId: String, sleepOptIn: Double?, sobrietyOptIn: Double?): Double? =
+        when (layerId) {
+            SLEEP_OPT_IN_LAYER -> sleepOptIn
+            SOBRIETY_OPT_IN_LAYER -> sobrietyOptIn
+            else -> null
+        }
+
+    /**
+     * Mapeo INTERINO ESTADO → puntos (`[0,1.5] → [650,1100]`, lineal) solo para mantener vivo el
+     * seam de persistencia y el dashboard durante PR-F. PR-G instala el mapeo sigmoide canónico
+     * (NIVEL 7) en la proyección y deja este helper sin uso.
+     */
+    private fun interimPoints(estado: Double): Int {
+        val floor = ScoringConstantsV2.POINTS_FLOOR
+        val ceiling = ScoringConstantsV2.POINTS_CEILING
+        val clamped = estado.coerceIn(0.0, 1.5)
+        return (floor + (clamped / 1.5) * (ceiling - floor)).roundToInt()
     }
 
     /** Cuenta capas activas que tienen al menos 1 ancla configurada (activa, no archivada). */
@@ -91,5 +163,6 @@ object ScoreEngine {
             },
             featureContributions = emptyList(),
             gates = emptyList(),
+            estado = 0f,
         )
 }

@@ -1,42 +1,27 @@
 package dev.panopt.autonomia.domain.scoring
 
+/**
+ * Constantes residuales del modelo viejo de scoring tras el recableado de PR-F. La mayoría de
+ * los parámetros del modelo de pesos puros (NIVELES 1–7) vive en [ScoringConstantsV2]; aquí solo
+ * quedan las constantes con consumidor vivo:
+ * - los IDs de capa que el orquestador usa para cablear los opt-ins (sueño → Cuerpo, sobriedad →
+ *   Conducta) y el gate de configuración mínima ([MIN_ACTIVE_LAYERS_WITH_ANCHOR]);
+ * - los pesos de la mezcla promedio/peor que [StabilityScoringPolicy] (APARCADA/inerte) todavía
+ *   referencia (la estabilidad multi-semana quedó fuera de alcance, pero el objeto compila).
+ *
+ * Las constantes del modelo viejo (worst-layer, histéresis, Inquebrantable gate, pesos
+ * frecuencia/valor 0.70/0.30, sueño/sobriedad 30%, umbrales de banda 0.40/0.70/0.85) se ELIMINARON
+ * en PR-F junto con sus policies.
+ */
 internal object ScoringConstants {
     const val BODY_LAYER_ID = "layer_cuerpo"
     const val CONDUCT_LAYER_ID = "layer_conducta"
-    const val ANCHOR_FREQUENCY_WEIGHT = 0.70f
-    const val ANCHOR_VALUE_WEIGHT = 0.30f
-    const val ANCHOR_WITH_SUPPORT_WEIGHT = 0.80f
-    const val SUPPORT_WEIGHT = 0.20f
-    const val SLEEP_WEIGHT_IN_BODY = 0.30f
-    const val SOBRIETY_WEIGHT_IN_CONDUCT = 0.30f
-    const val WEEKLY_AVERAGE_WEIGHT = 0.75f
-    const val WEEKLY_WORST_WEIGHT = 0.25f
-    const val TASK_MOMENTUM_MAX = 0.050f
-    const val ANCHOR_SURPLUS_MAX = 0.100f
-    const val SOBRIETY_PENDING_CLEAN_VALUE = 0.50f
-    const val SOBRIETY_PENDING_CONFIDENCE_PENALTY = 0.15f
-    const val SOBRIETY_RELAPSE_DECAY = 1.5f
-    const val SOBRIETY_FORGIVENESS_WINDOW_DAYS = 5L
 
     // Configuración mínima para emitir scoring (árbol §7.4): de las 5 capas,
     // mínimo 3 activas con al menos 1 ancla cada una. Si no se cumple → NoData.
     const val MIN_ACTIVE_LAYERS_WITH_ANCHOR = 3
 
-    // State band boundaries (lower-inclusive / upper-exclusive)
-    const val STATE_RESTORATION_THRESHOLD = 0.40f
-    const val STATE_ATTENTION_THRESHOLD = 0.70f
-    const val STATE_PLENITUDE_THRESHOLD = 0.85f
-
-    // Worst-layer collapse and ladder caps
-    const val WORST_LAYER_COLLAPSE = 0.30f
-    const val WORST_LAYER_MIN_FOR_MOTION = 0.55f
-    const val WORST_LAYER_MIN_FOR_PLENITUDE = 0.75f
-    const val WORST_LAYER_MIN_FOR_UNBREAKABLE = 0.80f
-
-    // Hysteresis
-    const val STATE_HYSTERESIS_MARGIN = 0.03f
-
-    // Inquebrantable gate
-    const val UNBREAKABLE_BASE_MIN = 0.90f
-    const val UNBREAKABLE_STABILITY_MIN = 0.90f
+    // Mezcla promedio/peor de la estabilidad multi-semana (StabilityScoringPolicy, inerte/aparcada).
+    const val WEEKLY_AVERAGE_WEIGHT = 0.75f
+    const val WEEKLY_WORST_WEIGHT = 0.25f
 }

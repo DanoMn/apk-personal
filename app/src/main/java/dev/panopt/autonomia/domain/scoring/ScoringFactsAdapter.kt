@@ -29,7 +29,8 @@ import java.time.ZoneId
  * NO recalcula scoring — solo adapta forma. Dominio puro JVM: no importa Room ni Compose; consume
  * los modelos de dominio ([ActivityLog], [Task], [AbstinenceLog], [SleepNightScore]). Toda la
  * aritmética de fechas usa la zona local del dispositivo (la fecha del log es `LocalDate` del
- * cierre diario). Coexiste con el pipeline viejo hasta el recableado de PR-F.
+ * cierre diario). Es la única fuente de formas crudas del motor núcleo v1 (el pipeline viejo se
+ * eliminó en PR-F); lo invoca el orquestador [ScoreEngine].
  *
  * Spec: `openspec/changes/scoring-motor-nucleo-v1/specs/scoring-facts-adapter/spec.md`.
  */

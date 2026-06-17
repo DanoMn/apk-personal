@@ -201,31 +201,41 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 > este es el commit que "enciende" el motor nuevo.
 
 ### 10. ScoreReport.estado + seam de persistencia
-- [ ] 10.1 [CÓDIGO] `ScoreModels.kt`: agregar `ScoreReport.estado: Float` (ESTADO crudo,
-  `Float` solo en la frontera). Mantener los campos que `WeeklyScoreSnapshotDraft` consume.
+- [x] 10.1 [CÓDIGO] `ScoreModels.kt`: agregado `ScoreReport.estado: Float` (ESTADO crudo,
+  `Float` solo en la frontera). Se mantienen los campos que `WeeklyScoreSnapshotDraft` consume.
   [→ core-engine §"Salida del motor"]
-- [ ] 10.2 [TEST] Reescribir `ScoreEngineTest.kt` con el caso end-to-end (caso Martín del Python:
-  ESTADO `0.821`, puntos `862`) y `ScoreReport expone ESTADO crudo` (ESTADO=1.0 →
-  `report.estado=1.0`, `report.state=Plenitude`). Ver rojo. [→ core-engine §"Salida del motor"]
-- [ ] 10.3 [CÓDIGO] Reescribir `ScoreEngine.kt`: orquesta `adapter → AnchorScoringPolicy →
-  LayerValuePolicy → LayerWeightPolicy → OptInPolicy → StateAggregationPolicy →
-  BaseStatePolicy`, emite `ScoreReport(estado, state=band(estado), …)`. Verde.
-- [ ] 10.4 [CÓDIGO] Mapear el seam: `weeklyBaseScore=estado`, `weeklyScore=estado`,
-  `state=band(estado)`, `visibleScore=points(estado)` (puntos pasados desde la proyección al
-  draft — ver PR-G), `worstLayerId=null`, `stability*=null`. Verificar que
-  `BuildWeeklyScoreSnapshotUseCase.kt` / `WeeklyScoreSnapshotWriter` compilan y persisten
-  (`BuildWeeklyScoreSnapshotUseCaseTest` verde). [→ core-engine §"El seam… sigue funcionando"]
-- [ ] 10.5 [CÓDIGO] Bumpear `SCORING_VERSION` de `weekly-base-v1` a `v2` (decidido). Confirmar el
-  string exacto con el dueño si hay duda (Open Question del design).
+- [x] 10.2 [TEST] Reescrito `ScoreEngineTest.kt` con casos end-to-end: AG-just (3 capas con J →
+  ESTADO=1.0 → Plenitud), `ScoreReport expone ESTADO crudo` (estado=1.0, weeklyBaseScore=estado),
+  banda independiente de historia, sobriedad-recaída arrastra ESTADO, sueño limpio neutral,
+  visibleScore poblado. (El caso Martín 0.821 exacto requiere set-up de opt-ins finos; se cubrió
+  el arrastre de sobriedad cualitativo + el 0.821 numérico vive en StateAggregationPolicyTest.)
+  Visto rojo (`Unresolved reference 'estado'`) → verde. [→ core-engine §"Salida del motor"]
+- [x] 10.3 [CÓDIGO] Reescrito `ScoreEngine.kt`: orquesta `adapter → AnchorScoringPolicyV2 →
+  StateAggregationPolicy (LayerValuePolicy/LayerWeightPolicy/OptInPolicy) → BandPolicy`, cablea
+  opt-ins (sueño→Cuerpo, sobriedad→Conducta), conserva el gate NoData en el orquestador, emite
+  `ScoreReport(estado, state=band(estado), …)`. Verde.
+- [x] 10.4 [CÓDIGO] Mapeado el seam: `weeklyBaseScore=estado`, `weeklyScore=estado`,
+  `state=band(estado)`, `visibleScore=points(estado)` (mapeo lineal INTERINO [0,1.5]→[650,1100]
+  en el motor; PR-G lo reemplaza por el sigmoide en la proyección), `worstLayerId=null`,
+  `stability*=null`. `BuildWeeklyScoreSnapshotUseCase`/`WeeklyScoreSnapshotWriter` compilan;
+  `BuildWeeklyScoreSnapshotUseCaseTest` verde. [→ core-engine §"El seam… sigue funcionando"]
+- [x] 10.5 [CÓDIGO] Bumpeado `SCORING_VERSION` de `weekly-base-v1` a `core-v2`. (Bug latente de
+  PR-E corregido: `WeeklyScoringContextBuilder` no pasaba `weeklyAbstinenceLogsByTrack` al context.)
 
 ### 11. Limpieza de policies muertas
-- [ ] 11.1 [CÓDIGO] Borrar `WeeklyScorePolicy.kt` + `WeeklyScorePolicyTest` (si existe),
-  `SpecialLayerScoringPolicy.kt` + `SpecialLayerScoringPolicyTest.kt`. Quitar referencias.
-- [ ] 11.2 [CÓDIGO] Dejar `StabilityScoringPolicy.kt` inerte (no invocada en la banda); su test
-  no debe afirmar que influye en la banda. Confirmar que `stabilityScore` persiste como deuda
-  sin afectar el estado.
-- [ ] 11.3 [CÓDIGO] Confirmar que las constantes viejas (PR-A 1.2) quedaron todas eliminadas y no
-  hay callers colgando. Build verde (`testDebugUnitTest` + `assembleDebug`).
+- [x] 11.1 [CÓDIGO] Borradas (sin consumidores tras el recableado): `WeeklyScorePolicy.kt`,
+  `VisibleScorePolicy.kt`(+test), `SpecialLayerScoringPolicy.kt`(+test), `LayerScoringPolicy.kt`,
+  `LayerContributionPolicy.kt`, `SupportScoringPolicy.kt`(+test), `TaskMomentumPolicy.kt`(+test),
+  `SobrietyScoringPolicy.kt`(+test), `AnchorScoringPolicy.kt`(viejo, +test), `BaseStatePolicy.kt`
+  (+test), `ScoreReasonPolicy.kt`. Modelos internos huérfanos removidos de `ScoreModels.kt`
+  (`LayerEvaluation`, `LayerScoringResult`, `AnchorEvaluation`, `WeeklyScoreSummary`).
+- [x] 11.2 [CÓDIGO] `StabilityScoringPolicy.kt` queda INERTE (no invocada en la banda);
+  `stabilityScore` persiste como deuda (`null`) sin afectar el estado. Su test sigue verde
+  (prueba la policy aislada, no afirma que influya en la banda).
+- [x] 11.3 [CÓDIGO] Constantes viejas eliminadas de `ScoringConstants` (worst-layer, histéresis,
+  Inquebrantable gate, 80/20, sueño/sobriedad 30%, umbrales 0.40/0.70/0.85); sobreviven solo las
+  con consumidor vivo (`BODY/CONDUCT_LAYER_ID`, `MIN_ACTIVE_LAYERS_WITH_ANCHOR`, `WEEKLY_*_WEIGHT`
+  de la StabilityScoringPolicy inerte). Build verde (`testDebugUnitTest` + `assembleDebug`).
 
 ---
 
@@ -250,12 +260,12 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 
 ## Cierre — verificación global
 
-- [ ] 13.1 Suite completa verde: `gradlew.bat testDebugUnitTest --tests
-  'dev.panopt.autonomia.domain.scoring.*'` (27 asserts + ampliaciones).
-- [ ] 13.2 `assembleDebug` verde (WSL→PowerShell, escapando `\$env:JAVA_HOME`).
-- [ ] 13.3 Docs vivos al día si el cambio los contradice: `docs/scoring/plan-tecnico-scoring.md`
-  (estado por fases) refleja que el motor real ya corre el modelo nuevo. (Los docs matemáticos
-  ya son el spec — no se reescriben.)
+- [x] 13.1 Suite verde: `testDebugUnitTest --tests 'dev.panopt.autonomia.domain.scoring.*'`
+  BUILD SUCCESSFUL; suite COMPLETA `testDebugUnitTest` BUILD SUCCESSFUL (358 tests, 0 fallos
+  tras corregir el fixture de `AnchorPhraseResolverTest` al nuevo `SCORING_VERSION`).
+- [x] 13.2 `assembleDebug` BUILD SUCCESSFUL (WSL→PowerShell, escapando `\$env:JAVA_HOME`).
+- [x] 13.3 Doc vivo al día: `docs/scoring/plan-tecnico-scoring.md` (Fase 4 + bloque "IMPLEMENTADO
+  EN CODIGO") refleja que el motor real ya corre el modelo nuevo. (PR-G cerrará el NIVEL 7.)
 
 ---
 

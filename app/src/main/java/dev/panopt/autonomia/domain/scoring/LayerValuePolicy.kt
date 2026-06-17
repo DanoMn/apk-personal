@@ -22,8 +22,9 @@ import kotlin.math.pow
  * extra_capa  = (1/n)·Σ max(R_i − 1, 0) ∈ [0, 0.5]  "¿se destacó?"  (SOLO anclas)
  * ```
  *
- * Coexiste con `LayerScoringPolicy`/`LayerContributionPolicy`/`SupportScoringPolicy`/
- * `TaskMomentumPolicy` (modelo viejo) hasta el recableado de PR-F.
+ * NIVEL 2 del motor núcleo v1 — único valor de capa tras PR-F (las policies viejas
+ * `LayerScoringPolicy`/`LayerContributionPolicy`/`SupportScoringPolicy`/`TaskMomentumPolicy`
+ * se eliminaron). Lo consume [StateAggregationPolicy].
  */
 internal object LayerValuePolicy {
 

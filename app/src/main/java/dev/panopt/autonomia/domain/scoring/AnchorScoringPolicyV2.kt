@@ -14,8 +14,8 @@ import kotlin.math.pow
  * `R ∈ [0, 1.5]`. Todas las constantes (γ, λ_v, κ, p, smax, s0) salen de [ScoringConstantsV2];
  * en particular el exponente del gate es el parámetro `P`, NUNCA el literal 2.
  *
- * Coexiste con [AnchorScoringPolicy] (modelo viejo, aún consumido por `LayerScoringPolicy`)
- * hasta el recableado de PR-F.
+ * NIVEL 1 del motor núcleo v1 — único modelo de ancla tras PR-F (la `AnchorScoringPolicy` vieja
+ * se eliminó). Lo invoca el orquestador [ScoreEngine] por ancla.
  */
 internal object AnchorScoringPolicyV2 {
 
