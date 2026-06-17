@@ -108,6 +108,34 @@ enum class ScoreGateKind {
     GoalPartial,
 }
 
+/**
+ * Forma cruda de UN ancla en la ventana semanal, tal como la produce [ScoringFactsAdapter]
+ * ANTES de resolverla a su `R`-value (eso lo hace [AnchorScoringPolicyV2.r]).
+ *
+ * Invariante "ancla = solo Minutes" (PR-D): `mins[i] = actualValue` (minutos) — NO hay conversión
+ * multi-unidad. La lista contiene solo los días CON actividad (`> 0`) de la ventana; su longitud =
+ * nº de días con actividad (no fija en 7). `f`/`t` salen de la config de la actividad.
+ */
+data class AnchorWindow(val f: Int, val t: Int, val mins: List<Int>)
+
+/**
+ * Forma cruda de UNA capa en la ventana semanal (salida de [ScoringFactsAdapter]). Es el insumo
+ * que, una vez resueltas las anclas a `R`-values, se convierte en
+ * [StateAggregationPolicy.LayerInput] para el motor.
+ *
+ * @param anchors anclas de la capa con su forma cruda `(f, t, mins)`.
+ * @param supportDays días sostenidos de cada soporte de la capa (ventana 4d, UX inversa).
+ *   Lista vacía = capa sin soportes.
+ * @param nTasksToday tasks completadas HOY con esta capa (conteo efímero, se resetea cada día).
+ * @param optIn señal del opt-in de la capa (`M ∈ [0, 1]`), o `null` si la capa no tiene opt-in.
+ */
+data class LayerFacts(
+    val anchors: List<AnchorWindow> = emptyList(),
+    val supportDays: List<Int> = emptyList(),
+    val nTasksToday: Int = 0,
+    val optIn: Double? = null,
+)
+
 internal data class WeeklyScoringContext(
     val weekStart: LocalDate,
     val weekDates: List<LocalDate>,
@@ -118,6 +146,12 @@ internal data class WeeklyScoringContext(
     val sleepScore: Float?,
     val sobrietyScore: Float?,
     val completedTasksByLayer: Map<String, List<Task>>,
+    /**
+     * Logs de abstinencia de la ventana semanal por track activo (PR-E). Forma cruda que
+     * [ScoringFactsAdapter.relapseDaysByTrack] consume para derivar `días_recaída` → `M_sobr`
+     * en el motor nuevo. Coexiste con `sobrietyScore` (policy vieja) hasta PR-F.
+     */
+    val weeklyAbstinenceLogsByTrack: Map<String, List<AbstinenceLog>> = emptyMap(),
 )
 
 internal data class LayerEvaluation(

@@ -165,27 +165,32 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 > riesgo del cambio. Tests con hechos sintéticos que reproducen §1.4.
 
 ### 9. ScoringFactsAdapter
-- [ ] 9.1 [CÓDIGO] `ScoreModels.kt`: agregar las data classes mínimas del adapter
-  (`AnchorWindow(f,t,mins)`, `LayerFacts(anchors, supportDays, nTasksToday, optIn)`,
-  `OptInSignal`). [→ facts-adapter §"Salida"]
-- [ ] 9.2 [TEST] `ScoringFactsAdapterTest.kt` (nuevo) — anclas: 3 días cumplidos →
+- [x] 9.1 [CÓDIGO] `ScoreModels.kt`: agregar las data classes mínimas del adapter
+  (`AnchorWindow(f,t,mins)`, `LayerFacts(anchors, supportDays, nTasksToday, optIn)`). [→ facts-adapter §"Salida"]
+  (Decisión: NO se creó `OptInSignal` — el opt-in es un `Double?` directo en `LayerFacts.optIn` /
+  `LayerInput.optIn`; un wrapper era superficie muerta. Las señales `M_sobr`/`M` se derivan vía
+  `ScoringFactsAdapter.relapseDaysByTrack`/`sleepSignal` + `OptInPolicy`.)
+- [x] 9.2 [TEST] `ScoringFactsAdapterTest.kt` (nuevo) — anclas: 3 días cumplidos →
   `mins=[30,30,30]` (motor R=1.000); superhabit por días (6 logs de 30 → R≈1.266); dedup
   `activityId:date` (duplicado no infla frecuencia); `NotDone`/`actualValue=0` = día sin
-  actividad; `Omitted` excluido; `actualValue=null` con `Done` → 0 minutos. Ver rojo.
+  actividad; `Omitted` excluido; `actualValue=null` con `Done` → 0 minutos. RED visto → GREEN.
   [→ facts-adapter §"Derivar (F,T,mins[7])", §"Logs duplicados, omitidos y NotDone"]
-- [ ] 9.3 [TEST] `ScoringFactsAdapterTest.kt` — soportes/tasks/tracks/sueño: soporte sin
-  registros → `días_sostenidos=4` (UX inversa); soporte con omisión → `<4`; `n_tasks_hoy` solo
-  cuenta tasks de HOY con capa (las de ayer y sin capa no); track limpio → `días_recaída=0`;
-  multi-track compone; sueño sin noches → `M=null`; sueño con `0.8,0.6,1.0` → `M=0.8`; semana
-  vacía → estructuras vacías + `M=null`. Ver rojo. [→ facts-adapter §"Soportes", §"Tasks",
+- [x] 9.3 [TEST] `ScoringFactsAdapterTest.kt` — soportes/tasks/tracks/sueño: soporte sin
+  registros → `días_sostenidos=4` (UX inversa); soporte con omisión → `<4` (+ omisión fuera de
+  ventana 4d NO resta); `n_tasks_hoy` solo cuenta tasks de HOY con capa (las de ayer, sin capa y
+  Neutral no); track limpio → `días_recaída=0`; multi-track compone; sueño sin noches → `M=null`;
+  sueño con `0.8,0.6,1.0` → `M=0.8`; semana vacía → estructuras vacías + `M=null`; `buildLayerFacts`
+  compone ancla+soporte+task por capa. RED visto → GREEN. [→ facts-adapter §"Soportes", §"Tasks",
   §"Tracks", §"Sueño", §"Casos límite"]
-- [ ] 9.4 [CÓDIGO] `ScoringFactsAdapter.kt` (nuevo): hechos → `AnchorWindow/LayerFacts/OptInSignal`.
+- [x] 9.4 [CÓDIGO] `ScoringFactsAdapter.kt` (nuevo): hechos → `AnchorWindow/LayerFacts`.
   Mapeo Minutes-only directo (`mins[día] = actualValue`); soportes ventana 4d UX inversa; tasks
   efímeras de hoy por capa; tracks días de recaída ventana 7d; sueño promedio noches con dato.
-  Zona local del dispositivo para todo cómputo de fecha. Verde.
-- [ ] 9.5 [CÓDIGO] Modificar `WeeklyScoringContextBuilder.kt` para exponer `mins[7]` por ancla,
-  `supportDays`, `nTasksToday`, `relapseDays` (preservando el `distinctBy "activityId:date"`
-  existente). Verde (no rompe tests existentes de `BuildScoreInputUseCaseTest`).
+  Zona local del dispositivo para todo cómputo de fecha. GREEN.
+- [x] 9.5 [CÓDIGO] Modificar `WeeklyScoringContextBuilder.kt`: expone `weeklyAbstinenceLogsByTrack`
+  (logs de recaída de la ventana por track activo, dedup `trackId:date`, hoy pisa histórico) para
+  alimentar `ScoringFactsAdapter.relapseDaysByTrack`. Anclas/soportes/tasks ya fluyen vía
+  `weeklyLogsByActivity` + tasks (parámetro del adapter); se preservó el `distinctBy
+  "activityId:date"` existente. GREEN (suite completa `testDebugUnitTest` + `assembleDebug`).
 
 ---
 

@@ -21,6 +21,17 @@ internal object WeeklyScoringContextBuilder {
             .filter { it.active }
             .sortedBy { it.sortOrder }
 
+        // PR-E: logs de abstinencia de la ventana por track activo (forma cruda para el adapter
+        // nuevo). El log de HOY pisa al histórico de la misma fecha (igual que SobrietyScoringPolicy).
+        val activeTrackIds = activeSobrietyTracks.mapTo(HashSet()) { it.id }
+        val weekDateStrings = weekDates.mapTo(HashSet()) { it.toString() }
+        val weeklyAbstinenceLogsByTrack = (input.allAbstinenceLogs + input.todayAbstinenceLogs)
+            .filter { it.trackId in activeTrackIds && it.date in weekDateStrings }
+            // hoy pisa al histórico de la misma (track, fecha): associateBy deja el ÚLTIMO.
+            .associateBy { "${it.trackId}:${it.date}" }
+            .values
+            .groupBy { it.trackId }
+
         // Weekly sleep score: average of nights WITH data only (NoData nights excluded).
         // Design §5: cobertura suave — una noche sin dato NO entra como 0.
         val nightsWithData = input.sleepNights.mapNotNull { it.sleepScore }
