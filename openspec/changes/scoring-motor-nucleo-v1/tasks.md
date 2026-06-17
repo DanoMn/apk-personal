@@ -69,25 +69,28 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 > ambos consumen `R`; los tests de cada uno pueden escribirse en paralelo.
 
 ### 3. NIVEL 2 — Valor de capa (dos canales) + soportes + tasks
-- [ ] 3.1 [TEST] `LayerValuePolicyTest.kt` (nuevo): VC3/VC4 (3 anclas, una 1.5 dos 1.0 →
+- [x] 3.1 [TEST] `LayerValuePolicyTest.kt` (nuevo): VC3/VC4 (3 anclas, una 1.5 dos 1.0 →
   `extra_capa = 0.1667`; anclas pesan igual), SO2 (blend bidireccional: descuidado < sin
   soporte < sostenido), SO4 (1 soporte = 5 soportes a igual cumplimiento, ±1e-9), TA5 (ancla
   `J` + `n_tasks=100` → banda NO Inquebrantable, ESTADO≈1.06 Plenitud), TA-suma (task nunca
-  resta: `t1 ≥ t0`). Ver rojo. [→ core-engine §"NIVEL 2"]
-- [ ] 3.2 [CÓDIGO] Reescribir `LayerScoringPolicy.kt` + `LayerContributionPolicy.kt` →
-  `LayerValuePolicy.kt`: dos canales `base_anclas = (1/n)·Σ min(R_i,1)`,
-  `extra_capa = (1/n)·Σ max(R_i−1,0)`; blend soportes `base_eff = (1−WS)·base_anclas + WS·G`
-  con `G = promedio(min(días/4,1))` (si no hay anclas, `base_eff = G`); tasks saturación
-  conjunta (techo `TAU`, gate `base_eff^P`, conteo efímero `n_hoy`). Reescribir
-  `SupportScoringPolicy.kt` (señal `G`) y `TaskMomentumPolicy.kt` (saturación conjunta). Verde.
+  resta: `t1 ≥ t0`) + TA3 (efímera) + task_lift tope ≈TAU. Visto rojo (unresolved ref) → verde.
+  [→ core-engine §"NIVEL 2"]
+- [x] 3.2 [CÓDIGO] `LayerValuePolicy.kt` (NUEVO, no reescritura — convivencia PR-B): dos canales
+  `baseAnchors = (1/n)·Σ min(R_i,1)`, `extraLayer = (1/n)·Σ max(R_i−1,0)`; blend soportes
+  `baseEff = (1−WS)·baseAnchors + WS·G` con `G = supportSignal = promedio(min(días/4,1))` (si no
+  hay anclas, `baseEff = G`); tasks saturación conjunta `extraFinal` (techo `TAU`, gate `base_eff^P`
+  con `P` de constantes, conteo efímero `n_hoy`). Las policies viejas (`LayerScoringPolicy`,
+  `LayerContributionPolicy`, `SupportScoringPolicy`, `TaskMomentumPolicy`) quedan INTACTAS — su
+  reescritura/borrado es PR-F. Verde.
 
 ### 4. NIVEL 3 — Peso de capa (votos)
-- [ ] 4.1 [P][TEST] `LayerWeightPolicyTest.kt` (nuevo): PC2 (`peso(1)=1.0`, `peso(2)=1.5`,
+- [x] 4.1 [P][TEST] `LayerWeightPolicyTest.kt` (nuevo): PC2 (`peso(1)=1.0`, `peso(2)=1.5`,
   `peso(3)=1.75`, `peso(50)<2.0`), PC3 (3 capas `50/1/1` → fracción de la saturada ≤0.50),
-  PC5 (capa solo-soportes `n=0` → `peso=ρ=0.15`). Ver rojo. [→ core-engine §"NIVEL 3"]
-- [ ] 4.2 [P][CÓDIGO] `LayerWeightPolicy.kt` (nuevo/reescrito):
-  `votes(n) = (1−r^n)/(1−r)` con `r=RHO`; `ρ=RG` para `n=0`; `W0` para capa solo-opt-in.
-  Verde.
+  PC5 (capa solo-soportes `n=0` → `peso=ρ=0.15`). Visto rojo (unresolved ref) → verde.
+  [→ core-engine §"NIVEL 3"]
+- [x] 4.2 [P][CÓDIGO] `LayerWeightPolicy.kt` (NUEVO, convivencia PR-B):
+  `votes(n) = (1−r^n)/(1−r)` con `r=RG`; `ρ=RHO` para `n=0`. El peso `W0` de capa solo-opt-in
+  se decide en la agregación (NIVEL 5, PR-C), no aquí. Verde.
 
 ---
 
