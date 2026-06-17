@@ -100,36 +100,41 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 > alimenta bandas (6). NIVEL 6 (bandas) es independiente del 4/5 y su test puede ir en paralelo.
 
 ### 5. NIVEL 4 — Opt-ins (señal M + término-sombra)
-- [ ] 5.1 [TEST] `OptInPolicyTest.kt` (nuevo): O2/C2 (neutralidad `M=1` ⟹ `w=0`, aun con
+- [x] 5.1 [TEST] `OptInPolicyTest.kt` (nuevo): O2/C2 (neutralidad `M=1` ⟹ `w=0`, aun con
   déficit), I2/O11 (capa solo-opt-in con `M=1.0` pesa `W0=1` → ESTADO=1.0), señal de sobriedad
   `M_sobr = Π(1−A)^días` (track limpio → 1; multi-track compone sin tope). (AG2/O3 e I1 se
   validan en el NIVEL 5 porque necesitan el agregado.) Ver rojo. [→ core-engine §"NIVEL 4",
-  facts-adapter §"Tracks"]
-- [ ] 5.2 [CÓDIGO] `OptInPolicy.kt` (nuevo): `shadowTerm(M, Σpesos) = BETA·Σpesos·(1−M)`
+  facts-adapter §"Tracks"] (O2/C2 e I2/O11 se trasladaron a `StateAggregationPolicyTest` porque
+  exigen la bolsa-global; en `OptInPolicyTest` quedan las piezas atómicas: `shadowTerm` y `M_sobr`.)
+- [x] 5.2 [CÓDIGO] `OptInPolicy.kt` (nuevo): `shadowTerm(M, Σpesos) = BETA·Σpesos·(1−M)`
   (escala con `Σpesos`, NO con `N`); `M` clampeado a `[0,1]`; `M=null` → opt-in inactivo.
-  Reescribir `SobrietyScoringPolicy.kt` → señal `M_sobr` desde días de recaída. Verde.
+  Señal `M_sobr = Π(1−A)^días` (`sobrietySignal`). `SobrietyScoringPolicy.kt` viejo NO se reescribe
+  (convivencia PR-A/PR-B: lo consume el motor viejo; su reescritura es PR-F). Verde.
 
 ### 6. NIVEL 5 — Agregación bolsa-global → ESTADO
-- [ ] 6.1 [TEST] `StateAggregationPolicyTest.kt` (nuevo): AG-just (3 capas con `J` → ESTADO=1.0),
+- [x] 6.1 [TEST] `StateAggregationPolicyTest.kt` (nuevo): AG-just (3 capas con `J` → ESTADO=1.0),
   AG2/O3 (arrastre PLANO ≈0.55 en config A de 1 ancla y config B de 3 anclas, ±0.01), O5/Sol=Tin
   (superhabit PLANO: `XL` en capa 1 = `XL` en capa 2), I1 (opt-in global: capa pesada = capa
-  liviana, ±1e-9), degradación sin capas → ESTADO=0. Ver rojo. [→ core-engine §"NIVEL 5"]
-- [ ] 6.2 [CÓDIGO] `StateAggregationPolicy.kt` (nuevo): bolsa-global con
-  `(base_eff, votos)` por capa-con-anclas, `(G, ρ)` solo-soportes, `(M, W0)` solo-opt-in,
-  término-sombra `(M, BETA·Σpesos·(1−M))`; `base_global = Σ(valor·peso)/Σ(peso)`;
-  `extra_global = (1/k)·Σ extra_final_capa`; `ESTADO = min(base_global,1) + extra_global`;
+  liviana, ±1e-9), O2/C2 (neutralidad `M=1` con déficit), I2/O11 (capa solo-opt-in pesa W0=1.0),
+  degradación sin capas → ESTADO=0. Ver rojo. [→ core-engine §"NIVEL 5"]
+- [x] 6.2 [CÓDIGO] `StateAggregationPolicy.kt` (nuevo): tipo de entrada `LayerInput` (anclas como
+  `R`-values, supportDays, nTasksToday, optIn); bolsa-global con `(base_eff, votos)` por
+  capa-con-anclas, `(G, ρ)` solo-soportes, `(M, W0)` solo-opt-in, término-sombra
+  `(M, BETA·Σpesos·(1−M))`; `base_global = Σ(valor·peso)/Σ(peso)`;
+  `extra_global = (1/k)·Σ extra_final_capa` (PLANO); `ESTADO = min(base_global,1) + extra_global`;
   sin capas → 0. Verde.
 
 ### 7. NIVEL 6 — Bandas `banda(ESTADO)`
-- [ ] 7.1 [P][TEST] Reescribir `BaseStatePolicyTest.kt`: BA1 (cortes
+- [x] 7.1 [P][TEST] `BandPolicyTest.kt` (nuevo): BA1 (cortes
   `0.30→Restoration/0.50→Attention/0.70→Motion/0.90→Plenitude/1.15→Unbreakable`), BA2 (0.85→
-  Plenitude, 0.84→Motion), Inquebrantable exacto (1.10→Unbreakable, 1.099→Plenitude), BA3
-  (1.0→Plenitude), banda pura (misma banda con distinta historia), ESTADO alto con capa débil
-  no colapsa, NoData conservado, sueño ausente no hunde la banda. Ver rojo.
-  [→ core-engine §"NIVEL 6", base-state-policy MODIFIED]
-- [ ] 7.2 [P][CÓDIGO] Reescribir `BaseStatePolicy.kt`: `band(estado: Double): ScoreState` puro
-  sobre cortes `0.40/0.62/0.85/1.10` (de constantes), sin gates/worst-layer/histéresis/memoria;
-  conservar `NoData`. Verde.
+  Plenitude, 0.84→Motion), Inquebrantable exacto (1.10→Unbreakable, 1.099→Plenitude),
+  cumplir-justo (1.0→Plenitude), bordes inferiores inclusivos, piso cero (0.0→Restoration).
+  Ver rojo. [→ core-engine §"NIVEL 6", base-state-policy MODIFIED] (Se creó `BandPolicy` NUEVO en
+  vez de reescribir `BaseStatePolicy`: convivencia — el viejo lo consume el motor viejo. La
+  reescritura/borrado del viejo y la conservación de `NoData` se cierran en PR-F.)
+- [x] 7.2 [P][CÓDIGO] `BandPolicy.kt` (nuevo): `band(estado: Double): ScoreState` puro
+  sobre cortes `0.40/0.62/0.85/1.10` (de [ScoringConstantsV2]), sin gates/worst-layer/histéresis/
+  memoria. `NoData` queda para el orquestador (`ScoreEngine`) en PR-F. Verde.
 
 ---
 
