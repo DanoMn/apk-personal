@@ -57,7 +57,7 @@ internal object DefaultSeeds {
             ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 10),
         activityDef("act_escribir", "layer_interior", "Escribir",
-            ActivityType.Note, ActivityRole.Practice, ActivityUnit.Text,
+            ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 11),
         activityDef("act_leer", "layer_interior", "Leer",
             ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
@@ -92,30 +92,15 @@ internal object DefaultSeeds {
             ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 26),
 
-        // === Conducta: 5 anchors ===
-        activityDef("act_no_celular_cama", "layer_conducta", "No celular antes de dormir",
-            ActivityType.Check, ActivityRole.DigitalHygiene, ActivityUnit.Boolean,
-            ContributionRole.Protective, ImportanceTier.High, "anchor", 30),
-        activityDef("act_no_decidir_madrugada", "layer_conducta", "No decidir de madrugada",
-            ActivityType.Check, ActivityRole.Boundary, ActivityUnit.Boolean,
-            ContributionRole.Protective, ImportanceTier.High, "anchor", 31),
+        // === Conducta: 2 anchors ===
         activityDef("act_educacion_financiera", "layer_conducta", "Educación financiera",
             ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 32),
         activityDef("act_gestion_financiera", "layer_conducta", "Gestión financiera",
             ActivityType.Time, ActivityRole.Practice, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 33),
-        activityDef("act_autonomia_alimentaria", "layer_conducta", "Autonomía alimentaria",
-            ActivityType.Check, ActivityRole.Practice, ActivityUnit.Boolean,
-            ContributionRole.Core, ImportanceTier.High, "anchor", 34),
 
-        // === Vínculos: 7 anchors ===
-        activityDef("act_no_aislarme", "layer_vinculos", "No aislarme",
-            ActivityType.Check, ActivityRole.RelationalHabit, ActivityUnit.Boolean,
-            ContributionRole.Core, ImportanceTier.High, "anchor", 40),
-        activityDef("act_cultivar_vinculo", "layer_vinculos", "Cultivar vínculo",
-            ActivityType.Note, ActivityRole.RelationalHabit, ActivityUnit.Text,
-            ContributionRole.Core, ImportanceTier.High, "anchor", 41),
+        // === Vínculos: 5 anchors ===
         activityDef("act_grupo_estudio", "layer_vinculos", "Grupo de estudio",
             ActivityType.Time, ActivityRole.Learning, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 42),
@@ -161,7 +146,7 @@ internal object DefaultSeeds {
             ActivityType.Time, ActivityRole.ProjectWork, ActivityUnit.Minutes,
             ContributionRole.Core, ImportanceTier.High, "anchor", 58),
 
-        // === Soportes: 12 presets canónicos (preset-soportes-v1.md) ===
+        // === Soportes: 17 presets canónicos (preset-soportes-v1.md) ===
         // Interior
         activityDef("sup_escribir_diario_personal", "layer_interior", "Escribir diario personal",
             ActivityType.Note, ActivityRole.SelfCare, ActivityUnit.Text,
@@ -202,6 +187,24 @@ internal object DefaultSeeds {
         activityDef("sup_responder_mensajes", "layer_vinculos", "Responder mensajes",
             ActivityType.Check, ActivityRole.RelationalHabit, ActivityUnit.Boolean,
             ContributionRole.Support, ImportanceTier.Low, "support", 111),
+        // Reubicadas desde anclas: la regla "anclas = solo Minutes" saca las Boolean/Text.
+        // Conducta
+        activityDef("sup_no_celular_cama", "layer_conducta", "No celular antes de dormir",
+            ActivityType.Check, ActivityRole.DigitalHygiene, ActivityUnit.Boolean,
+            ContributionRole.Support, ImportanceTier.Medium, "support", 112),
+        activityDef("sup_no_decidir_madrugada", "layer_conducta", "No decidir de madrugada",
+            ActivityType.Check, ActivityRole.Boundary, ActivityUnit.Boolean,
+            ContributionRole.Support, ImportanceTier.Medium, "support", 113),
+        activityDef("sup_autonomia_alimentaria", "layer_conducta", "Autonomía alimentaria",
+            ActivityType.Check, ActivityRole.SelfCare, ActivityUnit.Boolean,
+            ContributionRole.Support, ImportanceTier.Medium, "support", 114),
+        // Vínculos
+        activityDef("sup_no_aislarme", "layer_vinculos", "No aislarme",
+            ActivityType.Check, ActivityRole.RelationalHabit, ActivityUnit.Boolean,
+            ContributionRole.Support, ImportanceTier.Medium, "support", 115),
+        activityDef("sup_cultivar_vinculo", "layer_vinculos", "Cultivar vínculo",
+            ActivityType.Check, ActivityRole.RelationalHabit, ActivityUnit.Boolean,
+            ContributionRole.Support, ImportanceTier.Low, "support", 116),
     )
 
     val userActivityConfigs: List<UserActivityConfigEntity> = emptyList()
