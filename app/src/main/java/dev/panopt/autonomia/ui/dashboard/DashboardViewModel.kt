@@ -17,6 +17,7 @@ import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
+import dev.panopt.autonomia.domain.activity.requireAnchorUnit
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.domain.dashboard.DashboardEngine
 import dev.panopt.autonomia.domain.dashboard.DashboardState
@@ -337,6 +338,9 @@ internal class DashboardViewModel(
             val now = System.currentTimeMillis()
             val activityId = "act_custom_${UUID.randomUUID()}"
             val activityType = if (isSecondary) ActivitySurface.Support else ActivitySurface.Anchor
+            // Invariante de dominio "ancla = solo Minutes": una ancla siempre se mide en minutos.
+            val anchorUnit = ActivityUnit.Minutes
+            if (activityType == ActivitySurface.Anchor) requireAnchorUnit(anchorUnit)
             val isProject = layerId == "layer_proyecto"
             val normalizedSessionTarget = if (isSecondary) {
                 null
@@ -357,7 +361,7 @@ internal class DashboardViewModel(
                     description = "",
                     type = if (isSecondary) ActivityType.Check.name else ActivityType.Time.name,
                     role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
-                    unit = if (isSecondary) ActivityUnit.Boolean.name else ActivityUnit.Minutes.name,
+                    unit = if (isSecondary) ActivityUnit.Boolean.name else anchorUnit.name,
                     contributionRole = if (isSecondary) ContributionRole.Support.name else ContributionRole.Core.name,
                     importanceTier = ImportanceTier.Medium.name,
                     presetCategory = if (isSecondary) "support" else "anchor",

@@ -7,6 +7,27 @@ import dev.panopt.autonomia.ActivityUnit
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.TargetPeriod
 
+/**
+ * Invariante de dominio "ancla = solo Minutes".
+ *
+ * Una actividad configurada como ancla ([ActivitySurface.Anchor]) DEBE medirse en minutos: el
+ * motor de scoring (`AnchorScoringPolicyV2`) y el adapter de hechos asumen `mins = actualValue`
+ * sin conversión multi-unidad. `Boolean`/`Count`/`Time`/`Text` no son anclas válidas.
+ */
+fun ActivityUnit.isValidForAnchor(): Boolean =
+    this == ActivityUnit.Minutes
+
+/**
+ * Aplica el invariante "ancla = solo Minutes" en los puntos donde se asigna la surface
+ * [ActivitySurface.Anchor]. Rechaza unidades ilegales con [IllegalArgumentException] (decisión
+ * del design: rechazo, no normalización silenciosa).
+ */
+fun requireAnchorUnit(unit: ActivityUnit) {
+    require(unit.isValidForAnchor()) {
+        "An anchor must be measured in Minutes; got $unit"
+    }
+}
+
 fun ActivityDefinition.isAnchor(): Boolean =
     activityType == ActivitySurface.Anchor
 

@@ -21,6 +21,7 @@ import dev.panopt.autonomia.data.scoring.toHistoryEntry
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
+import dev.panopt.autonomia.domain.activity.requireAnchorUnit
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.seed.AnchorPhraseSeed
 import dev.panopt.autonomia.data.local.seed.DefaultSeeds
@@ -873,6 +874,12 @@ class AutonomiaRepository(context: Context) {
         weeklyFrequencyTarget: Int,
         commitmentDurationMonths: Int? = null,
     ) {
+        // Invariante de dominio "ancla = solo Minutes": validar antes de asignar la surface Anchor.
+        dao.getActivityDefinition(activityId)?.let { definition ->
+            val unit = runCatching { ActivityUnit.valueOf(definition.unit) }
+                .getOrDefault(ActivityUnit.Minutes)
+            requireAnchorUnit(unit)
+        }
         val normalizedSessionTarget = normalizeAnchorSessionTargetMinutes(sessionTargetMinutes)
         val normalizedWeeklyTarget = normalizeAnchorWeeklyFrequencyTarget(weeklyFrequencyTarget)
         configureActivity(

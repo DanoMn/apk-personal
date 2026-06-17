@@ -9,6 +9,7 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.ImportanceTier
 import dev.panopt.autonomia.TargetPeriod
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,6 +39,51 @@ class ActivityPolicyTest {
 
         assertTrue(definition.isSupport())
         assertFalse(definition.isAnchor())
+    }
+
+    // ── Invariante "ancla = solo Minutes" (PR-D) ──
+
+    @Test
+    fun `Minutes is the only valid unit for an anchor`() {
+        assertTrue(ActivityUnit.Minutes.isValidForAnchor())
+        assertFalse(ActivityUnit.Count.isValidForAnchor())
+        assertFalse(ActivityUnit.Boolean.isValidForAnchor())
+        assertFalse(ActivityUnit.Time.isValidForAnchor())
+        assertFalse(ActivityUnit.Text.isValidForAnchor())
+    }
+
+    @Test
+    fun `requireAnchorUnit accepts Minutes`() {
+        // Should not throw.
+        requireAnchorUnit(ActivityUnit.Minutes)
+    }
+
+    @Test
+    fun `requireAnchorUnit rejects Count`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            requireAnchorUnit(ActivityUnit.Count)
+        }
+    }
+
+    @Test
+    fun `requireAnchorUnit rejects Boolean`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            requireAnchorUnit(ActivityUnit.Boolean)
+        }
+    }
+
+    @Test
+    fun `requireAnchorUnit rejects Time`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            requireAnchorUnit(ActivityUnit.Time)
+        }
+    }
+
+    @Test
+    fun `requireAnchorUnit rejects Text`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            requireAnchorUnit(ActivityUnit.Text)
+        }
     }
 
     private fun activity(activityType: ActivitySurface): ActivityDefinition =

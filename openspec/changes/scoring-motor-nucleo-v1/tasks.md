@@ -144,14 +144,18 @@ Fuentes de verdad: `docs/scoring/modelo-matematico-nucleo-v1.md` (7 niveles + §
 > reclasificado (NO es task). Solo el enforcement + su test son tasks.
 
 ### 8. Invariante ancla=Minutes
-- [ ] 8.1 [TEST] `ActivityPolicyTest.kt` (nuevo o ampliado): `requireAnchorUnit(Minutes)` pasa;
-  `requireAnchorUnit(Boolean/Count/Time/Text)` lanza `IllegalArgumentException` (`assertThrows`).
-  Ver rojo. [→ facts-adapter §"Invariante anclas = solo Minutes"]
-- [ ] 8.2 [CÓDIGO] `domain/activity/ActivityPolicy.kt`: agregar `requireAnchorUnit(unit)` que
-  rechaza unidad != `Minutes`. Verde.
-- [ ] 8.3 [CÓDIGO] Validar al asignar surface `Anchor` en los 2 puntos: `AutonomiaRepository.kt`
-  (~880) y `DashboardViewModel.kt` (~339). (Cambio mecánico; el ViewModel valida pero el cálculo
-  sigue en dominio.)
+- [x] 8.1 [TEST] `ActivityPolicyTest.kt` (ampliado): `requireAnchorUnit(Minutes)` pasa;
+  `requireAnchorUnit(Boolean/Count/Time/Text)` lanza `IllegalArgumentException` (`assertThrows`);
+  `ActivityUnit.isValidForAnchor()` cubre los 5 casos. Visto rojo (unresolved ref) → verde.
+  [→ facts-adapter §"Invariante anclas = solo Minutes"]
+- [x] 8.2 [CÓDIGO] `domain/activity/ActivityPolicy.kt`: agregado `ActivityUnit.isValidForAnchor()`
+  (`== Minutes`) + `requireAnchorUnit(unit)` que rechaza unidad != `Minutes` con
+  `IllegalArgumentException` (`require`, rechazo según design). JVM-puro, sin Room/Compose. Verde.
+- [x] 8.3 [CÓDIGO] Validar al asignar surface `Anchor` en los 2 puntos: `AutonomiaRepository.kt`
+  (`addActivityAsAnchor`, ~876: lee la unidad de la `ActivityDefinitionEntity` vía
+  `dao.getActivityDefinition` y aplica `requireAnchorUnit`) y `DashboardViewModel.kt`
+  (`createActivity`, ~339: `anchorUnit = Minutes` validado y reusado en el `unit` de la
+  definición). `assembleDebug` verde.
 
 ---
 
