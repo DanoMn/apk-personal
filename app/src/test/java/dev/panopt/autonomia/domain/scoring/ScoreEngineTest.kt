@@ -242,6 +242,44 @@ class ScoreEngineTest {
     }
 
     @Test
+    fun reportDerivesAverageAndWorstLayerFromAggregation() {
+        // Tres capas con cumplimiento DISTINTO: justa (R=1.0), déficit (3/4 días), justa.
+        // El motor debe derivar promedio/peor-capa desde aggregation.layerResults (no 0f/null):
+        //   averageLayerScore = promedio de base_eff ∈ (0,1)
+        //   worstLayerId      = la capa en déficit
+        //   worstLayerScore   = su base_eff, menor que las justas.
+        val layers = coreThreeLayers()
+        val anchors = coreThreeAnchors()
+        val deficitLayerId = "layer_cuerpo"
+        val activityLogs = anchors.flatMap { a ->
+            val days = if (a.layerId == deficitLayerId) justDays.take(3) else justDays
+            days.map { log(a.id, it, actualValue = 30) }
+        }
+
+        val report = calculate(layers = layers, activities = anchors, activityLogs = activityLogs)
+
+        val justBaseEff = AnchorScoringPolicy.r(4, 30, List(4) { 30 })
+        val deficitBaseEff = AnchorScoringPolicy.r(4, 30, List(3) { 30 })
+        val expectedAverage = ((justBaseEff + deficitBaseEff + justBaseEff) / 3.0).toFloat()
+
+        // Peor capa = la en déficit; su score es el base_eff real y menor que las justas.
+        assertEquals(deficitLayerId, report.worstLayerId)
+        assertEquals(deficitBaseEff.toFloat(), report.worstLayerScore, 1e-6f)
+        assertTrue(
+            "worst (${report.worstLayerScore}) debe ser < justas (${justBaseEff.toFloat()})",
+            report.worstLayerScore < justBaseEff.toFloat(),
+        )
+
+        // Promedio de base_eff ∈ (0,1) y NO 0f placeholder.
+        assertEquals(expectedAverage, report.averageLayerScore, 1e-6f)
+        assertNotEquals(0f, report.averageLayerScore)
+        assertTrue(
+            "average (${report.averageLayerScore}) debe estar en (0,1)",
+            report.averageLayerScore > 0f && report.averageLayerScore < 1f,
+        )
+    }
+
+    @Test
     fun layerScoresCarrySurplusInAnchorSurplusBonus() {
         // Una capa con superhabit grande debe exponer extra (>0) en anchorSurplusBonus; las justas, 0.
         val layers = coreThreeLayers()

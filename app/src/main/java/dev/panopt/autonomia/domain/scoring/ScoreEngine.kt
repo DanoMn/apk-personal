@@ -104,6 +104,15 @@ object ScoreEngine {
         // y `rawScore` reflejan el mismo base_eff (el modelo nuevo no separa raw/base por capa).
         // Campos del modelo viejo que el motor núcleo no produce (anchorScore/supportScore/
         // taskMomentumBonus/sleepScore/sobrietyScore) quedan en su default coherente, no inventados.
+        // Derivado del detalle por-capa (NO recalculado): promedio de base_eff y peor capa.
+        // base_eff ∈ [0,1] ("¿la capa está en pie?"), coherente con LayerScore.score del dashboard.
+        // Lista vacía → defensivo (0f / null); el modelo solo llega aquí con ≥1 término de capa.
+        val layerResults = aggregation.layerResults
+        val averageLayerScore =
+            if (layerResults.isEmpty()) 0f
+            else layerResults.map { it.baseEff }.average().toFloat()
+        val worstLayer = layerResults.minByOrNull { it.baseEff }
+
         val resultsByLayer = aggregation.layerResults.associateBy { it.layerId }
         val layerScores = activeLayers.map { layer ->
             val result = resultsByLayer[layer.id]
@@ -129,13 +138,14 @@ object ScoreEngine {
             featureContributions = emptyList(),
             gates = emptyList(),
             estado = estadoFloat,
-            // Seam de persistencia (design §"Mapeo seam"): weeklyBaseScore/weeklyScore = ESTADO;
-            // worstLayerId = null (deuda); stability* = null (aparcado, StabilityScoringPolicy inerte).
+            // Seam de persistencia (design §"Mapeo seam"): weeklyBaseScore/weeklyScore = ESTADO.
+            // average/worst-layer derivados de aggregation.layerResults (base_eff por capa);
+            // stability* = null (aparcado, StabilityScoringPolicy inerte).
             weeklyBaseScore = estadoFloat,
             weeklyScore = estadoFloat,
-            averageLayerScore = 0f,
-            worstLayerScore = 0f,
-            worstLayerId = null,
+            averageLayerScore = averageLayerScore,
+            worstLayerScore = worstLayer?.baseEff?.toFloat() ?: 0f,
+            worstLayerId = worstLayer?.layerId,
             reasons = emptyList(),
             stabilityScore = null,
             stabilityWeeks = 0,
