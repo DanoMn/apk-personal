@@ -9,11 +9,9 @@ package dev.panopt.autonomia.domain.scoring
  * `docs/scoring/verificacion_modelo_oficial.py` (función `R(...)` y asserts AN/PC/AG/...).
  *
  * Además de los parámetros del modelo de pesos puros, este objeto retiene unas pocas constantes
- * de cableado con consumidor vivo:
- * - los IDs de capa que el orquestador usa para cablear los opt-ins (sueño → Cuerpo, sobriedad →
- *   Conducta) y el gate de configuración mínima ([MIN_ACTIVE_LAYERS_WITH_ANCHOR]);
- * - los pesos de la mezcla promedio/peor que [StabilityScoringPolicy] (APARCADA/inerte) todavía
- *   referencia (la estabilidad multi-semana quedó fuera de alcance, pero el objeto compila).
+ * de cableado con consumidor vivo: los IDs de capa que el orquestador usa para cablear los opt-ins
+ * (sueño → Cuerpo, sobriedad → Conducta) y el gate de configuración mínima
+ * ([MIN_ACTIVE_LAYERS_WITH_ANCHOR]).
  */
 internal object ScoringConstants {
     // --- NIVEL 1: ancla R(F, T, mins) ---
@@ -86,8 +84,4 @@ internal object ScoringConstants {
     // Configuración mínima para emitir scoring (árbol §7.4): de las 5 capas,
     // mínimo 3 activas con al menos 1 ancla cada una. Si no se cumple → NoData.
     const val MIN_ACTIVE_LAYERS_WITH_ANCHOR = 3
-
-    // Mezcla promedio/peor de la estabilidad multi-semana (StabilityScoringPolicy, inerte/aparcada).
-    const val WEEKLY_AVERAGE_WEIGHT = 0.75f
-    const val WEEKLY_WORST_WEIGHT = 0.25f
 }

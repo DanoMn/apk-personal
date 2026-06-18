@@ -151,7 +151,7 @@ object ScoreEngine {
             estado = estadoFloat,
             // Seam de persistencia (design §"Mapeo seam"): weeklyBaseScore/weeklyScore = ESTADO.
             // average/worst-layer derivados de aggregation.layerResults (base_eff por capa);
-            // stability* = null (aparcado, StabilityScoringPolicy inerte).
+            // stability* = null (estabilidad multi-semana fuera de alcance).
             weeklyBaseScore = estadoFloat,
             weeklyScore = estadoFloat,
             averageLayerScore = averageLayerScore,

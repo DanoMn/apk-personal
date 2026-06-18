@@ -159,9 +159,3 @@ internal data class WeeklyScoringContext(
      */
     val weeklyAbstinenceLogsByTrack: Map<String, List<AbstinenceLog>> = emptyMap(),
 )
-
-internal data class StabilityEvaluation(
-    val stabilityScore: Float?,
-    val evaluatedWeeks: Int,
-    val hasTemporalMemory: Boolean,
-)
