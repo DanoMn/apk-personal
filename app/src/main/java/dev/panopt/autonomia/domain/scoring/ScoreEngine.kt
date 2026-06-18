@@ -113,6 +113,17 @@ object ScoreEngine {
             else layerResults.map { it.baseEff }.average().toFloat()
         val worstLayer = layerResults.minByOrNull { it.baseEff }
 
+        // Razones (señales en lenguaje del usuario): peor capa, sueño y sobriedad bajos.
+        // Reusa las señales ya calculadas (worstLayer / sleepOptIn / sobrietyOptIn / tracks activos).
+        val worstLayerName = worstLayer?.layerId?.let { id -> activeLayers.firstOrNull { it.id == id }?.name }
+        val reasons = ScoreReasonPolicy.build(
+            worstLayerName = worstLayerName,
+            worstLayerBaseEff = worstLayer?.baseEff,
+            sleepSignal = sleepOptIn,
+            sobrietySignal = sobrietyOptIn,
+            hasActiveSobriety = context.activeSobrietyTracks.isNotEmpty(),
+        )
+
         val resultsByLayer = aggregation.layerResults.associateBy { it.layerId }
         val layerScores = activeLayers.map { layer ->
             val result = resultsByLayer[layer.id]
@@ -146,7 +157,7 @@ object ScoreEngine {
             averageLayerScore = averageLayerScore,
             worstLayerScore = worstLayer?.baseEff?.toFloat() ?: 0f,
             worstLayerId = worstLayer?.layerId,
-            reasons = emptyList(),
+            reasons = reasons,
             stabilityScore = null,
             stabilityWeeks = 0,
         )
