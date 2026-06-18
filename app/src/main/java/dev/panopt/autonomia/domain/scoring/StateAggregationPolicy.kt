@@ -27,7 +27,7 @@ import kotlin.math.min
  * ```
  *
  * Sin capas → `ESTADO = 0`. Dominio puro JVM; cálculo en [Double]; constantes (`W0`, `ρ`, `BETA`)
- * desde [ScoringConstantsV2] vía [LayerWeightPolicy] / [OptInPolicy] — NUNCA se hardcodean.
+ * desde [ScoringConstants] vía [LayerWeightPolicy] / [OptInPolicy] — NUNCA se hardcodean.
  *
  * NIVEL 5 del motor núcleo v1 — única agregación tras PR-F (las policies viejas `WeeklyScorePolicy`
  * / `BaseStatePolicy` se eliminaron). Lo invoca el orquestador [ScoreEngine].
@@ -36,7 +36,7 @@ internal object StateAggregationPolicy {
 
     /**
      * Forma de entrada de una capa para la bolsa-global (alineada al `LayerFacts` del design, pero
-     * con las anclas ya resueltas a sus `R`-values por [AnchorScoringPolicyV2]).
+     * con las anclas ya resueltas a sus `R`-values por [AnchorScoringPolicy]).
      *
      * @param anchors valores `R_i` de las anclas de la capa (vacío = capa sin anclas).
      * @param supportDays días sostenidos de cada soporte (`null` = sin soportes).
@@ -95,7 +95,7 @@ internal object StateAggregationPolicy {
                 layer.optIn != null -> Term(
                     kind = Term.Kind.OPT_IN,
                     value = layer.optIn,
-                    weight = ScoringConstantsV2.W0,
+                    weight = ScoringConstants.W0,
                     extraFinal = 0.0,
                     optIn = null, // capa solo-opt-in entra como término propio, sin sombra extra
                 )

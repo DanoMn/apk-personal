@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
  *  - el motor (`ScoreEngine`), al poblar `ScoreReport.visibleScore` para el seam de persistencia
  *    semanal (`WeeklyScoreSnapshotDraft`).
  *
- * Fórmula (de [ScoringConstantsV2], nunca hardcodeada):
+ * Fórmula (de [ScoringConstants], nunca hardcodeada):
  * ```
  *   σ(x)      = 1 / (1 + e^−x)
  *   raw(e)    = POINTS_FLOOR + Σ Aᵢ · σ((e − cᵢ)/wᵢ)        sobre POINTS_MILESTONES (cᵢ, wᵢ, Aᵢ)
@@ -38,8 +38,8 @@ object PointsMappingPolicy {
 
     /** raw(e) = piso + Σ Aᵢ·σ((e − cᵢ)/wᵢ) sobre los hitos del NIVEL 7. */
     private fun raw(e: Double): Double =
-        ScoringConstantsV2.POINTS_FLOOR +
-            ScoringConstantsV2.POINTS_MILESTONES.sumOf { (c, w, a) -> a * sigmoid((e - c) / w) }
+        ScoringConstants.POINTS_FLOOR +
+            ScoringConstants.POINTS_MILESTONES.sumOf { (c, w, a) -> a * sigmoid((e - c) / w) }
 
     // Normalización: anclas raw(0) → piso y raw(1.5) → tope. Constantes (no dependen de `e`).
     private val rawAtFloor: Double = raw(ESTADO_FLOOR)
@@ -53,8 +53,8 @@ object PointsMappingPolicy {
     fun points(estado: Double): Int {
         val clamped = estado.coerceIn(ESTADO_FLOOR, ESTADO_CEILING)
         val span = if (rawSpan == 0.0) 0.0 else (raw(clamped) - rawAtFloor) / rawSpan
-        val points = ScoringConstantsV2.POINTS_FLOOR +
-            span * (ScoringConstantsV2.POINTS_CEILING - ScoringConstantsV2.POINTS_FLOOR)
+        val points = ScoringConstants.POINTS_FLOOR +
+            span * (ScoringConstants.POINTS_CEILING - ScoringConstants.POINTS_FLOOR)
         return points.roundToInt()
     }
 }

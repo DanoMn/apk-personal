@@ -34,7 +34,7 @@ import org.junit.Test
  * `ScoringFactsAdapter` → niveles 1–6 → `ScoreReport.estado`). Reproducen los `chk(...)`
  * INTEGRADOS de `docs/scoring/verificacion_modelo_oficial.py` (AG-just, opt-in de sobriedad)
  * a través del orquestador completo, no de las policies aisladas (esas viven en sus propios
- * tests de nivel: AnchorScoringPolicyV2Test, StateAggregationPolicyTest, BandPolicyTest, …).
+ * tests de nivel: AnchorScoringPolicyTest, StateAggregationPolicyTest, BandPolicyTest, …).
  *
  * El motor viejo (worst-layer, histéresis, 0.70/0.30, sueño-30%, §16.7 cap) quedó ELIMINADO
  * en PR-F; estos tests validan el contrato nuevo: ESTADO ∈ [0,1.5] + banda = banda(ESTADO).

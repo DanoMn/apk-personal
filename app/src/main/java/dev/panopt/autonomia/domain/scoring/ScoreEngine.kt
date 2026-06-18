@@ -13,7 +13,7 @@ import dev.panopt.autonomia.ScoreState
  * ```
  *   WeeklyScoringContextBuilder           recolecta/dedup la ventana de 7 días
  *     → ScoringFactsAdapter               (f, t, mins) por ancla · días sostenidos · n_tasks_hoy
- *     → AnchorScoringPolicyV2.r           NIVEL 1: cada ancla → R
+ *     → AnchorScoringPolicy.r           NIVEL 1: cada ancla → R
  *     → cableado de opt-ins (PR-F)        sueño M → capa Cuerpo · sobriedad M → capa Conducta
  *     → StateAggregationPolicy.estado     NIVELES 2–5: bolsa-global → ESTADO
  *     → BandPolicy.band                   NIVEL 6: banda(ESTADO)
@@ -71,7 +71,7 @@ object ScoreEngine {
                         def,
                         context.weeklyLogsByActivity[def.id].orEmpty(),
                     )
-                    AnchorScoringPolicyV2.r(window.f, window.t, window.mins)
+                    AnchorScoringPolicy.r(window.f, window.t, window.mins)
                 }
             val supportDays = layerActivities
                 .filter { it.activityType == ActivitySurface.Support }
@@ -101,7 +101,7 @@ object ScoreEngine {
             visibleScore = visiblePoints,
             baseScore = visiblePoints,
             goalBonus = 0,
-            progress = (visiblePoints.toFloat() / ScoringConstantsV2.POINTS_CEILING.toFloat()).coerceIn(0f, 1f),
+            progress = (visiblePoints.toFloat() / ScoringConstants.POINTS_CEILING.toFloat()).coerceIn(0f, 1f),
             layerScores = activeLayers.map { layer ->
                 LayerScore(layerId = layer.id, name = layer.name, score = 0f, configured = true)
             },

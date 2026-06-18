@@ -116,7 +116,7 @@ enum class ScoreGateKind {
 
 /**
  * Forma cruda de UN ancla en la ventana semanal, tal como la produce [ScoringFactsAdapter]
- * ANTES de resolverla a su `R`-value (eso lo hace [AnchorScoringPolicyV2.r]).
+ * ANTES de resolverla a su `R`-value (eso lo hace [AnchorScoringPolicy.r]).
  *
  * Invariante "ancla = solo Minutes" (PR-D): `mins[i] = actualValue` (minutos) — NO hay conversión
  * multi-unidad. La lista contiene solo los días CON actividad (`> 0`) de la ventana; su longitud =

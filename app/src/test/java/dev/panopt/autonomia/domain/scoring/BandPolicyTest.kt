@@ -9,7 +9,7 @@ import org.junit.Test
  *
  * Traducción verbatim de `banda(e)` de `docs/scoring/verificacion_modelo_oficial.py`
  * (ver §NIVEL 6 de `docs/scoring/modelo-matematico-nucleo-v1.md`): función PURA sobre los cortes
- * de [ScoringConstantsV2] (`0.40 / 0.62 / 0.85 / 1.10`). Sin gates, sin worst-layer, sin
+ * de [ScoringConstants] (`0.40 / 0.62 / 0.85 / 1.10`). Sin gates, sin worst-layer, sin
  * histéresis, sin memoria.
  *
  * Reproduce los asserts `BA1` (cortes R/A/EM/P/I) y `BA2` (Plenitud entra en 0.85; 0.84 = En
@@ -41,10 +41,10 @@ class BandPolicyTest {
     @Test
     fun bordesInferioresInclusivos() {
         // Cada corte es límite inferior inclusivo de la banda superior.
-        assertEquals(ScoreState.Attention, BandPolicy.band(ScoringConstantsV2.BAND_ATTENTION))
-        assertEquals(ScoreState.Motion, BandPolicy.band(ScoringConstantsV2.BAND_MOTION))
-        assertEquals(ScoreState.Plenitude, BandPolicy.band(ScoringConstantsV2.BAND_PLENITUDE))
-        assertEquals(ScoreState.Unbreakable, BandPolicy.band(ScoringConstantsV2.BAND_UNBREAKABLE))
+        assertEquals(ScoreState.Attention, BandPolicy.band(ScoringConstants.BAND_ATTENTION))
+        assertEquals(ScoreState.Motion, BandPolicy.band(ScoringConstants.BAND_MOTION))
+        assertEquals(ScoreState.Plenitude, BandPolicy.band(ScoringConstants.BAND_PLENITUDE))
+        assertEquals(ScoreState.Unbreakable, BandPolicy.band(ScoringConstants.BAND_UNBREAKABLE))
     }
 
     @Test

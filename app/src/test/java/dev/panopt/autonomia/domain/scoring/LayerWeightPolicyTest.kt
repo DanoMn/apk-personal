@@ -33,7 +33,7 @@ class LayerWeightPolicyTest {
 
     @Test
     fun pc5_capaSoloSoportesPesaRho() {
-        assertEquals(ScoringConstantsV2.RHO, votes(0), tol)
+        assertEquals(ScoringConstants.RHO, votes(0), tol)
         assertEquals(0.15, votes(0), tol)
     }
 }

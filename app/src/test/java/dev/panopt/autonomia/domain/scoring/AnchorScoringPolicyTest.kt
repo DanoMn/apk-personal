@@ -12,12 +12,12 @@ import org.junit.Test
  *
  * Cálculo en [Double], tolerancia `1e-9` (`±0.001` para los casos §1.4).
  */
-class AnchorScoringPolicyV2Test {
+class AnchorScoringPolicyTest {
     private val tol = 1e-9
     private val tol14 = 1e-3
 
     private fun r(f: Int, t: Int, mins: List<Int>): Double =
-        AnchorScoringPolicyV2.r(f, t, mins)
+        AnchorScoringPolicy.r(f, t, mins)
 
     private fun extra(f: Int, t: Int, mins: List<Int>): Double =
         max(r(f, t, mins) - 1.0, 0.0)

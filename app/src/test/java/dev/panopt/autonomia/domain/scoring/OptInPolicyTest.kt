@@ -28,7 +28,7 @@ class OptInPolicyTest {
         // w = BETA·Σpesos·(1−M). Doblar Σpesos dobla el peso del término.
         val m = 0.0
         val sigma = 3.5
-        val expected = ScoringConstantsV2.BETA * sigma * (1.0 - m)
+        val expected = ScoringConstants.BETA * sigma * (1.0 - m)
         assertEquals(expected, OptInPolicy.shadowTerm(m, sigma), tol)
         // Escala lineal con Σpesos.
         assertEquals(2.0 * expected, OptInPolicy.shadowTerm(m, 2.0 * sigma), tol)
@@ -44,7 +44,7 @@ class OptInPolicyTest {
     fun shadowTerm_clampeaMFueraDeRango() {
         // M se clampea a [0, 1]: M > 1 cuenta como 1 (w = 0); M < 0 cuenta como 0.
         assertEquals(0.0, OptInPolicy.shadowTerm(1.5, 2.0), tol)
-        assertEquals(ScoringConstantsV2.BETA * 2.0, OptInPolicy.shadowTerm(-0.3, 2.0), tol)
+        assertEquals(ScoringConstants.BETA * 2.0, OptInPolicy.shadowTerm(-0.3, 2.0), tol)
     }
 
     // ---------------- señal de sobriedad M_sobr ----------------
@@ -59,7 +59,7 @@ class OptInPolicyTest {
     @Test
     fun sobriety_unDiaDeRecaidaAplicaUnGolpe() {
         // 1 día de recaída en 1 track → (1 − A)^1.
-        val a = ScoringConstantsV2.A
+        val a = ScoringConstants.A
         assertEquals((1.0 - a).pow(1), OptInPolicy.sobrietySignal(listOf(1))!!, tol)
         // 2 días en el mismo track → (1 − A)^2.
         assertEquals((1.0 - a).pow(2), OptInPolicy.sobrietySignal(listOf(2))!!, tol)
@@ -68,7 +68,7 @@ class OptInPolicyTest {
     @Test
     fun sobriety_multiTrackComponeSinTope() {
         // M_sobr = Π_tracks (1 − A)^días. Dos tracks con 1 día cada uno = (1 − A)^2.
-        val a = ScoringConstantsV2.A
+        val a = ScoringConstants.A
         assertEquals((1.0 - a).pow(2), OptInPolicy.sobrietySignal(listOf(1, 1))!!, tol)
         // Track limpio no aporta (factor 1).
         assertEquals((1.0 - a).pow(1), OptInPolicy.sobrietySignal(listOf(0, 1, 0))!!, tol)

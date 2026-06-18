@@ -7,7 +7,7 @@ import dev.panopt.autonomia.ScoreState
  *
  * Traducción verbatim de `banda(e)` de `docs/scoring/verificacion_modelo_oficial.py`
  * (ver §NIVEL 6 de `docs/scoring/modelo-matematico-nucleo-v1.md`): función PURA sobre los cortes
- * de [ScoringConstantsV2]. Cada corte es límite inferior INCLUSIVO de la banda superior.
+ * de [ScoringConstants]. Cada corte es límite inferior INCLUSIVO de la banda superior.
  * ```
  * ESTADO < 0.40  → Restauración
  * ESTADO < 0.62  → Atención
@@ -26,10 +26,10 @@ internal object BandPolicy {
 
     /** Mapea un ESTADO crudo `∈ [0, 1.5]` a su [ScoreState]. Función pura. */
     fun band(estado: Double): ScoreState = when {
-        estado < ScoringConstantsV2.BAND_ATTENTION -> ScoreState.Restoration
-        estado < ScoringConstantsV2.BAND_MOTION -> ScoreState.Attention
-        estado < ScoringConstantsV2.BAND_PLENITUDE -> ScoreState.Motion
-        estado < ScoringConstantsV2.BAND_UNBREAKABLE -> ScoreState.Plenitude
+        estado < ScoringConstants.BAND_ATTENTION -> ScoreState.Restoration
+        estado < ScoringConstants.BAND_MOTION -> ScoreState.Attention
+        estado < ScoringConstants.BAND_PLENITUDE -> ScoreState.Motion
+        estado < ScoringConstants.BAND_UNBREAKABLE -> ScoreState.Plenitude
         else -> ScoreState.Unbreakable
     }
 }

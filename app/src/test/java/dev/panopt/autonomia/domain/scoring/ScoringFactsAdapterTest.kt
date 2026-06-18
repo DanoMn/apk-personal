@@ -34,7 +34,7 @@ import org.junit.Test
  * Cada test reproduce un Scenario del delta-spec `scoring-facts-adapter`. Hechos sintéticos en
  * `Double`, tolerancia `1e-9`. El adapter NO recalcula scoring; solo adapta forma. La verificación
  * de que la forma reconstruida da el `R` esperado se hace pasando `mins` por
- * [AnchorScoringPolicyV2.r] (caso §1.4).
+ * [AnchorScoringPolicy.r] (caso §1.4).
  */
 class ScoringFactsAdapterTest {
     private val tol = 1e-9
@@ -59,7 +59,7 @@ class ScoringFactsAdapterTest {
         assertEquals(30, window.t)
         assertEquals(listOf(30, 30, 30), window.mins.sorted())
         // El motor da R = 1.000 (cumplir-justo §1.4).
-        assertEquals(1.0, AnchorScoringPolicyV2.r(window.f, window.t, window.mins), 1e-3)
+        assertEquals(1.0, AnchorScoringPolicy.r(window.f, window.t, window.mins), 1e-3)
     }
 
     @Test
@@ -69,7 +69,7 @@ class ScoringFactsAdapterTest {
         val window = ScoringFactsAdapter.anchorWindow(def, logs)
         assertEquals(List(6) { 30 }, window.mins)
         // El motor da R ≈ 1.266 (superhabit por días §1.4).
-        assertEquals(1.266, AnchorScoringPolicyV2.r(window.f, window.t, window.mins), 1e-3)
+        assertEquals(1.266, AnchorScoringPolicy.r(window.f, window.t, window.mins), 1e-3)
     }
 
     @Test
@@ -195,7 +195,7 @@ class ScoringFactsAdapterTest {
         assertEquals(1, daysA)
         assertEquals(1, daysB)
         // M_sobr = (1−A)^1 · (1−A)^1, composición sin tope.
-        val expected = (1.0 - ScoringConstantsV2.A) * (1.0 - ScoringConstantsV2.A)
+        val expected = (1.0 - ScoringConstants.A) * (1.0 - ScoringConstants.A)
         assertEquals(expected, OptInPolicy.sobrietySignal(listOf(daysA, daysB))!!, tol)
     }
 

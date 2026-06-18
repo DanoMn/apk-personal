@@ -13,7 +13,7 @@ import kotlin.math.pow
  * Traducción verbatim del bloque de capa de `estado(...)` en
  * `docs/scoring/verificacion_modelo_oficial.py` (ver §NIVEL 2 de
  * `docs/scoring/modelo-matematico-nucleo-v1.md`). Dominio puro JVM; cálculo en [Double]; todas
- * las constantes (WS, TAU, N0, SMAX, S0, gate `P`) salen de [ScoringConstantsV2] — NUNCA se
+ * las constantes (WS, TAU, N0, SMAX, S0, gate `P`) salen de [ScoringConstants] — NUNCA se
  * hardcodean (en particular el exponente del gate es `P`, nunca el literal 2).
  *
  * Dos canales por capa con `n` anclas (valores `R_i`):
@@ -62,7 +62,7 @@ internal object LayerValuePolicy {
         val raw = if (anchors.isEmpty()) {
             supportSignal(supportDays.orEmpty())
         } else if (supportDays != null) {
-            val ws = ScoringConstantsV2.WS
+            val ws = ScoringConstants.WS
             (1.0 - ws) * baseAnchors(anchors) + ws * supportSignal(supportDays)
         } else {
             baseAnchors(anchors)
@@ -89,11 +89,11 @@ internal object LayerValuePolicy {
         val extraCapa = extraLayer(anchors)
         if (nTasksToday <= 0) return extraCapa
 
-        val smax = ScoringConstantsV2.SMAX
-        val s0 = ScoringConstantsV2.S0
-        val tau = ScoringConstantsV2.TAU
-        val n0 = ScoringConstantsV2.N0
-        val p = ScoringConstantsV2.P
+        val smax = ScoringConstants.SMAX
+        val s0 = ScoringConstants.S0
+        val tau = ScoringConstants.TAU
+        val n0 = ScoringConstants.N0
+        val p = ScoringConstants.P
 
         val suAnc = if (extraCapa < smax) -s0 * ln(1.0 - extraCapa / smax) else 1e9
         val theta = -s0 * ln(1.0 - tau / smax)

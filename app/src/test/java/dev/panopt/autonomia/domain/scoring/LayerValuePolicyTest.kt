@@ -24,9 +24,9 @@ class LayerValuePolicyTest {
     private val tol = 1e-9
 
     // Anclas de referencia del Python.
-    private val J = AnchorScoringPolicyV2.r(4, 30, List(4) { 30 }) // cumplir-justo ≈ 1.0
-    private val XL = AnchorScoringPolicyV2.r(4, 30, List(7) { 60 }) // superhabit grande
-    private val HALF = AnchorScoringPolicyV2.r(4, 30, List(4) { 15 }) // base a medias
+    private val J = AnchorScoringPolicy.r(4, 30, List(4) { 30 }) // cumplir-justo ≈ 1.0
+    private val XL = AnchorScoringPolicy.r(4, 30, List(7) { 60 }) // superhabit grande
+    private val HALF = AnchorScoringPolicy.r(4, 30, List(4) { 15 }) // base a medias
 
     /** Una capa con anclas (R-values), días de soporte opcionales y conteo de tasks de hoy. */
     private data class Layer(
@@ -61,14 +61,14 @@ class LayerValuePolicyTest {
     }
 
     /**
-     * Banda local (criterio `banda()` del Python). La banda V2 sobre cortes de constantes es PR-C
+     * Banda local (criterio `banda()` del Python). La banda sobre cortes de constantes es PR-C
      * (NIVEL 6); aquí solo se necesita distinguir Inquebrantable para `TA5`.
      */
     private fun banda(e: Double): ScoreState = when {
-        e < ScoringConstantsV2.BAND_ATTENTION -> ScoreState.Restoration
-        e < ScoringConstantsV2.BAND_MOTION -> ScoreState.Attention
-        e < ScoringConstantsV2.BAND_PLENITUDE -> ScoreState.Motion
-        e < ScoringConstantsV2.BAND_UNBREAKABLE -> ScoreState.Plenitude
+        e < ScoringConstants.BAND_ATTENTION -> ScoreState.Restoration
+        e < ScoringConstants.BAND_MOTION -> ScoreState.Attention
+        e < ScoringConstants.BAND_PLENITUDE -> ScoreState.Motion
+        e < ScoringConstants.BAND_UNBREAKABLE -> ScoreState.Plenitude
         else -> ScoreState.Unbreakable
     }
 
@@ -148,6 +148,6 @@ class LayerValuePolicyTest {
         val extraConTasks = LayerValuePolicy.extraFinal(listOf(J), null, 1000)
         val lift = extraConTasks - extraSinTasks
         assertTrue("lift=$lift nunca resta", lift >= -tol)
-        assertTrue("lift=$lift no supera TAU≈0.06 por capa", lift <= ScoringConstantsV2.TAU + 1e-6)
+        assertTrue("lift=$lift no supera TAU≈0.06 por capa", lift <= ScoringConstants.TAU + 1e-6)
     }
 }

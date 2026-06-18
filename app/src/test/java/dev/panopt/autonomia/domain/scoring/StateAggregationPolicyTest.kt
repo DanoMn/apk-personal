@@ -21,9 +21,9 @@ class StateAggregationPolicyTest {
     private val tol = 1e-9
 
     // Anclas de referencia del Python.
-    private val J = AnchorScoringPolicyV2.r(4, 30, List(4) { 30 }) // cumplir-justo ≈ 1.0
-    private val XL = AnchorScoringPolicyV2.r(4, 30, List(7) { 60 }) // superhabit grande
-    private val DEF = AnchorScoringPolicyV2.r(4, 30, List(3) { 30 }) // déficit (3 de 4 días)
+    private val J = AnchorScoringPolicy.r(4, 30, List(4) { 30 }) // cumplir-justo ≈ 1.0
+    private val XL = AnchorScoringPolicy.r(4, 30, List(7) { 60 }) // superhabit grande
+    private val DEF = AnchorScoringPolicy.r(4, 30, List(3) { 30 }) // déficit (3 de 4 días)
 
     private fun anc(vararg r: Double, optin: Double? = null, nTasks: Int = 0) =
         LayerInput(anchors = r.toList(), optIn = optin, nTasksToday = nTasks)

@@ -11,13 +11,13 @@ import kotlin.math.pow
  * Traducción verbatim de la función `R(...)` de `docs/scoring/verificacion_modelo_oficial.py`
  * (ver también `docs/scoring/modelo-matematico-nucleo-v1.md` §NIVEL 1). Dominio puro JVM: no
  * conoce Room, Compose ni la forma de los hechos crudos. Cálculo en [Double]; produce
- * `R ∈ [0, 1.5]`. Todas las constantes (γ, λ_v, κ, p, smax, s0) salen de [ScoringConstantsV2];
+ * `R ∈ [0, 1.5]`. Todas las constantes (γ, λ_v, κ, p, smax, s0) salen de [ScoringConstants];
  * en particular el exponente del gate es el parámetro `P`, NUNCA el literal 2.
  *
  * NIVEL 1 del motor núcleo v1 — único modelo de ancla tras PR-F (la `AnchorScoringPolicy` vieja
  * se eliminó). Lo invoca el orquestador [ScoreEngine] por ancla.
  */
-internal object AnchorScoringPolicyV2 {
+internal object AnchorScoringPolicy {
 
     /**
      * @param f frecuencia meta (días/semana, 2–7).
@@ -26,12 +26,12 @@ internal object AnchorScoringPolicyV2 {
      * @return `R ∈ [0, 1.5]`.
      */
     fun r(f: Int, t: Int, mins: List<Int>): Double {
-        val gamma = ScoringConstantsV2.G_
-        val lamV = ScoringConstantsV2.LV
-        val kappa = ScoringConstantsV2.KP
-        val p = ScoringConstantsV2.P
-        val smax = ScoringConstantsV2.SMAX
-        val s0 = ScoringConstantsV2.S0
+        val gamma = ScoringConstants.G_
+        val lamV = ScoringConstants.LV
+        val kappa = ScoringConstants.KP
+        val p = ScoringConstants.P
+        val smax = ScoringConstants.SMAX
+        val s0 = ScoringConstants.S0
 
         // mk = días con actividad (>0) ordenados descendente; D = cantidad.
         val mk = mins.filter { it > 0 }.sortedDescending()

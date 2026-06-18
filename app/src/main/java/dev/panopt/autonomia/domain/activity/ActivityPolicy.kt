@@ -11,7 +11,7 @@ import dev.panopt.autonomia.TargetPeriod
  * Invariante de dominio "ancla = solo Minutes".
  *
  * Una actividad configurada como ancla ([ActivitySurface.Anchor]) DEBE medirse en minutos: el
- * motor de scoring (`AnchorScoringPolicyV2`) y el adapter de hechos asumen `mins = actualValue`
+ * motor de scoring (`AnchorScoringPolicy`) y el adapter de hechos asumen `mins = actualValue`
  * sin conversión multi-unidad. `Boolean`/`Count`/`Time`/`Text` no son anclas válidas.
  */
 fun ActivityUnit.isValidForAnchor(): Boolean =

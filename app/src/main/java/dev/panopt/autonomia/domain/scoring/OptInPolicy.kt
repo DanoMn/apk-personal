@@ -20,7 +20,7 @@ import kotlin.math.pow
  * Traducción verbatim de `BETA·Sigma·(1−M)` y `M_sobr = Π_tracks (1 − A)^días` de
  * `docs/scoring/verificacion_modelo_oficial.py` (ver §NIVEL 4 de
  * `docs/scoring/modelo-matematico-nucleo-v1.md`). Dominio puro JVM; cálculo en [Double]; todas las
- * constantes (BETA, A) salen de [ScoringConstantsV2] — NUNCA se hardcodean.
+ * constantes (BETA, A) salen de [ScoringConstants] — NUNCA se hardcodean.
  *
  * NIVEL 4 del motor núcleo v1 — única señal de opt-ins tras PR-F (la `SobrietyScoringPolicy` vieja
  * se eliminó). El orquestador [ScoreEngine] cablea `sobrietySignal` a Conducta y el sueño a Cuerpo.
@@ -39,7 +39,7 @@ internal object OptInPolicy {
      */
     fun shadowTerm(m: Double, sigmaWeights: Double): Double {
         val mClamped = min(max(m, 0.0), 1.0)
-        return ScoringConstantsV2.BETA * sigmaWeights * (1.0 - mClamped)
+        return ScoringConstants.BETA * sigmaWeights * (1.0 - mClamped)
     }
 
     /**
@@ -52,7 +52,7 @@ internal object OptInPolicy {
      */
     fun sobrietySignal(relapseDaysPerTrack: List<Int>): Double? {
         if (relapseDaysPerTrack.isEmpty()) return null
-        val a = ScoringConstantsV2.A
+        val a = ScoringConstants.A
         return relapseDaysPerTrack.fold(1.0) { acc, days ->
             acc * (1.0 - a).pow(max(days, 0))
         }
