@@ -41,9 +41,9 @@ porta primero sus asserts de `verificacion_modelo_oficial.py`. No se toca Room (
 
 | File | Action | Description |
 |------|--------|-------------|
-| `domain/scoring/ScoringConstants.kt` | Rewrite | 17 params §0.1 (G_,LV,KP,P,SMAX,S0,WS,TAU,N0,RG,RHO,W0,BETA,A,B_SLEEP,DELTA, bandas, hitos puntos). Borrar `WORST_LAYER_*`, `UNBREAKABLE_*`, `ANCHOR_*_WEIGHT`, `SUPPORT_WEIGHT`, `SLEEP_WEIGHT_IN_BODY`, `WEEKLY_*_WEIGHT`, `TASK_MOMENTUM_MAX`, `STATE_HYSTERESIS_MARGIN` |
+| `domain/scoring/ScoringConstants.kt` | Rewrite | 17 params §0.1. Borrar `WORST_LAYER_*`, `UNBREAKABLE_*`, etc. |
 | `domain/scoring/AnchorScoringPolicy.kt` | Rewrite | NIVEL 1 `R(F,T,mins):Double`; gate `base.pow(P)` (P de constantes) |
-| `domain/scoring/LayerValuePolicy.kt` (ex Layer*Policy) | Rewrite | NIVEL 2 dos canales + blend soportes (`WS`) + tasks joint (`TAU`, gate `base_eff^P`) |
+| `domain/scoring/LayerValuePolicy.kt` | Rewrite | NIVEL 2 dos canales + blend soportes (`WS`) + tasks joint (`TAU`, gate `base_eff^P`) |
 | `domain/scoring/LayerWeightPolicy.kt` | New/Rewrite | NIVEL 3 `votes(n)=(1−r^n)/(1−r)`, `RHO`, `W0` |
 | `domain/scoring/OptInPolicy.kt` | New | NIVEL 4 `M_sobr=Π(1−A)^d`, `shadow=BETA·Σpesos·(1−M)` |
 | `domain/scoring/StateAggregationPolicy.kt` | New | NIVEL 5 bolsa-global → ESTADO |
@@ -57,7 +57,7 @@ porta primero sus asserts de `verificacion_modelo_oficial.py`. No se toca Room (
 | `domain/scoring/StabilityScoringPolicy.kt` | Inert | no se invoca en la banda |
 | `domain/scoring/SobrietyScoringPolicy.kt` | Rewrite | señal `M_sobr` (días de recaída) |
 | `domain/activity/ActivityPolicy.kt` | Modify | `requireAnchorUnit(unit)` invariante |
-| `AutonomiaRepository.kt` (~880) · `DashboardViewModel.kt` (~339) | Modify | validar Minutes al asignar surface Anchor |
+| `AutonomiaRepository.kt` · `DashboardViewModel.kt` | Modify | validar Minutes al asignar surface Anchor |
 | `domain/dashboard/DashboardProjection.kt` | Modify | NIVEL 7 mapeo E (650–1100) |
 | `BuildWeeklyScoreSnapshotUseCase.kt` | Verify | compila/persiste con campos mapeados |
 | `app/src/test/.../domain/scoring/*Test.kt` | New | 27 asserts + AN12/VC4/SO6/TA6/O6/O9/PU2 |
@@ -105,10 +105,8 @@ snapshots viejos con la convención nueva (los snapshots son cache derivado, rec
 6. **PR-F**: recableado `ScoreEngine` + `ScoreReport.estado` + seam verificado + borrado de policies viejas.
 7. **PR-G**: NIVEL 7 puntos en proyección + tests.
 
-## Open Questions
+## Open Questions (resueltas en ejecución)
 
-- [ ] **Spec delta (adapter):** `scoring-facts-adapter` aún contempla conversión multi-unidad
-  para anclas (Requirement "Derivar (F,T,mins)" + caso `actualValue=null` por unidad). Con el
-  invariante Minutes-only: `mins[día] = actualValue` (minutos); `Done` sin `actualValue` = 0;
-  Boolean/Count/Time NO aplican a anclas. **Parchear esa sección a Minutes-only** (orquestador).
-- [ ] Confirmar `SCORING_VERSION` nuevo string (sugerido `v2`) con el dueño antes de PR-F.
+- [x] **Spec delta (adapter):** parchada a Minutes-only — `mins[día] = actualValue`; `Done`
+  sin `actualValue` = 0; Boolean/Count/Time NO aplican a anclas (invariante de dominio).
+- [x] `SCORING_VERSION` nuevo: `core-v2` (confirmado, bumpeado en PR-F).

@@ -1,13 +1,12 @@
-# Especificación: scoring-facts-adapter (NEW)
+# Especificación: scoring-facts-adapter
 
-Cambio: `scoring-motor-nucleo-v1`
 Fuente canónica: `docs/scoring/modelo-matematico-nucleo-v1.md` (formas de entrada que el
-modelo exige por nivel), `proposal.md` § "El trabajo real es el adapter".
+modelo exige por nivel), `proposal.md` § "El trabajo real es el adapter" del cambio
+`scoring-motor-nucleo-v1`.
 
 > El adapter es el foco de esfuerzo y de riesgo del cambio. El motor recibe datos con FORMA
 > FINAL; esta spec declara, sin huecos, cómo se derivan esas formas desde los hechos crudos de
-> `daily_activity_logs`. Es el insumo crítico de la fase design siguiente: cada ambigüedad de
-> frontera que quede acá se vuelve un bug caro después. La spec NO toca Room (Camino A).
+> `daily_activity_logs`. La spec NO toca Room (Camino A).
 
 ## Propósito
 
@@ -208,3 +207,9 @@ señal MUST propagarse como ausente (`null`) y el motor trata el opt-in de sueñ
 - Soportes UX inversa (sin registro = sostenido), tasks efímeras (solo hoy), tracks y sueño
   derivados correctamente — tests verdes.
 - Esquema Room sin cambios; build verde con `testDebugUnitTest`.
+
+---
+
+> **Estado de implementación:** Implementado y verificado en el cambio
+> `scoring-motor-nucleo-v1` (archivado 2026-06-17). `ScoringFactsAdapter` con su test suite
+> verde; Room no tocado (Camino A).

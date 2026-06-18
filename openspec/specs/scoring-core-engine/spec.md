@@ -1,11 +1,10 @@
-# Especificación: scoring-core-engine (NEW)
+# Especificación: scoring-core-engine
 
-Cambio: `scoring-motor-nucleo-v1`
 Fuente canónica (spec matemático): `docs/scoring/modelo-matematico-nucleo-v1.md`
 (7 niveles + §0.1 constantes), `docs/scoring/axiomas-modelo-scoring-v1.md` (contrato
 AN/VC/PC/SO/TA/AG/BA/PU), `docs/scoring/verificacion_modelo_oficial.py` (27 asserts verdes).
 
-> Esta delta spec NO reescribe la matemática (esos docs YA son el spec); la traduce a
+> Esta spec NO reescribe la matemática (esos docs YA son el spec); la traduce a
 > requisitos verificables. Cada escenario WHEN/THEN reproduce un `chk(...)` del script de
 > verificación con sus números EXACTOS, o un caso de referencia §1.4. La spec del modelo
 > manda: si esta spec y el doc matemático difieren en un número, gana el doc.
@@ -215,8 +214,8 @@ El motor MUST mapear `ESTADO` a banda como función PURA sobre los cortes
 `<0.40 → Restauración`, `[0.40, 0.62) → Atención`, `[0.62, 0.85) → En marcha`,
 `[0.85, 1.10) → Plenitud`, `≥1.10 → Inquebrantable` (`1.10 = 1 + δ`, `δ=0.10`). Sin gates,
 sin worst-layer, sin histéresis: la banda solo mira el ESTADO de la ventana de 7 días. Los
-cortes MUST estar en `ScoringConstants`. Esta resolución reemplaza por completo la lógica de
-`base-state-policy` previa (ver capability `base-state-policy` MODIFIED).
+cortes MUST estar en `ScoringConstants`. Esta resolución es la fuente única de banda; ver la
+capability canónica `base-state-policy`.
 
 #### Scenario: BA1 — Cortes R/A/EM/P/I
 - GIVEN `ESTADO ∈ {0.30, 0.50, 0.70, 0.90, 1.15}`
@@ -279,7 +278,7 @@ La banda NO MUST mirar historia: la estabilidad temporal multi-semana queda fuer
 - **Esquema Room sin cambios.** Camino A: en dev no se escriben ni testean migraciones.
 - **Pesos puros.** Cero gates/caps/worst-term/histéresis duros: todo comportamiento EMERGE.
   Las eliminaciones explícitas (worst-layer, histéresis, `UNBREAKABLE_*`) se especifican en
-  `base-state-policy` (MODIFIED).
+  `base-state-policy`.
 - **17 constantes calibradas** de `§0.1` viven en `ScoringConstants`; el exponente del gate es
   el parámetro `p`, no el literal `2`.
 - **Strict TDD:** cada escenario es un test JUnit escrito ANTES del código del nivel.
@@ -299,3 +298,11 @@ La banda NO MUST mirar historia: la estabilidad temporal multi-semana queda fuer
 - El seam de persistencia semanal sigue funcionando (`WeeklyScoreSnapshotWriter` compila y
   persiste; build verde con `testDebugUnitTest`).
 - `StabilityScoringPolicy` inerte; ninguna banda mira historia.
+
+---
+
+> **Estado de implementación:** Implementado y verificado en el cambio
+> `scoring-motor-nucleo-v1` (archivado 2026-06-17). 366 tests verdes, `assembleDebug` verde,
+> los 27 asserts del Python con test JUnit 1:1. Deudas declaradas abiertas: `LayerScore.score`
+> se emite como `0f` placeholder (detalle por-capa, deuda de presentación) y
+> `reasons = emptyList()` (`ScoreReasonPolicy` borrada).

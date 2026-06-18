@@ -1,6 +1,5 @@
-# Especificación: scoring-points-mapping (NEW)
+# Especificación: scoring-points-mapping
 
-Cambio: `scoring-motor-nucleo-v1`
 Fuente canónica: `docs/scoring/modelo-matematico-nucleo-v1.md` § NIVEL 7 (mapeo E),
 `docs/scoring/axiomas-modelo-scoring-v1.md` § 9 (PU1–PU5),
 `docs/scoring/verificacion_modelo_oficial.py` (`PU1`, `PU3`, `PU4`).
@@ -8,10 +7,9 @@ Fuente canónica: `docs/scoring/modelo-matematico-nucleo-v1.md` § NIVEL 7 (mape
 ## Propósito
 
 `scoring-points-mapping` mapea `ESTADO ∈ [0, 1.5]` a PUNTOS visibles `∈ [650, 1100]` con el
-enfoque E (suma de rampas logísticas), para el dashboard. Vive en la PROYECCIÓN
-(`DashboardProjection` / `ScoringScreen`), NO en el motor: el motor emite ESTADO + banda; esta
-capability traduce ESTADO a número visible. Reemplaza `VisibleScorePolicy` (`700 + base·300`);
-el rango visible pasa de `700–1000` a `650–1100`.
+enfoque E (suma de rampas logísticas), para el dashboard. El motor emite ESTADO + banda; esta
+capability traduce ESTADO a número visible. Reemplaza la `VisibleScorePolicy` previa
+(`700 + base·300`); el rango visible pasa de `700–1000` a `650–1100`.
 
 ---
 
@@ -19,7 +17,7 @@ el rango visible pasa de `700–1000` a `650–1100`.
 
 ### Requirement: Mapeo E `ESTADO → PUNTOS [650, 1100]`
 
-La proyección MUST mapear `ESTADO` a puntos con la fórmula del NIVEL 7: `σ(x)=1/(1+e^−x)`,
+El mapeo MUST traducir `ESTADO` a puntos con la fórmula del NIVEL 7: `σ(x)=1/(1+e^−x)`,
 hitos `(c,w,A)` = `(0.18,0.10,60)·(0.55,0.11,110)·(0.83,0.09,100)·(1.07,0.055,130)·(1.35,0.13,50)`,
 `raw(e)=650+Σ A·σ((e−c)/w)`, y normalización
 `PUNTOS(e)=650+(raw(e)−raw(0))·450/(raw(1.5)−raw(0))`, con `e` clampeado a `[0,1.5]`. El
@@ -51,9 +49,9 @@ resultado es continuo, monótono y se mueve de a 1 punto. Los hitos y el piso/to
 
 ## Restricciones
 
-- **Va en la PROYECCIÓN, no en el motor.** El motor emite ESTADO; el mapeo a puntos vive en
-  `DashboardProjection` / `ScoringScreen`. Coherente con local-first (Compose solo presenta;
-  el cálculo del número es dominio de proyección, no del ViewModel ni del Composable).
+- **Mapeo reutilizable de dominio.** El motor emite ESTADO; el mapeo a puntos NO vive en el
+  Composable ni en el ViewModel. El seam de persistencia semanal y el dashboard MUST consumir
+  el MISMO cálculo (no duplicarlo) para que no diverjan. (Local-first.)
 - **Reemplaza `VisibleScorePolicy`** (`700 + base·300`): se elimina del motor. El rango visible
   cambia `700–1000` → `650–1100`.
 - **El seam de persistencia semanal** necesita un `visibleScore: Int`; el valor materializado
@@ -64,8 +62,19 @@ resultado es continuo, monótono y se mueve de a 1 punto. Los hitos y el piso/to
 
 ## Criterios de aceptación
 
-- Mapeo E `ESTADO → [650, 1100]` implementado en la proyección; `PUNTOS(1.0)=941`,
-  `PUNTOS(1.10)=1011`, rango `650–1100`, monótono — verificado con tests PU1/PU3/PU4(/PU5).
+- Mapeo E `ESTADO → [650, 1100]` implementado; `PUNTOS(1.0)=941`, `PUNTOS(1.10)=1011`, rango
+  `650–1100`, monótono — verificado con tests PU1/PU3/PU4(/PU5).
 - `VisibleScorePolicy` (motor) eliminada; el `visibleScore` del snapshot proviene del nuevo
   mapeo.
 - Build verde con `testDebugUnitTest`.
+
+---
+
+> **Estado de implementación:** Implementado y verificado en el cambio
+> `scoring-motor-nucleo-v1` (archivado 2026-06-17). `PointsMappingPolicy` (sigmoide enfoque E)
+> con tests PU1/PU3/PU4/PU5 verdes.
+>
+> **Desviación deliberada del design:** el mapeo quedó como policy de dominio reutilizable
+> (`PointsMappingPolicy`), NO como función privada de `DashboardProjection` como decía el design
+> literal. Razón: el seam de persistencia y el dashboard DEBEN usar el mismo cálculo; duplicarlo
+> los haría divergir. Documentado en tasks 12.x.

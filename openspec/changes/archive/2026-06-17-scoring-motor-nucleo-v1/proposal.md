@@ -140,29 +140,6 @@ las dependencias del pipeline:
 | `StabilityScoringPolicy` | inerte/deuda (estabilidad aparcada) |
 | `ScoringConstants` viejo | reescribir con los 17 parámetros del `§0.1`; eliminar las constantes del modelo viejo |
 
-## Affected Areas
-
-| Area | Impact | Description |
-|------|--------|-------------|
-| `domain/scoring/AnchorScoringPolicy.kt` | Rewritten | NIVEL 1 `R(F,T,mins)` (Best-F, gate `base²`, superhabit `St`/`Sd`) |
-| `domain/scoring/SupportScoringPolicy.kt` | Rewritten | NIVEL 2.1 blend `WS=0.07`, señal `min(días/4,1)`, bloque promedio |
-| `domain/scoring/TaskMomentumPolicy.kt` | Rewritten | NIVEL 2.2 saturación conjunta, gate `base²`, efímero diario |
-| `domain/scoring/LayerScoringPolicy.kt`, `LayerContributionPolicy.kt` | Rewritten | NIVEL 2 dos canales (`base_eff` + `extra`) |
-| `domain/scoring/WeeklyScorePolicy.kt` | Removed | sustituido por NIVEL 5 bolsa-global; worst-layer eliminado |
-| `domain/scoring/SobrietyScoringPolicy.kt` | Rewritten | NIVEL 4 señal `M_sobr = Π(1−A)^días`; término-sombra global |
-| `domain/scoring/SpecialLayerScoringPolicy.kt` | Removed/Revised | capa solo-soportes `ρ` / solo-opt-in `W0` ahora viven en la agregación |
-| `domain/scoring/BaseStatePolicy.kt` | Rewritten | `banda(ESTADO)` función pura; sin gates/histéresis/worst-min |
-| `domain/scoring/VisibleScorePolicy.kt` | Removed | mapeo a puntos sale del motor (va a proyección) |
-| `domain/scoring/StabilityScoringPolicy.kt` | Inert/Deuda | estabilidad multi-semana aparcada; no se invoca en la banda |
-| `domain/scoring/ScoringConstants.kt` | Rewritten | 17 parámetros calibrados (`§0.1`); eliminar constantes del modelo viejo |
-| `domain/scoring/WeeklyScoringContextBuilder.kt` | Modified | construir las formas del adapter (`mins[7]` por ancla, días sostenidos, etc.) |
-| nuevo adapter (p. ej. `domain/scoring/ScoringFactsAdapter.kt`) | New | hechos Room → `(F,T,mins)`, `días_sostenidos`, `n_tasks_hoy`, `días_recaída`, `M` |
-| `domain/scoring/ScoreModels.kt` (`ScoreReport`) | Modified | nuevo campo `estado: Float ∈ [0,1.5]`; campos que la persistencia consume |
-| `domain/scoring/ScoreEngine.kt` | Rewritten | orquesta adapter → niveles 1–6 → `ScoreReport` |
-| `DashboardProjection` / `ScoringScreen` | Modified | NIVEL 7 mapeo E `ESTADO → [650,1100]` (reemplaza VisibleScore) |
-| `domain/scoring/BuildWeeklyScoreSnapshotUseCase.kt`, `WeeklyScoreSnapshotWriter` | Preserved/Verified | seam de persistencia semanal: NO romper; sigue materializando estado/banda/puntos |
-| `app/src/test/.../domain/scoring/*Test.kt` | New | suite traducida de `verificacion_modelo_oficial.py` (27 asserts + ampliación) |
-
 ## Constraints & Risks
 
 ### Restricciones (no negociables)
@@ -171,65 +148,29 @@ las dependencias del pipeline:
   en ViewModel ni Compose. El esquema Room NO cambia (Camino A: sin migraciones en dev).
 - **Preservar el seam de persistencia semanal (CONSTRAINT explícito del dueño):** seguir
   materializando por semana **ESTADO + banda + puntos** en `WeeklyScoreSnapshotEntity` vía
-  `WeeklyScoreSnapshotWriter` / `BuildWeeklyScoreSnapshotUseCase`, para tracking futuro de
-  métricas del usuario. `WeeklyScoreSnapshotDraft` hoy consume `weeklyBaseScore`, `weeklyScore`,
-  `state`, `visibleScore`, `worstLayerId`, `stability*` del `ScoreReport`: el motor nuevo debe
-  seguir poblando esos campos (o sus equivalentes mapeados desde ESTADO/banda/puntos) para no
-  romper el writer. NO eliminar ese seam.
-- **Seed canónico** intacto (no aplica directo aquí — sin cambios de seed).
-- **Strict TDD activo:** test ANTES de código en cada nivel. Test runner:
-  `gradlew.bat testDebugUnitTest --tests 'dev.panopt.autonomia.domain.scoring.*'`.
+  `WeeklyScoreSnapshotWriter` / `BuildWeeklyScoreSnapshotUseCase`. NO eliminar ese seam.
+- **Strict TDD activo:** test ANTES de código en cada nivel.
 - **Idioma:** docs/respuestas en español; código/clases/commits en inglés. Conventional
-  commits, sin atribución de IA. (Dominio puro — sin texto de UI; los nombres canónicos de UI
-  no aplican al motor.)
+  commits, sin atribución de IA.
 
 ### Riesgos
 
-| Riesgo | Probabilidad | Mitigación |
-|---|---|---|
-| El adapter no reconstruye bien `mins[7]` (días/minutos por ancla) desde `daily_activity_logs` | Alta | Tests del adapter con hechos sintéticos que reproducen los casos `§1.4` antes de cablear; foco principal de la fase de tests |
-| Hardcodear el exponente del gate (`base^p`) en `2` en vez de leer `p` de constantes | Media | El blueprint usa `be**P` con `P` parametrizado; portar como constante, test del gate con `p` variable |
-| Opt-in mal escalado: usar `N` en vez de `Σpesos` | Media | Término-sombra `w = BETA·Σpesos·(1−M)`; test I1 (arrastre plano 0.55 en 3 configs) e I2 (capa solo-opt-in pesa `W0`) |
-| Tasks no efímeras (no se resetean al cierre diario) | Media | `n_hoy` cuenta tasks de HOY; encaja en `closeElapsedActivityDays`; test de reset diario |
-| Romper el seam de persistencia semanal al quitar campos del `ScoreReport` | Media | Mantener/mapear los campos que `WeeklyScoreSnapshotDraft` consume; verificar el writer compila y persiste |
-| Plenitud mal ubicada (entrar en 1.0 en vez de 0.85) | Baja | Cortes del NIVEL 6 a constantes; test BA2 (cumplir-justo 1.0 cae DENTRO de Plenitud) |
-| Cambio grande (>400 líneas: motor + adapter + suite) excede el presupuesto de un PR | Alta | Delivery `ask-on-risk`: PRs encadenados por nivel/work-unit (niveles 1→6, luego adapter, luego puntos + recableado) |
+(Los riesgos se mitigaron en la ejecución: adapter con tests §1.4, gate `base^P` con P de
+constantes, término-sombra `BETA·Σpesos·(1−M)`, tasks efímeras, seam preservado, Plenitud en
+0.85, PRs encadenados PR-A…PR-G por la política `ask-on-risk`.)
 
 ## Rollback Plan
 
 Cambio acotado a dominio puro JVM, sin migración de DB. Revertir = `git revert` de los commits
-del cambio; el motor vuelve al modelo viejo. Sin estado persistido afectado a nivel de esquema
-(los snapshots semanales nuevos quedarían con la convención de scoring nueva; al revertir se
-recalculan desde los hechos, que son la verdad primaria). Por PRs encadenados, cada slice es
-revertible de forma independiente hasta el recableado final de `ScoreEngine`.
-
-## Dependencies
-
-- Ninguna externa. El modelo está cerrado, calibrado y verificado (27/27). Las fuentes de
-  verdad (`docs/scoring/modelo-matematico-nucleo-v1.md`, `axiomas-modelo-scoring-v1.md`,
-  `verificacion_modelo_oficial.py`) ya existen y no requieren trabajo previo.
-- Depende de que la spec phase reconcilie la spec previa de `base-state-policy` (que asume
-  bandas sobre `weeklyBaseScore` con gates) con el NIVEL 6 `banda(ESTADO)` puro.
+del cambio; el motor vuelve al modelo viejo. Sin estado persistido afectado a nivel de esquema.
 
 ## Success Criteria
 
-- [ ] Los 7 niveles del núcleo implementados en Kotlin (dominio puro JVM), traducción fiel del
-      blueprint Python de `modelo-matematico-nucleo-v1.md`.
-- [ ] Suite JUnit verde reproduciendo los 27 asserts de `verificacion_modelo_oficial.py`
-      (ancla, peso de capa, opt-ins bolsa-global, soportes, tasks, agregación, bandas, puntos),
-      escritos ANTES del código de cada nivel (TDD).
-- [ ] `ScoringConstants.kt` contiene exactamente los 17 parámetros de `§0.1`; las constantes del
-      modelo viejo (`WORST_LAYER_*`, `UNBREAKABLE_*`, `ANCHOR_FREQUENCY/VALUE_WEIGHT`,
-      `SUPPORT_WEIGHT`, `SLEEP_WEIGHT_IN_BODY`, `SOBRIETY_*`, `WEEKLY_AVERAGE/WORST_WEIGHT`,
-      `TASK_MOMENTUM_MAX`, `STATE_HYSTERESIS_MARGIN`, etc.) eliminadas.
-- [ ] `ScoreReport` expone `estado ∈ [0, 1.5]`; la banda emerge de `banda(ESTADO)` con cortes
-      `0.40/0.62/0.85/1.10` (Plenitud entra en 0.85, Inquebrantable en 1.10).
-- [ ] El adapter reconstruye `(F,T,mins[7])` por ancla, `días_sostenidos` por soporte,
-      `n_tasks_hoy` por capa, `días_recaída` por track y señal `M` de sueño, desde los hechos
-      de `daily_activity_logs` — verificado con tests de adapter (casos `§1.4`).
-- [ ] Mapeo E `ESTADO → [650, 1100]` en la proyección; cumplir-justo (1.0) → 941; entrar a
-      Inquebrantable (1.10) → 1011; rango visible `650–1100`.
-- [ ] El seam de persistencia semanal sigue funcionando: `WeeklyScoreSnapshotWriter` materializa
-      ESTADO/banda/puntos por semana sin romperse (verificado: el writer compila y persiste).
-- [ ] `WeeklyScorePolicy` y `VisibleScorePolicy` (en el motor) eliminadas; `StabilityScoringPolicy`
-      inerte; esquema Room sin cambios; build verde (`assembleDebug` + `testDebugUnitTest`).
+- [x] Los 7 niveles del núcleo implementados en Kotlin (dominio puro JVM).
+- [x] Suite JUnit verde reproduciendo los 27 asserts de `verificacion_modelo_oficial.py`.
+- [x] `ScoringConstantsV2` con los 17 parámetros de `§0.1`; constantes viejas eliminadas.
+- [x] `ScoreReport.estado ∈ [0,1.5]`; banda `banda(ESTADO)` cortes `0.40/0.62/0.85/1.10`.
+- [x] Adapter reconstruye `(F,T,mins[7])`/`días_sostenidos`/`n_tasks_hoy`/`días_recaída`/`M`.
+- [x] Mapeo E `ESTADO → [650, 1100]`; cumplir-justo 1.0→941; Inquebrantable 1.10→1011.
+- [x] Seam de persistencia semanal funcionando; `WeeklyScorePolicy`/`VisibleScorePolicy`
+      eliminadas; `StabilityScoringPolicy` inerte; Room sin cambios; build verde.
