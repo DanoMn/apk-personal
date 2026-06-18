@@ -87,14 +87,37 @@ object ScoreEngine {
                 supportDays = supportDays,
                 nTasksToday = tasksToday[layer.id] ?: 0,
                 optIn = optInFor(layer.id, sleepOptIn, sobrietyOptIn),
+                layerId = layer.id,
             )
         }
 
-        // NIVEL 5: bolsa-global → ESTADO ∈ [0, 1.5]. NIVEL 6: banda(ESTADO).
-        val estado: Double = StateAggregationPolicy.estado(layerInputs)
+        // NIVEL 5: bolsa-global → ESTADO ∈ [0, 1.5] + detalle por capa (UNA pasada, sin recalcular).
+        // NIVEL 6: banda(ESTADO).
+        val aggregation = StateAggregationPolicy.aggregate(layerInputs)
+        val estado: Double = aggregation.estado
         val band = BandPolicy.band(estado)
         val estadoFloat = estado.toFloat()
         val visiblePoints = PointsMappingPolicy.points(estado)
+
+        // Detalle por-capa para el dashboard: `score = base_eff` (la barra "¿está en pie?" ∈ [0,1]);
+        // `anchorSurplusBonus = extra_final` (el canal "se destacó", superhabit + tasks). `baseScore`
+        // y `rawScore` reflejan el mismo base_eff (el modelo nuevo no separa raw/base por capa).
+        // Campos del modelo viejo que el motor núcleo no produce (anchorScore/supportScore/
+        // taskMomentumBonus/sleepScore/sobrietyScore) quedan en su default coherente, no inventados.
+        val resultsByLayer = aggregation.layerResults.associateBy { it.layerId }
+        val layerScores = activeLayers.map { layer ->
+            val result = resultsByLayer[layer.id]
+            val baseEff = result?.baseEff?.toFloat() ?: 0f
+            LayerScore(
+                layerId = layer.id,
+                name = layer.name,
+                score = baseEff,
+                configured = true,
+                baseScore = baseEff,
+                rawScore = baseEff,
+                anchorSurplusBonus = result?.extra?.toFloat() ?: 0f,
+            )
+        }
 
         return ScoreReport(
             state = band,
@@ -102,9 +125,7 @@ object ScoreEngine {
             baseScore = visiblePoints,
             goalBonus = 0,
             progress = (visiblePoints.toFloat() / ScoringConstants.POINTS_CEILING.toFloat()).coerceIn(0f, 1f),
-            layerScores = activeLayers.map { layer ->
-                LayerScore(layerId = layer.id, name = layer.name, score = 0f, configured = true)
-            },
+            layerScores = layerScores,
             featureContributions = emptyList(),
             gates = emptyList(),
             estado = estadoFloat,

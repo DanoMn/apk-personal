@@ -48,6 +48,41 @@ internal object StateAggregationPolicy {
         val supportDays: List<Int>? = null,
         val nTasksToday: Int = 0,
         val optIn: Double? = null,
+        /**
+         * ID de la capa que origina este término. Opcional: el cálculo del ESTADO no lo usa, pero
+         * [aggregate] lo propaga a [LayerResult] para que el orquestador pueble el detalle por-capa
+         * del dashboard sin recalcular. `null` cuando el llamador solo necesita el ESTADO.
+         */
+        val layerId: String? = null,
+    )
+
+    /**
+     * Resultado por-capa de la agregación, para que la presentación (dashboard) muestre el detalle
+     * por capa SIN recalcular. Son exactamente los valores que la bolsa-global ya computó:
+     *
+     * @param layerId capa de origen (propagado desde [LayerInput.layerId]).
+     * @param baseEff `base_eff ∈ [0, 1]` — "¿la capa está en pie?". Es el `value` del término de
+     *   capa (anclas → `base_eff`; solo-soportes → `G`; solo-opt-in → `M`).
+     * @param extra `extra_final ∈ [0, 0.5]` — "¿se destacó?" (superhabit + tasks). Solo capas con
+     *   anclas aportan extra; el resto es `0`.
+     * @param weight peso de la capa en la bolsa-global (votos / ρ / W0).
+     */
+    data class LayerResult(
+        val layerId: String?,
+        val baseEff: Double,
+        val extra: Double,
+        val weight: Double,
+    )
+
+    /**
+     * Salida completa de la agregación: el [estado] global y el detalle [layerResults] por capa.
+     * El estado es idéntico a [estado]; los resultados por capa son los términos de capa ya
+     * resueltos (no recalculados), en el mismo orden que las [LayerInput] de entrada que aportaron
+     * un término (las capas vacías —sin anclas, soportes ni opt-in— no producen [LayerResult]).
+     */
+    data class Aggregation(
+        val estado: Double,
+        val layerResults: List<LayerResult>,
     )
 
     /** Término ya resuelto de la bolsa-global. */
@@ -57,12 +92,21 @@ internal object StateAggregationPolicy {
         val weight: Double,
         val extraFinal: Double,
         val optIn: Double?,
+        val layerId: String?,
     ) {
         enum class Kind { ANCHOR, SUPPORT, OPT_IN }
     }
 
     /** ESTADO ∈ [0, 1.5] de la bolsa-global. Sin capas → 0. */
-    fun estado(layers: List<LayerInput>): Double {
+    fun estado(layers: List<LayerInput>): Double = aggregate(layers).estado
+
+    /**
+     * Agrega las capas en UNA pasada y devuelve el ESTADO ∈ [0, 1.5] junto con el detalle por capa
+     * ([LayerResult]). El ESTADO es idéntico al de [estado] (que delega aquí): no hay doble cálculo
+     * ni divergencia posible entre el número global y el detalle del dashboard. Sin capas → ESTADO 0
+     * y lista vacía.
+     */
+    fun aggregate(layers: List<LayerInput>): Aggregation {
         val terms = layers.mapNotNull { layer ->
             when {
                 layer.anchors.isNotEmpty() -> {
@@ -78,6 +122,7 @@ internal object StateAggregationPolicy {
                         weight = LayerWeightPolicy.votes(layer.anchors.size),
                         extraFinal = extraFinal,
                         optIn = layer.optIn,
+                        layerId = layer.layerId,
                     )
                 }
 
@@ -89,6 +134,7 @@ internal object StateAggregationPolicy {
                         weight = LayerWeightPolicy.votes(0),
                         extraFinal = 0.0,
                         optIn = layer.optIn,
+                        layerId = layer.layerId,
                     )
                 }
 
@@ -98,12 +144,17 @@ internal object StateAggregationPolicy {
                     weight = ScoringConstants.W0,
                     extraFinal = 0.0,
                     optIn = null, // capa solo-opt-in entra como término propio, sin sombra extra
+                    layerId = layer.layerId,
                 )
 
                 else -> null
             }
         }
-        if (terms.isEmpty()) return 0.0
+        if (terms.isEmpty()) return Aggregation(estado = 0.0, layerResults = emptyList())
+
+        val layerResults = terms.map {
+            LayerResult(layerId = it.layerId, baseEff = it.value, extra = it.extraFinal, weight = it.weight)
+        }
 
         // Σpesos = suma de pesos de los términos de capa (NO de las sombras).
         val sigma = terms.sumOf { it.weight }
@@ -126,6 +177,9 @@ internal object StateAggregationPolicy {
         val extrasAnchors = terms.filter { it.kind == Term.Kind.ANCHOR }.map { it.extraFinal }
         val extraGlobal = if (extrasAnchors.isEmpty()) 0.0 else extrasAnchors.average()
 
-        return min(baseGlobal, 1.0) + extraGlobal
+        return Aggregation(
+            estado = min(baseGlobal, 1.0) + extraGlobal,
+            layerResults = layerResults,
+        )
     }
 }

@@ -196,6 +196,77 @@ class ScoreEngineTest {
         assertTrue(report.visibleScore!! in 650..1100)
     }
 
+    @Test
+    fun layerScoresExposePerLayerBaseEffNotZero() {
+        // Tres capas con cumplimiento DISTINTO: justa (R=1.0), déficit (3/4 días), justa.
+        // El detalle por-capa debe traer el base_eff REAL de cada capa (no 0f placeholder),
+        // y el ESTADO global NO debe cambiar respecto del mismo cálculo agregado puro.
+        val layers = coreThreeLayers()
+        val anchors = coreThreeAnchors()
+        val deficitLayerId = "layer_cuerpo"
+        // La capa Cuerpo cumple solo 3 de 4 días (déficit); las otras dos cumplen justo (4 días).
+        val activityLogs = anchors.flatMap { a ->
+            val days = if (a.layerId == deficitLayerId) justDays.take(3) else justDays
+            days.map { log(a.id, it, actualValue = 30) }
+        }
+
+        val report = calculate(layers = layers, activities = anchors, activityLogs = activityLogs)
+
+        // Cada capa activa tiene su LayerScore con score = base_eff real.
+        assertEquals(layers.size, report.layerScores.size)
+        val byId = report.layerScores.associateBy { it.layerId }
+
+        // Capas justas: base_eff = 1.0; capa con déficit: base_eff < 1.0 pero > 0 (no placeholder).
+        val justBaseEff = AnchorScoringPolicy.r(4, 30, List(4) { 30 })
+        val deficitBaseEff = AnchorScoringPolicy.r(4, 30, List(3) { 30 })
+        assertEquals(justBaseEff.toFloat(), byId["layer_interior"]!!.score, 1e-6f)
+        assertEquals(justBaseEff.toFloat(), byId["layer_conducta"]!!.score, 1e-6f)
+        assertEquals(deficitBaseEff.toFloat(), byId["layer_cuerpo"]!!.score, 1e-6f)
+        assertTrue(
+            "déficit base_eff debe ser >0 y <1 (${byId["layer_cuerpo"]!!.score})",
+            byId["layer_cuerpo"]!!.score > 0f && byId["layer_cuerpo"]!!.score < 1f,
+        )
+        // baseScore/rawScore reflejan el mismo base_eff que score.
+        assertEquals(byId["layer_cuerpo"]!!.score, byId["layer_cuerpo"]!!.baseScore, 1e-9f)
+        assertEquals(byId["layer_cuerpo"]!!.score, byId["layer_cuerpo"]!!.rawScore, 1e-9f)
+
+        // El ESTADO global coincide EXACTAMENTE con la agregación pura (presentación no lo movió).
+        val expectedEstado = StateAggregationPolicy.estado(
+            listOf(
+                StateAggregationPolicy.LayerInput(anchors = listOf(justBaseEff)),
+                StateAggregationPolicy.LayerInput(anchors = listOf(deficitBaseEff)),
+                StateAggregationPolicy.LayerInput(anchors = listOf(justBaseEff)),
+            ),
+        )
+        assertEquals(expectedEstado.toFloat(), report.estado, 1e-9f)
+    }
+
+    @Test
+    fun layerScoresCarrySurplusInAnchorSurplusBonus() {
+        // Una capa con superhabit grande debe exponer extra (>0) en anchorSurplusBonus; las justas, 0.
+        val layers = coreThreeLayers()
+        val anchors = coreThreeAnchors()
+        val surplusLayerId = "layer_interior"
+        // Interior con superhabit (7 días, 60 min ⇒ R>1); las otras dos cumplen justo.
+        val activityLogs = anchors.flatMap { a ->
+            if (a.layerId == surplusLayerId) {
+                weekDates.map { log(a.id, it, actualValue = 60) }
+            } else {
+                justDays.map { log(a.id, it, actualValue = 30) }
+            }
+        }
+
+        val report = calculate(layers = layers, activities = anchors, activityLogs = activityLogs)
+        val byId = report.layerScores.associateBy { it.layerId }
+
+        assertTrue(
+            "capa con superhabit debe tener anchorSurplusBonus>0 (${byId[surplusLayerId]!!.anchorSurplusBonus})",
+            byId[surplusLayerId]!!.anchorSurplusBonus > 0f,
+        )
+        assertEquals(0f, byId["layer_cuerpo"]!!.anchorSurplusBonus, 1e-9f)
+        assertEquals(0f, byId["layer_conducta"]!!.anchorSurplusBonus, 1e-9f)
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     // Días de "cumplir-justo": 4 días con 30 min (F=4, T=30 → R = 1.0).
