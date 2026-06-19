@@ -170,3 +170,13 @@ Este protocolo se utiliza para evitar ambigüedades, ahorrar tokens y crear un h
 
 - Al enfrentarnos a la escritura de código nuevo, arquitectura o dudas sobre las mejores formas de codificar, **la IA debe apoyarse en el servidor MCP Context 7**.
 - Tras cada iteración, al igual que se utiliza el "Pro-Prompting" para definir claramente qué hacer, se debe usar la información proporcionada por **Context 7** para garantizar que la implementación se realiza siguiendo los estándares más recientes y las mejores prácticas de desarrollo.
+
+## Skills del proyecto
+
+Skills auto-descubribles en `.claude/skills/`. Si tu tarea matchea el trigger, leé la
+SKILL.md **antes** de escribir.
+
+| Skill | Para qué | Trigger |
+|-------|----------|---------|
+| `scoring-historias-usuario` | Formato canónico para plantear historias/casos de decisión de scoring que el dueño marca (estado esperado, superhabit/déficit, umbrales). Evita ejemplos de juguete, casos no autocontenidos y teorizar sin calcular. | Escribir o pedir historias de usuario / escenarios / casos de scoring (`docs/scoring/historias-*`, `escenarios-estado-esperado`). Ver [SKILL.md](.claude/skills/scoring-historias-usuario/SKILL.md). |
+| `scoring-dataset-decisiones` | Mantener el dataset AI-facing append-only (`docs/scoring/dataset-decisiones-estado-*.md`) que destila las marcas del dueño e infiere patrones por estado. Es el doc que el agente LEE para inferir (no las historias grandes). | El dueño marcó una tanda de historias, o hay que inferir qué variable define un estado. Ver [SKILL.md](.claude/skills/scoring-dataset-decisiones/SKILL.md). |

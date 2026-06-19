@@ -55,7 +55,7 @@ Lo que falta es **conectar Sueño como consumidor**. El flujo de Sueño hoy sigu
 4. **El scoring usa 2 de 4 componentes** (`SleepScoring`: `duration*0.70 +
    schedule*0.30`); el árbol pide `0.40 / 0.25 / 0.20 / 0.15`
    (Duration / Continuity / ScheduleAlignment / DigitalInterruption). Ver
-   `docs/scoring/arbol-scoring-v1.md`.
+   `docs/scoring/old/arbol-scoring-v1.md`.
 
 ---
 

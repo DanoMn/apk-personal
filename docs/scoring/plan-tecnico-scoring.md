@@ -2,8 +2,8 @@
 
 > **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
 
-Estado: fuente de verdad tecnica viva; implementacion v0 en curso
-Fecha: 2026-05-26
+Estado: fuente de verdad tecnica viva; modelo de valor de capa + opt-ins CERRADO 2026-06-12; implementacion v0 en deuda tecnica
+Fecha: 2026-06-12 (ultima actualizacion; redaccion original 2026-05-26)
 Proyecto: Autonomía sin límites
 
 Este documento guia la implementacion del sistema de scoring completo de Autonomía sin límites.
@@ -13,7 +13,7 @@ conceptual y la realidad del codigo.
 La referencia canonica de formulas, variables y arbol matematico esta en:
 
 ```text
-docs/scoring/arbol-scoring-v1.md
+docs/scoring/old/arbol-scoring-v1.md
 ```
 
 Los documentos `sistema-scoring-semanal-vocal-v1.md` y
@@ -112,16 +112,23 @@ implementacion.
 | Tema | Estado |
 | --- | --- |
 | Amortiguacion inicial de una semana hasta `En marcha` | Decision aprobada. |
-| Soportes opt-in: sin soportes, anclas 100%; con soportes, 80/20 | Decision aprobada. |
+| Soportes opt-in: sin soportes, anclas 100%; con soportes, 80/20 | **SUPERADO** — formula de soportes en modelo v4 PENDIENTE de cierre. El 80/20 era el modelo viejo. |
 | Tasks solo valen con capa y no deben abusar del score | Criterio conceptual aprobado. |
-| `TaskMomentum` como superhabit diario por capa | Decision aprobada. |
-| Formula exacta de `TaskMomentum` | Decision aprobada v0, calibrable con tests. |
-| Superhabit separado en magnitud visible y bonus capado | Decision aprobada. |
+| `TaskMomentum` como superhabit diario por capa | Decision aprobada en principio; formula exacta PENDIENTE en modelo v4. |
+| Formula exacta de `TaskMomentum` (0.050 * (1-exp(-n/2))) | Aprobada v0 para el codigo actual; pendiente integracion en modelo v4. |
+| Superhabit separado en magnitud visible y bonus capado | Aprobado; en modelo v4 el extra sigue siendo separado y ponderado con pesos iguales. |
 | Recomendacion de metas: 7 dias tiempo/cantidad, 14 dias frecuencia | Decision aprobada. |
-| Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | Decision aprobada. |
-| Politica de estados y umbrales v1 | Sellada. Bandas, collapse, ladder, histeresis e Inquebrantable resueltos en scoring-audit-remediation slice 1. |
+| Sobriedad: pending 0.5, recaida asumida igual que manual, 70/30 average/worst | **SUPERADO** — modelo v4 usa `M=(1-0.55)^(dias_recaida)`, multi-track producto, termino-sombra dinamico. No hay 70/30. |
+| Sueno 30% de Cuerpo (peso fijo) | **SUPERADO** — modelo v4 usa termino-sombra dinamico `w=BETA·N·(1-M)`. No hay peso fijo. |
+| Sobriedad 30% de Conducta (peso fijo) | **SUPERADO** — idem sueno; mismo mecanismo. |
+| Politica de estados y umbrales v1 (bandas 0.40/0.70/0.85) | **PARCIALMENTE SUPERADO** — modelo v4 usa bandas 0.40/0.62/0.85/1.10. Ladder de peor capa e histeresis aplican al motor viejo en codigo; se revisaran al migrar. |
 | `DailyClosureEntity` y algoritmo de cierre idempotente | Implementado v0 con cierre de garantia al abrir dashboard y WorkManager periodico a medianoche local. |
 | `WeeklyScoreSnapshotEntity` despues del motor estable | Entidad, DAO, escritura v0 y `stabilityScore` v0 creados. |
+| Valor de capa v4 (anchor_base + extra_capa + termino-sombra opt-in) | **Cerrado 2026-06-12** — ver §2.0 y old/arbol-scoring-v1.md §6-NUEVO. |
+| Motor de opt-ins (sueno y sobriedad como termino-sombra, BETA=0.818) | **Cerrado 2026-06-12** — ver §2.0 y old/arbol-scoring-v1.md §11-NUEVO. |
+| Bandas del modelo v4 (0.40/0.62/0.85/1.10) | **Cerrado 2026-06-12** — ver §2.0. |
+| Formula de soportes en modelo v4 | Pendiente — proxima sesion de modelado. |
+| Formula de tasks en modelo v4 | Pendiente — proxima sesion de modelado. |
 
 ## 2. Estado de fases
 
@@ -131,11 +138,62 @@ implementacion.
 | 1 | Hecha v0 | Consolidar modelo de registro de hechos. |
 | 2 | Hecha v0 + sobriedad sensible | Ajustar entidades Room y migraciones minimas. |
 | 3 | Hecha v0 | Crear input builder semanal desde hechos reales. |
-| 4 | Hecha v0 + modularizada | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
+| 4 | **Hecha (motor núcleo v1 encendido, PR-F)** | Reemplazar `ScoreEngine` por motor nuevo de dominio. |
 | 5 | Hecha v0 | Integrar score al dashboard sin redisenar UI. |
 | 6 | Hecha v0 | Crear pagina de scoring detallado. |
 | 7 | Hecha v0 | Agregar memoria semanal derivada y versionada. |
 | 8 | Pendiente | Refinar UI explicativa por capas. |
+| M (modelado) | **Modelo cerrado, pendiente de implementacion en codigo** | Migrar motor a modelo v4 (valor de capa + opt-ins); formulas de soportes y tasks pendientes de cierre. |
+
+### 2.0 Estado del modelo matematico (2026-06-12)
+
+```text
+CERRADO (modelo v4 merge):
+  - Valor de capa: anchor_base = promedio min(R_i,1); extra_capa = promedio max(R_i-1,0)
+  - Opt-in como termino-sombra w=BETA·N·(1-M), con w(M=1)=0 (invisible cuando bien)
+  - Senal de sobriedad: M=(1-0.55)^(dias de recaida), multi-track = producto
+  - Senal de sueno: continua [0,1], 4 componentes; sin dato → B_SLEEP=0.5
+  - BETA=0.818 (mismo para sueno y sobriedad; despejado de TARGET=0.55)
+  - Agregacion: promedio ponderado de terminos; extra con pesos iguales (Sol=Tin)
+  - Bandas: R<0.40 · A<0.62 · EM<0.85 · P≥0.85 · I≥1.10 (δ=0.10)
+  - Fuente reproducible: docs/scoring/old/exploracion-valor-capa/modelo_valor_capa_v4_merge.py
+  - **NOTA (2026-06-16):** modelo consolidado, congelado y verificado en `docs/scoring/modelo-scoring-oficial-v1.md`
+    (+ `axiomas-modelo-scoring-v1.md`, `verificacion_modelo_oficial.py` 27/27). Soportes/tasks/peso/puntos YA cerrados.
+
+PENDIENTE DE CIERRE (modelado):
+  - Formula de soportes en el modelo v4
+  - Formula de tasks en el modelo v4
+  - Calibracion final de parametros del ancla (γ, λ_v, κ, p, σ_max, σ_0) contra dataset
+
+IMPLEMENTADO EN CODIGO (2026-06-17, PR-F — motor núcleo v1 encendido):
+  - `ScoreEngine.calculate` corre el modelo NUEVO de pesos puros: adapter →
+    AnchorScoringPolicyV2 (NIVEL 1) → StateAggregationPolicy (NIVELES 2–5) →
+    BandPolicy (NIVEL 6). Emite `ScoreReport.estado ∈ [0,1.5]` crudo + banda(ESTADO).
+  - Opt-ins cableados por el orquestador: sueño M → capa Cuerpo, sobriedad M → capa
+    Conducta (término-sombra w=BETA·Σpesos·(1−M)).
+  - El modelo VIEJO (sueño/sobriedad 30% fijo, anclas 80/20, worst-layer, histéresis,
+    Inquebrantable gate) quedó ELIMINADO junto con sus policies (WeeklyScorePolicy,
+    VisibleScorePolicy, BaseStatePolicy, LayerScoringPolicy, SupportScoringPolicy,
+    TaskMomentumPolicy, SobrietyScoringPolicy, SpecialLayerScoringPolicy,
+    LayerContributionPolicy, AnchorScoringPolicy viejo, ScoreReasonPolicy).
+  - `SCORING_VERSION` bumpeado a `core-v2` (invalida snapshots `weekly-base-v1`).
+  - StabilityScoringPolicy queda INERTE (no se invoca en la banda; estabilidad aparcada).
+  - NIVEL 7 (mapeo de puntos sigmoide) CERRADO en PR-G: `PointsMappingPolicy.points(estado)`
+    (dominio puro) implementa el enfoque E (σ + 5 hitos `(c,w,A)`, `raw(e)`, normalización a
+    [650,1100], clamp `e∈[0,1.5]`). Lo consumen DOS callers con el MISMO cálculo: el motor al
+    poblar `ScoreReport.visibleScore` (seam) y `DashboardProjection` (dashboard). El mapeo lineal
+    interino del motor (`interimPoints`) fue ELIMINADO. Hitos: `0→650`, `1.0→941`, `1.10→1011`,
+    `1.5→1100` (verificados con PU1/PU3/PU4/PU5).
+
+OBSOLETO (no usar):
+  - sueno 30% fijo de Cuerpo (Forma A / K_INT multiplicador de peso)
+  - sobriedad 30% fija de Conducta (blend γ·M+(1-γ)·avg)
+  - blend "γ·M+(1-γ)·avg" como mecanismo de opt-in
+  - K_sleep/K_sobr como multiplicadores de peso de capa
+  - cortes con 0.70 como banda de Atencion
+  - cualquier referencia a EM_TOP=0.85 como multiplicador de la base (anulado en ERRATA)
+  - soporte 0.20 en formula intra-capa del modelo viejo
+```
 
 Regla de trazabilidad:
 
@@ -953,31 +1011,36 @@ Riesgo controlado:
 
 ## 7. Reglas de scoring objetivo
 
-Estas reglas quedan vigentes para el motor nuevo, sujetas a ajuste si el modelo
-de registro obliga a una version incremental:
+> **ATENCION:** Las reglas numeradas abajo incluyen items superados por el modelo
+> v4 (cerrado 2026-06-12). Los items superados estan marcados. Para el contrato
+> matematico vigente ver §2.0 y old/arbol-scoring-v1.md §6-NUEVO / §11-NUEVO / §12-NUEVO.
 
-- Escala interna: `0.000` a `1.000`.
+Reglas vigentes (invariantes en ambos modelos):
+
 - Escala visible: `700` a `1000`.
-- Si una capa no tiene soportes configurados: anclas pesan 100% de la base de
-  capa.
-- Si una capa tiene soportes configurados: anclas pesan 80% y soportes 20% de
-  la base de capa.
-- Tasks no entran en la base. Aportan hasta 5% como `TaskMomentum` positivo por
-  capa, no como deuda ni denominador que penalice pendientes.
-- Anclas: 70% frecuencia y 30% minutos.
-- Cuerpo integra sueno semanal como 30% de Cuerpo.
-- Conducta integra sobriedad activa como 30% de Conducta.
+- Tasks no entran en la base. Su formula exacta en modelo v4 esta PENDIENTE.
+- Anclas: frecuencia domina estructuralmente (peso via F-slots, no via 70/30 fijo).
 - Sobriedad inactiva no aparece, no pesa y no limita.
-- Todas las capas activas pesan igual.
-- Score semanal/base: 75% promedio de capas activas + 25% peor capa activa.
+- Todas las capas activas pesan igual (W0=1 por capa; el opt-in no infla el peso de capa).
 - Superavit nunca resta.
 - Superavit no compensa capas caidas.
-- Plenitud requiere base alta y equilibrio.
-- Inquebrantable requiere memoria temporal, no una sola semana.
-- No hay gates duros: una recaida, sueno bajo o capa caida se expresa mediante
-  pesos, penalizaciones y razones.
+- Plenitud requiere base alta y equilibrio (ESTADO ≥ 0.85 en escala v4).
+- Inquebrantable requiere memoria temporal, no una sola semana (ESTADO ≥ 1.10 en escala v4).
+- No hay gates duros: recaida, sueno bajo o capa caida se expresa mediante pesos y razones.
 
-### 7.0 Arbol matematico aprobado v0
+Reglas SUPERADAS por modelo v4 (no usar para implementacion nueva):
+
+- ~~Anclas 70% frecuencia y 30% minutos~~ → sustituido por la formula R consolidada con F-slots.
+- ~~Cuerpo integra sueno al 30%~~ → sustituido por termino-sombra dinamico.
+- ~~Conducta integra sobriedad al 30%~~ → sustituido por termino-sombra dinamico.
+- ~~Soportes: anclas 80% + soportes 20%~~ → formula pendiente en modelo v4.
+- ~~Score semanal: 75% promedio + 25% peor capa~~ → en modelo v4 el denominador es la suma de pesos dinamicos.
+- ~~Escala interna 0.000..1.000~~ → en modelo v4 la escala es [0, ~1.5] (1.0 = Plenitud exacta, >1 = superhabit).
+
+### 7.0 Arbol matematico — modelo VIEJO en codigo (deuda)
+
+> **ATENCION:** Este bloque describe el motor VIEJO implementado en `domain/scoring/`.
+> No es el contrato cerrado. Ver §2.0 para el modelo v4.
 
 #### Capa normal
 

@@ -1,9 +1,14 @@
 # Arbol de scoring Autonomía sin límites v1
 
-> **Estado: vivo** — se actualiza cuando cambia el codigo que describe.
+> **Estado: ARCHIVADO (2026-06-17) — modelo VIEJO, NO usar como contrato.** Supersedido por
+> `docs/scoring/modelo-scoring-oficial-v1.md` (FUENTE DE VERDAD ÚNICA) + `modelo-matematico-nucleo-v1.md`
+> (matemática completa) + `axiomas-modelo-scoring-v1.md` / `axiomas-opt-in-v1.md` (contrato). Se conserva
+> como registro histórico y porque la fórmula SELLADA de los 4 componentes del sueño (§11.2) aún no se
+> migró al núcleo. **OJO:** las secciones VIEJAS donde el sueño figura como "pilar CORE 30% de Cuerpo / no
+> opt-in" (§11, §16.7) están SUPERADAS: el sueño es **opt-in** (término-sombra), igual que la sobriedad.
 
-Estado: referencia canonica de formulas aprobadas; implementacion v0 iniciada
-Fecha: 2026-05-26
+Estado historico: referencia canonica de formulas aprobadas; modelo de valor de capa + opt-ins cerrado 2026-06-12; implementacion v0 del motor VIEJO en codigo (deuda)
+Fecha: 2026-06-12 (ultima actualizacion; redaccion original 2026-05-26)
 Producto: Autonomía sin límites
 
 Este documento define el arbol matematico del scoring de Autonomía sin límites. Sirve como
@@ -46,32 +51,50 @@ No cubre:
 
 | Bloque | Estado |
 | --- | --- |
-| Escala interna `0.000..1.000` | Aprobado |
+| Escala interna `0.000..~1.5` (con superhabit) | Aprobado — modelo v4 merge |
 | Escala visible `700..1000` | Aprobado |
-| Capa sin soportes: anclas 100% | Aprobado |
-| Capa con soportes: anclas 80%, soportes 20% | Aprobado |
-| Anclas: frecuencia 70%, valor 30% | Aprobado |
-| Superhabit separado en magnitud visible y bonus capado | Aprobado |
-| TaskMomentum por capa | Aprobado |
-| Sueno: 40/25/20/15 | Aprobado |
-| Sobriedad: Conducta 70%, Sobriedad 30% | Aprobado |
-| Sobriedad: pending 0.5, recaida asumida como manual | Aprobado |
-| Sobriedad multi-track: promedio 70%, peor track 30% | Aprobado |
-| WeeklyBaseScore: promedio 75%, peor capa 25% | Aprobado |
-| Politica exacta de estados/umbrales | Aprobado — sellado en scoring-audit-remediation slice 1 |
-| Algoritmo exacto de cierre diario | Pendiente de validacion |
-| Formula final de StabilityScore | Pendiente de validacion |
+| Valor de capa: base = promedio min(R_i,1) de anclas; extra = promedio max(R_i-1,0) de anclas | **Cerrado 2026-06-12** — ver §6-NUEVO |
+| Opt-in (sueno/sobriedad) como termino-sombra de peso dinamico `w=BETA·N·(1-M)` | **Cerrado 2026-06-12** — ver §11-NUEVO |
+| Senales: sueno continuo [0,1]; sobriedad `M=(1-0.55)^(dias de recaida)`, multi-track producto | **Cerrado 2026-06-12** — ver §11-NUEVO y §12-NUEVO |
+| Agregacion global: promedio ponderado con terminos ancla (W0=1) y sombra (w dinamico) | **Cerrado 2026-06-12** — ver §12-NUEVO |
+| Bandas de estado: R<0.40 · A<0.62 · EM<0.85 · P≥0.85 · I≥1.10 (1+δ, δ=0.10) | **Cerrado 2026-06-12** — ver §16-NUEVO |
+| BETA = 0.818 (despejado de TARGET=0.55) | **Cerrado 2026-06-12** |
+| Ancla: formula consolidada (base de compromiso + superhabit saturado) | Aprobado — ver §7 |
+| Superhabit de anclas separado en magnitud y bonus | Aprobado |
+| TaskMomentum por capa | Aprobado — formula v0; PENDIENTE integracion en modelo v4 |
+| Soportes: formula opt-in | **PENDIENTE** — no definida en modelo v4 |
+| StabilityScore (ventana 6 semanas, 75/25) | Aprobado — ver §15 |
+| Politica exacta de estados/umbrales (Inquebrantable, histeresis, ladder peor capa) | Aprobado — sellado en scoring-audit-remediation slice 1 |
+| Algoritmo exacto de cierre diario | Implementado v0 |
 
-Nota de implementacion v0:
+### 2.1 Modelo en codigo vs modelo cerrado
 
 ```text
-El motor actual implementa las formulas aprobadas con los datos disponibles en
-el repo. Sueno usa todavia el SleepScoring incremental existente
+ATENCION: el codigo actual en domain/scoring/ implementa el modelo VIEJO
+(anclas 80/20 con soportes en mezcla intra-capa, sueno 30% de Cuerpo,
+sobriedad 30% de Conducta con pesos fijos). Ese codigo es DEUDA tecnica:
+el modelo de valor de capa + opt-ins cerrado el 2026-06-12 (§6-NUEVO,
+§11-NUEVO, §12-NUEVO) NO esta implementado aun.
+
+Los bloques marcados "Aprobado" en versiones anteriores de este doc y que
+contradigan el modelo v4 quedan SUPERADOS. Las secciones §6.1-§6.3, §11,
+§12 originales describen el modelo viejo; los nuevos §6-NUEVO, §11-NUEVO
+y §12-NUEVO describen el contrato matematico cerrado.
+```
+
+### 2.2 Nota de implementacion v0 (modelo viejo — deuda)
+
+```text
+El motor actual implementa las formulas del modelo viejo con los datos
+disponibles en el repo. Sueno usa el SleepScoring incremental existente
 (duracion + alineacion de horario), porque la telemetria completa de
 continuidad/interrupciones/desbloqueos no existe aun.
 
 Inquebrantable no se emite desde una sola semana. Queda reservado para cuando
 exista memoria temporal/snapshots con StabilityScore.
+
+El reemplazo de este motor por el modelo v4 es la proxima tarea de modelado
+pendiente junto con soportes y tasks.
 ```
 
 ## 3. Escalas
@@ -156,7 +179,82 @@ Todas las capas activas pesan igual en el promedio.
 | `average(values)` | Promedio aritmetico. |
 | `worst(values)` | Menor valor de una lista. |
 
-## 6. Capa normal
+## 6-NUEVO. Valor de capa — modelo cerrado 2026-06-12
+
+> **Este bloque reemplaza §6.1–§6.3 para el modelo nuevo.** La implementacion
+> en codigo todavia corresponde al modelo viejo (deuda — ver §2.1).
+
+Referencia reproducible: `docs/scoring/old/exploracion-valor-capa/modelo_valor_capa_v4_merge.py`
+
+### 6-NUEVO.1 Rendimiento de ancla (R)
+
+Cada ancla exporta un valor `R ≥ 0`. La formula consolidada (de
+`old/exploracion-rendimiento-ancla/merge-consolidado.md`) calcula `R` a partir de
+frecuencia semanal comprometida `F`, objetivo de tiempo por sesion `T` y
+minutos reales marcados cada dia:
+
+```text
+r_i = t_i / T                       razon diaria (0..>>1)
+Ordenar r descendente. D = dias marcados.
+Compromiso = los min(D, F) mejores.  Voluntaria = los D-F restantes si D > F.
+Si D = 0 → R = 0.
+
+u(r)  = min(r, 1)^γ                 valor-dia (γ >= 1; default γ=1.5)
+φ     = (1/F) · Σ_compromiso  u(r_i)  base de compromiso ∈ [0,1]
+V     = Σ_voluntaria  u(r_j)        dias-equivalentes voluntarios
+base  = 1 − (1 − φ) · exp(−λ_v · V)   reparacion voluntaria, acotada en 1
+
+S_t   = (1/F) · Σ_compromiso  max(r_i − 1, 0)   superavit de tiempo (crudo)
+S_d   = V / (7 − F)   (0 si F=7)                superavit de dias
+w_t   = (F/7)^κ                                  peso desplazable (κ=1.5 default)
+S     = σ_max · (1 − exp(−(w_t·S_t + (1−w_t)·S_d) / σ_0))   superavit saturado
+
+R     = base  +  base^p · S         ∈ [0, 1 + σ_max]
+```
+
+Parametros con defaults ilustrativos: `γ=1.5, λ_v=0.5, κ=1.5, p=2.0, σ_max=0.5, σ_0=0.5`.
+La calibracion final va contra el dataset de marcas del dueno.
+
+Propiedades garantizadas:
+- `R = 0` si no hubo ningun dia.
+- `R = 1.000` exacto si se cumplio el objetivo exacto (D=F, cada dia en meta).
+- `R > 1` solo con superhabit real; acotado en `1 + σ_max`.
+- La frecuencia domina estructuralmente: ningun parametro puede comprar slots vacios.
+
+### 6-NUEVO.2 Componentes del valor de capa
+
+```text
+anchor_base(capa) = promedio_i  min(R_i, 1)          ∈ [0, 1]
+extra_capa        = promedio_i  max(R_i − 1, 0)      ≥ 0   (SOLO anclas)
+```
+
+Solo las anclas contribuyen a `extra_capa`. Los opt-ins (sueno/sobriedad) NO
+generan extra/superhabit: su canal es unicamente la base.
+
+### 6-NUEVO.3 Termino-ancla y termino-sombra (opt-in)
+
+Para cada capa activa con anclas:
+
+```text
+termino ancla:    (anchor_base,  W0)         W0 = 1 (masa de una capa-ancla)
+
+si la capa ademas tiene opt-in con senal M ∈ [0,1]:
+    w_optin = BETA · N · (1 − M)            termino de peso dinamico
+    termino sombra:  (M,  w_optin)          w(M=1) = 0 → invisible cuando bien
+```
+
+Para una capa solo-opt-in (sin anclas):
+
+```text
+termino:  (M, W0)                           el opt-in ES la capa, peso normal
+```
+
+Soportes y tasks: pendiente de definicion (no inventes formula — ver §2.1).
+
+## 6. Capa normal — modelo VIEJO (deuda — codigo actual)
+
+> **ATENCION:** Esta seccion describe el modelo VIEJO implementado en codigo.
+> Para el contrato matematico cerrado ver §6-NUEVO arriba.
 
 Una capa normal se compone de:
 
@@ -423,7 +521,95 @@ Reglas:
 - no reemplaza anclas;
 - no convierte pendientes en deuda.
 
-## 11. Cuerpo con sueno
+## 11-NUEVO. Opt-ins — modelo cerrado 2026-06-12
+
+> **Este bloque reemplaza §11 y §12 para el modelo nuevo.** La implementacion
+> en codigo todavia corresponde al modelo viejo (deuda — ver §2.1).
+
+### 11-NUEVO.1 Parametros globales del motor de opt-ins
+
+```text
+BETA = 0.818     despejado de TARGET=0.55
+                 "recaida total + anclas perfectas → Atencion (0.55)"
+N    = numero de capas activas en la sesion
+W0   = 1         masa de un termino-ancla
+
+Mismo BETA para sueno y sobriedad (decision compasiva: no castigar mas al
+usuario mas sensible por insomnio o adiccion).
+```
+
+### 11-NUEVO.2 Senal del sueno `M_sleep ∈ [0,1]`
+
+```text
+4 componentes por noche (duracion, continuidad, alineacion horaria,
+interrupciones digitales); cobertura c = noches con dato / 7.
+
+M_sleep = c · avg(noches con dato) + (1 − c) · B_SLEEP
+
+Sin ninguna noche con dato → M_sleep = B_SLEEP = 0.5
+B_SLEEP = 0.5  (sin telemetria ≠ fracaso; pendiente decision del dueno si
+quiere "sin dato = peso 0" en vez de B_SLEEP)
+```
+
+### 11-NUEVO.3 Senal de sobriedad `M_sobr ∈ [0,1]`
+
+```text
+M_sobr = (1 − A)^(dias de recaida en la semana)    A = 0.55
+
+Multi-track: producto de la senal por track.
+  Track limpio (0 dias de recaida) → M_track = 1.0 → invisible (no penaliza)
+  Track con recaida → M_track < 1 → arrastra
+
+M_sobr = Π_tracks  (1 − 0.55)^(dias_recaida_track)
+
+Verificado (N=3, anclas justas):
+  1 dia de recaida  → M≈0.45 → MERGE≈0.829 → En marcha
+  3 dias de recaida → M≈0.09 → MERGE≈0.612 → Atencion
+  7 dias de recaida → M≈0.01 → MERGE≈0.553 → Atencion
+```
+
+### 11-NUEVO.4 Peso dinamico del termino-sombra
+
+```text
+w_optin = BETA · N · (1 − M)
+
+Propiedades:
+  M = 1 (opt-in perfecto) → w = 0 → INVISIBLE, no suma masa al denominador
+  M = 0 (recaida total)   → w = BETA·N → arrastre PLANO en N
+  Arrastre plano: con anclas perfectas, base = N/(N+BETA·N) = 1/(1+BETA) = 0.55
+    → independiente de N (no se diluye con mas capas)
+```
+
+Comportamiento verificado (salida python3 `modelo_valor_capa_v4_merge.py`):
+
+```text
+P1 justo + sueno bien N=3    MERGE=1.000 PLENITUD
+P2 mal sueno M=0.15 N=3      MERGE=0.651 EN MARCHA
+P2 mal sueno M=0.15 N=5      MERGE=0.651 EN MARCHA   (plano en N)
+P3 recaida M=0 N=3           MERGE=0.550 ATENCION
+P3 recaida M=0 N=5           MERGE=0.550 ATENCION     (plano en N)
+P4 sueno regular M=0.5 N=5   MERGE=0.855 PLENITUD
+P7 superhabit repartido x3   MERGE=1.432 INQUEBRANTABLE
+P8 capa solo-opt-in bien     MERGE=1.000 PLENITUD
+C2 neutralidad exacta (incl. deficit de anclas): sin opt-in = con opt-in bien ✓
+C3 arrastre plano en N: [0.550, 0.550, 0.550, 0.550, 0.550] ✓
+C5 Sol=Tin (superhabit rinde igual en cualquier capa) ✓
+D8 recaida (0.550) < mal sueno (0.651) ✓
+Anti-gate: cambio maximo |dEstado| con dM=0.001 = 0.00070 → continuo ✓
+```
+
+### 11-NUEVO.5 Dos opt-ins malos al mismo tiempo
+
+Cuando la capa de sueno tiene M_sleep bajo Y hay recaida en sobriedad (que
+actua sobre Conducta), ambos terminos-sombra se acumulan en la agregacion
+global (ver §14-NUEVO). Caso realista (mal sueno + recaida 2-3 dias) → Atencion;
+extremo absoluto (sueno nulo + recaida 7 dias) → Restauracion. Sin tope
+(aceptado por el dueno).
+
+## 11. Cuerpo con sueno — modelo VIEJO (deuda — codigo actual)
+
+> **ATENCION:** Esta seccion describe el modelo VIEJO implementado en codigo.
+> Para el contrato matematico cerrado ver §11-NUEVO arriba.
 
 Cuerpo integra sueno semanal como modulo especial.
 
@@ -463,7 +649,35 @@ Definir APIs/permisos Android concretos para obtener desbloqueos,
 interrupciones, screen-on y confianza de fuente.
 ```
 
-## 12. Conducta con sobriedad
+## 12-NUEVO. Agregacion global — modelo cerrado 2026-06-12
+
+> **Este bloque reemplaza §14.2 para el modelo nuevo.** La implementacion
+> en codigo todavia corresponde al modelo viejo (deuda — ver §2.1).
+
+```text
+Terminos que entran al promedio ponderado:
+  Por cada capa con anclas:     termino (anchor_base, W0=1)
+  Si esa capa tiene opt-in M:   termino-sombra (M, w_optin) si w_optin > 0
+
+  Para capa solo-opt-in (sin anclas):  termino (M, W0=1)
+
+base_global  = Σ(valor · peso) / Σ(peso)    sobre todos los terminos activos
+
+extra_global = promedio_simple de extra_capa sobre capas con anclas
+               (pesos IGUALES — superhabit rinde igual en cualquier capa)
+
+ESTADO = min(base_global, 1.0) + extra_global
+```
+
+Nota: `extra_global` usa pesos iguales (no ponderado por peso de capa) para
+garantizar `Sol = Tin` (superhabit en la capa de sueno rinde igual que en
+cualquier otra capa).
+
+## 12. Conducta con sobriedad — modelo VIEJO (deuda — codigo actual)
+
+> **ATENCION:** Esta seccion describe el modelo VIEJO implementado en codigo.
+> Para el contrato matematico cerrado ver §11-NUEVO (senal) y §12-NUEVO
+> (agregacion).
 
 Sobriedad es opt-in. Si esta inactiva, no aparece, no pesa y no limita.
 
@@ -524,6 +738,10 @@ CleanCoverageScore
 
 ### 13.4 Varios tracks activos
 
+> **OBSOLETO bajo el modelo v4 (2026-06-12):** la sobriedad multi-track NO usa worst-term. La señal
+> es producto por track `M_sobr = ∏ (1−A)^(días de recaída del track)`, A=0.55 (§11-NUEVO). Un track
+> limpio = 1 (invisible, no diluye). No rige el `0.700·avg + 0.300·worst` de abajo.
+
 ```text
 SobrietyWeeklyScore =
 0.700 * average(SobrietyTrackScore)
@@ -537,6 +755,11 @@ Una racha limpia no debe ocultar otra racha en recaida.
 ```
 
 ## 14. Score semanal
+
+> **OBSOLETO bajo el modelo v4 (2026-06-12):** el score semanal NO usa worst-term (`WorstLayerScore`
+> al 25%). La agregación v4 es `base_global` (promedio ponderado de términos ancla + sombras dinámicas
+> de opt-in) + `extra_global` (pesos IGUALES), ver §12-NUEVO. **No hay arrastre de peor capa**: que la
+> peor capa no colapse el estado es comportamiento aceptado (emerge del promedio puro).
 
 ### 14.1 Variables
 
@@ -628,12 +851,43 @@ arrastra el score, de modo que `Inquebrantable` exige constancia real, no un pic
 
 ## 16. Estados
 
-Los umbrales y el orden de precedencia estan sellados como contrato desde
-`scoring-audit-remediation slice 1`. No son propuesta a discutir.
+Los umbrales de estado estan en proceso de actualizacion. El modelo viejo
+usaba `WeeklyBaseScore` con bandas 0.40/0.70/0.85. El modelo nuevo (v4 merge,
+cerrado 2026-06-12) usa `ESTADO = min(base_global,1) + extra_global` con
+bandas 0.40/0.62/0.85/1.10 (donde 1.10 = 1+δ con δ=0.10).
+
+Las constantes de codigo (`ScoringConstants.kt`) siguen siendo el modelo viejo
+hasta que se implemente el motor v4. No sincronizar codigo con estas bandas
+hasta que el motor completo este migrado.
 
 No usar gates duros.
 
-### 16.1 Bandas sobre WeeklyBaseScore (lower-inclusive / upper-exclusive)
+### 16-NUEVO. Bandas modelo v4 (cerradas 2026-06-12)
+
+```text
+ESTADO = min(base_global, 1.0) + extra_global     escala [0, ~1.5]
+
+Restauracion:       ESTADO < 0.40
+Atencion:     0.40 ≤ ESTADO < 0.62
+En marcha:    0.62 ≤ ESTADO < 0.85
+Plenitud:     0.85 ≤ ESTADO < 1.10   (= 1 + δ, δ=0.10)
+Inquebrantable:     ESTADO ≥ 1.10
+
+Eje semantico:
+  Plenitud entra en 0.85 (decision del dueno 2026-06-16: "casi cumplir todo ya es Plenitud").
+  Cumplir todo justo = ESTADO = 1.0 → cae DENTRO de Plenitud (zona alta), NO es su inicio.
+  Superhabit real repartido → Inquebrantable (≥ 1.10)
+  Cumplimiento parcial BAJO (<0.85) → En marcha o Atencion ; parcial ALTO (0.85-1.0) ya es Plenitud
+  Opt-in perfecto + todo cumplido → ESTADO = 1.0 (Plenitud; no sube sin extra)
+  Recaida total + anclas perfectas → ESTADO ≈ 0.55 (Atencion)
+```
+
+### 16.1 Bandas sobre WeeklyBaseScore — modelo VIEJO (deuda — codigo actual)
+
+> **ATENCION:** Estas bandas corresponden al modelo VIEJO en codigo. Para el
+> modelo cerrado ver §16-NUEVO arriba.
+
+(lower-inclusive / upper-exclusive)
 
 | Estado | Condicion |
 | --- | --- |
@@ -642,7 +896,11 @@ No usar gates duros.
 | `En marcha` | `0.70 <= WeeklyBaseScore < 0.85` |
 | `Plenitud` | `WeeklyBaseScore >= 0.85` |
 
-### 16.2 Ladder de peor capa (caps aplicados sobre la banda)
+### 16.2 Ladder de peor capa (caps aplicados sobre la banda) — OBSOLETO v4
+
+> **OBSOLETO bajo el modelo v4 (2026-06-12):** v4 NO tiene ladder ni caps de peor capa, ni
+> `WORST_LAYER_COLLAPSE`. El estado emerge del agregado de pesos puros (§16-NUEVO). La tabla de abajo
+> es del modelo VIEJO en código (deuda).
 
 | Condicion | Cap maximo |
 | --- | --- |
@@ -667,7 +925,12 @@ Reglas:
 - `WeeklyBaseScore`, `visibleScore` y `reasons` se exponen crudos (sin alterar);
 - `previousState` se deriva del `weeklyHistory` filtrado por `scoringVersion` y `weekStart != actual`.
 
-### 16.4 Puerta Inquebrantable
+### 16.4 Puerta Inquebrantable — OBSOLETO v4 (Inquebrantable es emergente)
+
+> **OBSOLETO bajo el modelo v4 (2026-06-12):** v4 NO usa puerta de 4 condiciones. Inquebrantable
+> EMERGE de `ESTADO ≥ 1.10` (§16-NUEVO), sin gates. ⚠️ La condición de **memoria temporal /
+> estabilidad multi-semana** (§15) es ORTOGONAL al motor de valor de capa y **no se reconcilió con v4
+> esta sesión** — queda pendiente decidir si v4 la conserva. La puerta de abajo es del modelo VIEJO.
 
 Requiere que se cumplan TODOS simultaniamente:
 
@@ -804,3 +1067,17 @@ Para revisar una implementacion, verificar:
 14. Sobriedad activa entra en Conducta al 30%.
 15. Peor capa arrastra el semanal al 25%.
 16. Snapshot no se usa como verdad primaria.
+
+### 18-NUEVO. Items adicionales para el motor v4 (pendiente de implementacion)
+
+Los siguientes items se verifican cuando el motor v4 se implemente:
+
+17. `anchor_base` = promedio `min(R_i, 1)` de anclas de la capa (no mezcla con opt-in directamente).
+18. `extra_capa` = promedio `max(R_i-1, 0)` de anclas — SOLO anclas, nunca opt-ins.
+19. El termino-sombra del opt-in usa `w = BETA·N·(1-M)`; con `M=1`, `w=0` (invisible).
+20. El extra global se promedia con pesos IGUALES entre capas con anclas (`Sol == Tin`).
+21. La senal de sobriedad usa `M=(1-0.55)^(dias_recaida)`; multi-track = producto.
+22. Sin dato de sueno → `M_sleep = B_SLEEP = 0.5` (no 0).
+23. `BETA = 0.818` (constante; mismo valor para sueno y sobriedad).
+24. `ESTADO = min(base_global, 1) + extra_global`; bandas 0.40/0.62/0.85/1.10.
+25. Soportes y tasks: formula PENDIENTE — no implementar hasta cierre del modelo.

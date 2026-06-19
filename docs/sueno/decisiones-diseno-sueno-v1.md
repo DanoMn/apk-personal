@@ -9,7 +9,7 @@
 > Fecha: 2026-05-29 · Proyecto: apk-personal (Autonomía sin límites)
 >
 > Leer junto con: `handoff-sleep-consumer.md` (arranque y contrato de consumo),
-> `sleep-feature-preliminar.md` (edge cases originales), `arbol-scoring-v1.md`
+> `sleep-feature-preliminar.md` (edge cases originales), `docs/scoring/old/arbol-scoring-v1.md`
 > (fórmulas **selladas**), `nucleo-dominio-autonomia.md` (filosofía: sueño es core).
 
 ---
@@ -110,7 +110,7 @@ Dos relojes distintos alimentan componentes distintos. No mezclarlos.
 
 ## 5. Scoring
 
-- **4 componentes y pesos SELLADOS** (`arbol-scoring-v1.md`, no se rediscuten):
+- **4 componentes y pesos SELLADOS** (`docs/scoring/old/arbol-scoring-v1.md`, no se rediscuten):
   `SleepWeeklyScore = 0.40·Duración + 0.25·Continuidad + 0.20·AlineaciónHorario + 0.15·InterrupciónDigital`
 - **Sueño entra a Cuerpo al 30%**: `Body = 0.70·BodyBaseWithoutSleep + 0.30·SleepWeeklyScore`.
 - **Sin superávit en v1**: dormir de más = **NEUTRO** (Duración llega a 1.0 al cumplir

@@ -145,9 +145,14 @@ Hechos Room
   → Compose (resumen en DashboardScreen / detalle en ScoringScreen "Estado Base")
 ```
 
-- El contrato matemático está en `docs/scoring/arbol-scoring-v1.md` (fórmulas
-  canónicas) y `docs/scoring/plan-tecnico-scoring.md` (plan técnico, estado por
-  fases, decisiones). Al tocar scoring, esos docs son el spec.
+- El contrato matemático vigente es `docs/scoring/modelo-scoring-oficial-v1.md`
+  (**FUENTE DE VERDAD ÚNICA**, alto nivel + filosofía + ejemplos), con la matemática
+  completa de los 7 niveles en `docs/scoring/modelo-matematico-nucleo-v1.md` y el
+  contrato de comportamiento en `docs/scoring/axiomas-modelo-scoring-v1.md` +
+  `docs/scoring/axiomas-opt-in-v1.md`. El plan técnico/estado por fases vive en
+  `docs/scoring/plan-tecnico-scoring.md`. Al tocar scoring, esos docs son el spec.
+  (`docs/scoring/old/arbol-scoring-v1.md` es el modelo VIEJO archivado — NO usar como
+  contrato; el sueño YA es opt-in, no "pilar CORE 30%".)
 - La historia semanal es un **cache derivado y versionado**
   (`WeeklyScoreSnapshotEntity` vía `WeeklyScoreSnapshotWriter`), nunca verdad
   primaria — siempre recalculable desde los hechos diarios.

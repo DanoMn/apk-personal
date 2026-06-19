@@ -39,8 +39,11 @@ conflicto entre documentos, lo vigente manda sobre lo archivado (`old/`).
 
 ## `scoring/` — motor de puntuación
 
-- `scoring/arbol-scoring-v1.md`: contrato matemático canónico (fórmulas).
+- `scoring/modelo-scoring-oficial-v1.md`: **FUENTE DE VERDAD ÚNICA** del scoring (contrato vigente).
+- `scoring/modelo-matematico-nucleo-v1.md`: matemática completa de los 7 niveles (el núcleo).
+- `scoring/axiomas-modelo-scoring-v1.md` + `scoring/axiomas-opt-in-v1.md`: contrato de comportamiento.
 - `scoring/plan-tecnico-scoring.md`: plan técnico vivo del scoring.
+- `scoring/old/arbol-scoring-v1.md`: modelo VIEJO archivado (NO usar como contrato).
 
 ## `sueno/` — feature Sueño
 
