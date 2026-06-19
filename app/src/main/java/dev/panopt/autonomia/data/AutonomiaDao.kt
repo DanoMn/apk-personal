@@ -44,9 +44,6 @@ interface AutonomiaDao {
     @Query("DELETE FROM daily_activity_logs WHERE subjectId = :activityId AND date = :date")
     suspend fun deleteActivityLog(activityId: String, date: String)
 
-    @Query("DELETE FROM daily_activity_logs WHERE subjectId = :activityId")
-    suspend fun deleteActivityLogsForActivity(activityId: String)
-
     @Query("SELECT * FROM abstinence_tracks ORDER BY sortOrder")
     fun observeAbstinenceTracks(): Flow<List<AbstinenceTrackEntity>>
 

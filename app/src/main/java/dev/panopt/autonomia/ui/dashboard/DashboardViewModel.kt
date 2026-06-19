@@ -359,42 +359,48 @@ internal class DashboardViewModel(
             } else {
                 normalizeAnchorWeeklyFrequencyTarget(weeklyFrequencyTarget)
             }
-            // Insert definition
-            repository.upsertActivityDefinition(
-                ActivityDefinitionEntity(
-                    id = activityId,
-                    layerId = layerId,
-                    name = trimmedName,
-                    description = "",
-                    type = if (isSecondary) ActivityType.Check.name else ActivityType.Time.name,
-                    role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
-                    unit = if (isSecondary) ActivityUnit.Boolean.name else anchorUnit.name,
-                    contributionRole = if (isSecondary) ContributionRole.Support.name else ContributionRole.Core.name,
-                    importanceTier = ImportanceTier.Medium.name,
-                    presetCategory = if (isSecondary) "support" else "anchor",
-                    sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                    createdAt = now,
-                    updatedAt = now,
-                )
+            val definition = ActivityDefinitionEntity(
+                id = activityId,
+                layerId = layerId,
+                name = trimmedName,
+                description = "",
+                type = if (isSecondary) ActivityType.Check.name else ActivityType.Time.name,
+                role = if (isProject) ActivityRole.ProjectWork.name else ActivityRole.Practice.name,
+                unit = if (isSecondary) ActivityUnit.Boolean.name else anchorUnit.name,
+                contributionRole = if (isSecondary) ContributionRole.Support.name else ContributionRole.Core.name,
+                importanceTier = ImportanceTier.Medium.name,
+                presetCategory = if (isSecondary) "support" else "anchor",
+                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                createdAt = now,
+                updatedAt = now,
             )
-            // Insert config
-            repository.upsertUserActivityConfig(
-                UserActivityConfigEntity(
-                    activityId = activityId,
-                    activityType = activityType.name,
-                    cadence = if (isSecondary) null else ActivityCadence.Weekly.name,
-                    targetValue = normalizedSessionTarget,
-                    minimumValue = if (isSecondary) null else 1,
-                    targetCount = normalizedWeeklyTarget,
-                    targetPeriod = if (isSecondary) null else TargetPeriod.Week.name,
-                    weeklyFrequencyTarget = normalizedWeeklyTarget,
-                    sessionTargetMinutes = normalizedSessionTarget,
-                    commitmentDurationMonths = if (isSecondary) null else commitmentDurationMonths,
-                    sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                    createdAt = now,
-                    updatedAt = now,
+
+            if (isSecondary) {
+                // R9: la creación de soporte custom pasa por la vía VALIDADA del Repository
+                // (valida capa-existente; definición + config inseparables). La validación vive
+                // en el repo, NO acá.
+                repository.createCustomSupport(definition)
+            } else {
+                // Anchor custom: camino actual (definición + config con targets).
+                repository.upsertActivityDefinition(definition)
+                repository.upsertUserActivityConfig(
+                    UserActivityConfigEntity(
+                        activityId = activityId,
+                        activityType = activityType.name,
+                        cadence = ActivityCadence.Weekly.name,
+                        targetValue = normalizedSessionTarget,
+                        minimumValue = 1,
+                        targetCount = normalizedWeeklyTarget,
+                        targetPeriod = TargetPeriod.Week.name,
+                        weeklyFrequencyTarget = normalizedWeeklyTarget,
+                        sessionTargetMinutes = normalizedSessionTarget,
+                        commitmentDurationMonths = commitmentDurationMonths,
+                        sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                        createdAt = now,
+                        updatedAt = now,
+                    )
                 )
-            )
+            }
         }
     }
 

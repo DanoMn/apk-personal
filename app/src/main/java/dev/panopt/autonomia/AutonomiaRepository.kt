@@ -30,7 +30,9 @@ import dev.panopt.autonomia.domain.abstinence.AbstinenceRelapseMaterializationPo
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.AnchorCoverageRule
 import dev.panopt.autonomia.domain.activity.AnchorRef
+import dev.panopt.autonomia.domain.activity.ConfigEditRule
 import dev.panopt.autonomia.domain.activity.RemoveAnchorResult
+import dev.panopt.autonomia.domain.activity.SupportConfigFactory
 import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.data.SleepSegmentEntity
 import dev.panopt.autonomia.data.repository.TelemetryRepository
@@ -962,23 +964,26 @@ class AutonomiaRepository(context: Context) {
         customDescription: String? = null,
     ) {
         val now = System.currentTimeMillis()
+        // R6: distinguir CREAR de EDITAR. Al editar, [ConfigEditRule] preserva los campos de ciclo
+        // de vida (createdAt/active/archived/sortOrder) en vez de pisarlos; solo updatedAt y los
+        // campos de configuración toman los valores nuevos.
+        val previous = dao.getUserActivityConfig(activityId)
         dao.upsertUserActivityConfig(
-            UserActivityConfigEntity(
+            ConfigEditRule.resolve(
+                previous = previous,
                 activityId = activityId,
-                activityType = activityType.name,
-                cadence = cadence?.name,
+                activityType = activityType,
+                cadence = cadence,
                 targetValue = targetValue,
                 minimumValue = minimumValue,
                 targetCount = targetCount,
-                targetPeriod = targetPeriod?.name,
+                targetPeriod = targetPeriod,
                 weeklyFrequencyTarget = weeklyFrequencyTarget,
                 sessionTargetMinutes = sessionTargetMinutes,
                 commitmentDurationMonths = commitmentDurationMonths,
-                customName = customName?.trim()?.takeIf { it.isNotBlank() },
-                customDescription = customDescription?.trim()?.takeIf { it.isNotBlank() },
-                sortOrder = now.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
-                createdAt = now,
-                updatedAt = now,
+                customName = customName,
+                customDescription = customDescription,
+                now = now,
             )
         )
     }
@@ -1010,18 +1015,14 @@ class AutonomiaRepository(context: Context) {
         return RemoveAnchorResult.Removed
     }
 
-    private suspend fun deleteUserActivityConfig(activityId: String) {
-        dao.deleteUserActivityConfig(activityId)
-    }
-
     /**
      * Elimina una actividad custom (catálogo + config por FK CASCADE), pasando por el CANDADO de
      * cobertura: si es un ancla activa cuya remoción dejaría menos de [AnchorCoverageRule.minLayers]
      * capas con ancla, devuelve [RemoveAnchorResult.BlockedByMinimum] y NO borra nada.
      *
      * Los **hechos** ([DailyActivityLogEntity]) NUNCA se borran: aunque la actividad se elimine, su
-     * historial diario persiste (decisión firme del dueño — los hechos no se pierden). Por eso NO
-     * se llama a `deleteActivityLogsForActivity`.
+     * historial diario persiste (decisión firme del dueño — los hechos no se pierden). No existe
+     * siquiera una query de borrado masivo de hechos por actividad.
      *
      * Una actividad NO custom (preset) retorna temprano como [RemoveAnchorResult.Removed]: no hay
      * nada que borrar ni que bloquear (comportamiento actual preservado).
@@ -1075,6 +1076,25 @@ class AutonomiaRepository(context: Context) {
                 createdAt = now,
                 updatedAt = now,
             ),
+        )
+    }
+
+    /**
+     * R9 — Crea un soporte **custom** por la vía validada: persiste la [definition] de catálogo y su
+     * config de soporte SOLO si la capa de la definición existe. Si la capa no existe, es un no-op
+     * seguro (no persiste NI definición NI config), con la misma validación que [addSupport]. La
+     * definición y la config son inseparables: se persisten juntas o nada.
+     *
+     * La config se construye con [SupportConfigFactory] (sin targets, `activityType = Support`),
+     * garantizando las reglas de superficie del soporte sin duplicar la regla en el ViewModel.
+     */
+    suspend fun createCustomSupport(definition: ActivityDefinitionEntity) {
+        // Validación de capa-existente (paridad con addSupport): no se crea un soporte cuya capa no existe.
+        dao.getLayer(definition.layerId) ?: return
+        val now = System.currentTimeMillis()
+        dao.upsertActivityDefinition(definition)
+        dao.upsertUserActivityConfig(
+            SupportConfigFactory.buildSupportConfig(activityId = definition.id, now = now),
         )
     }
 

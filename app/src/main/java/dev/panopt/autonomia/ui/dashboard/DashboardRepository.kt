@@ -110,6 +110,7 @@ internal interface DashboardRepository {
     )
     suspend fun removeActivityAsAnchor(activityId: String): RemoveAnchorResult
     suspend fun addSupport(activityId: String)
+    suspend fun createCustomSupport(definition: ActivityDefinitionEntity)
     suspend fun removeSupport(activityId: String)
 }
 
@@ -201,5 +202,7 @@ internal class AutonomiaDashboardRepository(
     ) = delegate.addActivityAsAnchor(activityId, sessionTargetMinutes, weeklyFrequencyTarget, commitmentDurationMonths)
     override suspend fun removeActivityAsAnchor(activityId: String) = delegate.removeActivityAsAnchor(activityId)
     override suspend fun addSupport(activityId: String) = delegate.addSupport(activityId)
+    override suspend fun createCustomSupport(definition: ActivityDefinitionEntity) =
+        delegate.createCustomSupport(definition)
     override suspend fun removeSupport(activityId: String) = delegate.removeSupport(activityId)
 }

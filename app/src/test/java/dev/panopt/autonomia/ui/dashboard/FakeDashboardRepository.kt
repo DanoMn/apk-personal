@@ -141,5 +141,6 @@ internal class FakeDashboardRepository(
     override suspend fun removeActivityAsAnchor(activityId: String) =
         dev.panopt.autonomia.domain.activity.RemoveAnchorResult.Removed
     override suspend fun addSupport(activityId: String) = Unit
+    override suspend fun createCustomSupport(definition: ActivityDefinitionEntity) = Unit
     override suspend fun removeSupport(activityId: String) = Unit
 }
