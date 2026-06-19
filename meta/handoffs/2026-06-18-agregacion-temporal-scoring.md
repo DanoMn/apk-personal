@@ -254,10 +254,14 @@ que el dueño pueda revisar y "marcar con la panza" antes de comprometerse con u
 
 ## 9. Qué quedó FUERA de esta sesión (no se tocó en el SDD de "hardening")
 
-El **SDD de "hardening de operaciones de ciclo de vida"** (lanzado en paralelo, 2026-06-18)
-trabaja sobre los **bugs de manejo** identificados en `mapa-casos-limite-ciclo-vida.md §10.1**:
-puertas traseras al candado del mínimo, higiene de borrado/edición, logs huérfanos, relapse
-events huérfanos. Todo eso es **ortogonal** a la decisión de agregación temporal.
+El **SDD de "hardening de operaciones de ciclo de vida"** YA está **COMPLETO y commiteado**
+(2026-06-18/19): Lote 1 (candado de cobertura de anclas + cierre de las 3 puertas traseras
+`deleteCustomActivity`/`toggleActivityArchive`/`deleteUserActivityConfig`, commit `d916011`) y
+Lote 2 (preservar `createdAt`/`active`/`archived`/`sortOrder` al editar config + validar capa al
+crear soporte custom + cleanup de letra muerta, commit `e309f2d`). 398 tests verdes. Branch
+`feat/scoring-motor-nucleo-v1`, SIN push. **Importante:** ese SDD **NO borró ningún hecho** — el
+dueño decidió firme que *los hechos no se borran nunca* (sostiene el anti-trampa de la ventana). No
+hubo limpieza de "huérfanos". Todo eso es **ortogonal** a la decisión de agregación temporal.
 
 Los tres gaps del §5 de este handoff (A/B/C) están **explícitamente excluidos** del SDD de
 hardening porque su resolución depende de la decisión de agregación temporal. No se tocan
