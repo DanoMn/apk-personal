@@ -9,3 +9,7 @@ local.properties
 # Claude Code local runtime artifacts (locks, machine-local state)
 .claude/scheduled_tasks.lock
 
+# Python bytecode (scripts/scoring + exploraciones) — regenerable, no se versiona
+__pycache__/
+*.pyc
+
