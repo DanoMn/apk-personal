@@ -308,16 +308,22 @@ class MainActivity : ComponentActivity() {
                     palette = palette,
                     onBack = { currentScreen = AppScreen.Dashboard },
                 )
-                AppScreen.AnchorConfig -> AnchorConfigScreen(
-                    layers = dashboardState.layers,
-                    activityOptions = dashboardState.activityOptions,
-                    palette = palette,
-                    onAddAnchor = dashboardViewModel::addActivityAsAnchor,
-                    onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
-                    onCreateActivity = dashboardViewModel::createActivity,
-                    onDeleteActivity = dashboardViewModel::deleteActivity,
-                    onBack = { currentScreen = AppScreen.Dashboard },
-                )
+                AppScreen.AnchorConfig -> {
+                    val anchorRemovalBlockedMessage
+                        by dashboardViewModel.anchorRemovalBlockedMessage.collectAsStateWithLifecycle()
+                    AnchorConfigScreen(
+                        layers = dashboardState.layers,
+                        activityOptions = dashboardState.activityOptions,
+                        palette = palette,
+                        onAddAnchor = dashboardViewModel::addActivityAsAnchor,
+                        onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                        onCreateActivity = dashboardViewModel::createActivity,
+                        onDeleteActivity = dashboardViewModel::deleteActivity,
+                        onBack = { currentScreen = AppScreen.Dashboard },
+                        removalBlockedMessage = anchorRemovalBlockedMessage,
+                        onRemovalBlockedMessageShown = dashboardViewModel::clearAnchorRemovalBlockedMessage,
+                    )
+                }
                 AppScreen.Supports -> SupportsConfigScreen(
                     layers = dashboardState.layers,
                     supportItems = dashboardState.supportItems,

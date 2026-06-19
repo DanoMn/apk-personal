@@ -5,6 +5,7 @@ import dev.panopt.autonomia.AbstinenceTrack
 import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.AnchorPhrase
 import dev.panopt.autonomia.AutonomiaRepository
+import dev.panopt.autonomia.domain.activity.RemoveAnchorResult
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.RiskEvent
 import dev.panopt.autonomia.SleepConfig
@@ -80,7 +81,7 @@ internal interface DashboardRepository {
     suspend fun setDarkMode(enabled: Boolean)
     suspend fun setActivityCompleted(activity: ActivityDefinition, completed: Boolean, date: String)
     suspend fun setActivityValue(activity: ActivityDefinition, actualValue: Int, date: String)
-    suspend fun deleteCustomActivity(activityId: String)
+    suspend fun deleteCustomActivity(activityId: String): RemoveAnchorResult
     suspend fun markAbstinenceClean(trackId: String, date: String)
     suspend fun clearAbstinenceLog(trackId: String, date: String)
     suspend fun markAbstinenceRelapse(trackId: String, date: String)
@@ -107,7 +108,7 @@ internal interface DashboardRepository {
         weeklyFrequencyTarget: Int,
         commitmentDurationMonths: Int?,
     )
-    suspend fun removeActivityAsAnchor(activityId: String)
+    suspend fun removeActivityAsAnchor(activityId: String): RemoveAnchorResult
     suspend fun addSupport(activityId: String)
     suspend fun removeSupport(activityId: String)
 }

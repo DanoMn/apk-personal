@@ -28,6 +28,9 @@ import dev.panopt.autonomia.data.local.seed.DefaultSeeds
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.abstinence.AbstinenceRelapseMaterializationPolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.AnchorCoverageRule
+import dev.panopt.autonomia.domain.activity.AnchorRef
+import dev.panopt.autonomia.domain.activity.RemoveAnchorResult
 import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.data.SleepSegmentEntity
 import dev.panopt.autonomia.data.repository.TelemetryRepository
@@ -895,8 +898,30 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
-    suspend fun removeActivityAsAnchor(activityId: String) {
+    /**
+     * Quita un ancla (borra su config de usuario), pero solo si NO deja la app sin cobertura mínima:
+     * el candado [AnchorCoverageRule] exige ≥ [AnchorCoverageRule.minLayers] capas con ancla para que
+     * el motor pueda emitir estado. Si quitarla bajaría del mínimo, NO borra y devuelve
+     * [RemoveAnchorResult.BlockedByMinimum].
+     */
+    suspend fun removeActivityAsAnchor(activityId: String): RemoveAnchorResult {
+        if (!AnchorCoverageRule.canRemoveAnchor(activeAnchorRefs(), activityId)) {
+            return RemoveAnchorResult.BlockedByMinimum
+        }
         dao.deleteUserActivityConfig(activityId)
+        return RemoveAnchorResult.Removed
+    }
+
+    /** Anclas ACTIVAS con su capa, para evaluar la cobertura ([AnchorCoverageRule]). */
+    private suspend fun activeAnchorRefs(): List<AnchorRef> {
+        val layerByActivityId = dao.getActivityDefinitionsSnapshot().associate { it.id to it.layerId }
+        return dao.getActiveUserActivityConfigs()
+            .filter { it.activityType == ActivitySurface.Anchor.name }
+            .mapNotNull { config ->
+                layerByActivityId[config.activityId]?.let { layerId ->
+                    AnchorRef(anchorId = config.activityId, layerId = layerId)
+                }
+            }
     }
 
     // --- New repository methods for v4 entity split ---
@@ -958,24 +983,63 @@ class AutonomiaRepository(context: Context) {
         )
     }
 
-    suspend fun toggleActivityArchive(activityId: String, archived: Boolean) {
+    /**
+     * Archiva ([archived] = `true`) o reactiva ([archived] = `false`) la config de una actividad,
+     * pasando por el CANDADO de cobertura: archivar un ancla activa la saca de la cobertura, así
+     * que solo procede si [AnchorCoverageRule] lo permite. Reactivar o tocar una no-ancla no afecta
+     * la cobertura → procede siempre. Devuelve [RemoveAnchorResult] para que la UI muestre el
+     * bloqueo sin conocer el umbral.
+     */
+    suspend fun toggleActivityArchive(activityId: String, archived: Boolean): RemoveAnchorResult {
+        val activeAnchors = activeAnchorRefs()
+        // El candado solo puede bloquear cuando se ESTÁ archivando (saliendo de la cobertura).
+        val isActiveAnchor = archived && activeAnchors.any { it.anchorId == activityId }
+        val decision = AnchorCoverageRule.resolveAnchorOperation(
+            activeAnchors = activeAnchors,
+            activityId = activityId,
+            isActiveAnchor = isActiveAnchor,
+        )
+        if (decision is RemoveAnchorResult.BlockedByMinimum) return decision
+
         dao.toggleUserActivityConfigActive(
             activityId = activityId,
             active = !archived,
             archived = archived,
             updatedAt = System.currentTimeMillis(),
         )
+        return RemoveAnchorResult.Removed
     }
 
-    suspend fun deleteUserActivityConfig(activityId: String) {
+    private suspend fun deleteUserActivityConfig(activityId: String) {
         dao.deleteUserActivityConfig(activityId)
     }
 
-    suspend fun deleteCustomActivity(activityId: String) {
-        if (!isCustomActivityId(activityId)) return
+    /**
+     * Elimina una actividad custom (catálogo + config por FK CASCADE), pasando por el CANDADO de
+     * cobertura: si es un ancla activa cuya remoción dejaría menos de [AnchorCoverageRule.minLayers]
+     * capas con ancla, devuelve [RemoveAnchorResult.BlockedByMinimum] y NO borra nada.
+     *
+     * Los **hechos** ([DailyActivityLogEntity]) NUNCA se borran: aunque la actividad se elimine, su
+     * historial diario persiste (decisión firme del dueño — los hechos no se pierden). Por eso NO
+     * se llama a `deleteActivityLogsForActivity`.
+     *
+     * Una actividad NO custom (preset) retorna temprano como [RemoveAnchorResult.Removed]: no hay
+     * nada que borrar ni que bloquear (comportamiento actual preservado).
+     */
+    suspend fun deleteCustomActivity(activityId: String): RemoveAnchorResult {
+        if (!isCustomActivityId(activityId)) return RemoveAnchorResult.Removed
 
-        dao.deleteActivityLogsForActivity(activityId)
+        val activeAnchors = activeAnchorRefs()
+        val decision = AnchorCoverageRule.resolveAnchorOperation(
+            activeAnchors = activeAnchors,
+            activityId = activityId,
+            isActiveAnchor = activeAnchors.any { it.anchorId == activityId },
+        )
+        if (decision is RemoveAnchorResult.BlockedByMinimum) return decision
+
+        // Los hechos (daily_activity_logs) PERSISTEN: solo se borra la definición de catálogo.
         dao.deleteActivityDefinition(activityId)
+        return RemoveAnchorResult.Removed
     }
 
     suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity) {

@@ -26,7 +26,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -73,6 +75,8 @@ internal fun AnchorConfigScreen(
     onDeleteActivity: (activityId: String) -> Unit,
     onCreateActivity: (name: String, layerId: String, sessionTargetMinutes: Int, isSecondary: Boolean, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit,
     onBack: () -> Unit,
+    removalBlockedMessage: String? = null,
+    onRemovalBlockedMessageShown: () -> Unit = {},
 ) {
     BackHandler(onBack = onBack)
 
@@ -547,6 +551,20 @@ internal fun AnchorConfigScreen(
                     if (highlightedAnchorId == activity.id) highlightedAnchorId = null
                     activityPendingDeletion = null
                 },
+            )
+        }
+
+        // CANDADO de cobertura: si quitar el ancla dejaría a la app sin el mínimo de capas con
+        // ancla, el ViewModel emite un mensaje compasivo y NO se quita nada (la regla vive en el
+        // dominio; ver AnchorCoverageRule).
+        if (removalBlockedMessage != null) {
+            AlertDialog(
+                onDismissRequest = onRemovalBlockedMessageShown,
+                confirmButton = {
+                    TextButton(onClick = onRemovalBlockedMessageShown) { Text("Entendido") }
+                },
+                title = { Text("Mantené tu base en pie") },
+                text = { Text(removalBlockedMessage) },
             )
         }
     }

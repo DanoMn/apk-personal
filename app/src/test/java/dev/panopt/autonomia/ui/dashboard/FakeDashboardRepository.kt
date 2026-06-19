@@ -110,7 +110,10 @@ internal class FakeDashboardRepository(
     override suspend fun setDarkMode(enabled: Boolean) = Unit
     override suspend fun setActivityCompleted(activity: ActivityDefinition, completed: Boolean, date: String) = Unit
     override suspend fun setActivityValue(activity: ActivityDefinition, actualValue: Int, date: String) = Unit
-    override suspend fun deleteCustomActivity(activityId: String) = Unit
+    /** Resultado configurable que devuelve [deleteCustomActivity]; default: procede. */
+    var deleteCustomActivityResult: dev.panopt.autonomia.domain.activity.RemoveAnchorResult =
+        dev.panopt.autonomia.domain.activity.RemoveAnchorResult.Removed
+    override suspend fun deleteCustomActivity(activityId: String) = deleteCustomActivityResult
     override suspend fun setAbstinenceTrackActive(trackId: String, active: Boolean) = Unit
     override suspend fun createCustomAbstinenceTrack(name: String) = Unit
     override suspend fun deleteCustomAbstinenceTrack(trackId: String) = Unit
@@ -135,7 +138,8 @@ internal class FakeDashboardRepository(
         weeklyFrequencyTarget: Int,
         commitmentDurationMonths: Int?,
     ) = Unit
-    override suspend fun removeActivityAsAnchor(activityId: String) = Unit
+    override suspend fun removeActivityAsAnchor(activityId: String) =
+        dev.panopt.autonomia.domain.activity.RemoveAnchorResult.Removed
     override suspend fun addSupport(activityId: String) = Unit
     override suspend fun removeSupport(activityId: String) = Unit
 }

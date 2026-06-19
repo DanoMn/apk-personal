@@ -16,6 +16,8 @@ import dev.panopt.autonomia.app.AppGraph
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
 import dev.panopt.autonomia.data.UserActivityConfigEntity
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.AnchorCoverageRule
+import dev.panopt.autonomia.domain.activity.RemoveAnchorResult
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.requireAnchorUnit
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
@@ -28,6 +30,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -233,7 +236,11 @@ internal class DashboardViewModel(
 
     fun deleteActivity(activityId: String) {
         viewModelScope.launch {
-            repository.deleteCustomActivity(activityId)
+            when (repository.deleteCustomActivity(activityId)) {
+                RemoveAnchorResult.Removed -> { /* la lista se actualiza por el flow de configs */ }
+                RemoveAnchorResult.BlockedByMinimum ->
+                    _anchorRemovalBlockedMessage.value = anchorRemovalBlockedText()
+            }
         }
     }
 
@@ -425,9 +432,30 @@ internal class DashboardViewModel(
         }
     }
 
+    /**
+     * Mensaje compasivo cuando el CANDADO de cobertura ([AnchorCoverageRule]) impide quitar un ancla
+     * porque dejaría a la app sin el mínimo de capas con ancla. `null` = nada que mostrar. La UI lo
+     * muestra y luego llama [clearAnchorRemovalBlockedMessage].
+     */
+    private val _anchorRemovalBlockedMessage = MutableStateFlow<String?>(null)
+    val anchorRemovalBlockedMessage: StateFlow<String?> = _anchorRemovalBlockedMessage.asStateFlow()
+
+    fun clearAnchorRemovalBlockedMessage() {
+        _anchorRemovalBlockedMessage.value = null
+    }
+
+    /** Mensaje compasivo (tono AGENTS.md) compartido por todos los bloqueos del candado de cobertura. */
+    private fun anchorRemovalBlockedText(): String =
+        "Para acompañarte, la app necesita al menos ${AnchorCoverageRule.minLayers} " +
+            "capas con un ancla activa. Sumá un ancla en otra capa antes de quitar esta."
+
     fun removeActivityAsAnchor(activityId: String) {
         viewModelScope.launch {
-            repository.removeActivityAsAnchor(activityId)
+            when (repository.removeActivityAsAnchor(activityId)) {
+                RemoveAnchorResult.Removed -> { /* la lista se actualiza por el flow de configs */ }
+                RemoveAnchorResult.BlockedByMinimum ->
+                    _anchorRemovalBlockedMessage.value = anchorRemovalBlockedText()
+            }
         }
     }
 
