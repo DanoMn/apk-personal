@@ -6,6 +6,7 @@ import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceRelapseEventEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
+import dev.panopt.autonomia.data.ActivityTargetVersionEntity
 import dev.panopt.autonomia.data.AutonomiaDatabase
 import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.DailyClosureEntity
@@ -33,6 +34,7 @@ import dev.panopt.autonomia.domain.activity.AnchorRef
 import dev.panopt.autonomia.domain.activity.ConfigEditRule
 import dev.panopt.autonomia.domain.activity.RemoveAnchorResult
 import dev.panopt.autonomia.domain.activity.SupportConfigFactory
+import dev.panopt.autonomia.domain.activity.TargetVersionDecisionRule
 import dev.panopt.autonomia.domain.activity.defaultActualValue
 import dev.panopt.autonomia.data.SleepSegmentEntity
 import dev.panopt.autonomia.data.repository.TelemetryRepository
@@ -986,6 +988,73 @@ class AutonomiaRepository(context: Context) {
                 now = now,
             )
         )
+
+        // FASE 2 — versionado de la vara: al crear/editar metas de un ANCLA, registrar la versión
+        // vigente desde hoy para que el motor lea cada día con su meta (no reescribe el pasado).
+        recordAnchorTargetVersion(
+            activityId = activityId,
+            activityType = activityType,
+            previous = previous,
+            newMinutes = sessionTargetMinutes,
+            newDays = weeklyFrequencyTarget,
+            now = now,
+        )
+    }
+
+    /**
+     * Registra versiones de la vara de un ancla (FASE 2). Si es la primera edición y el ancla no
+     * tenía versiones, hace BACKFILL de la versión inicial con la vara PREVIA anclada a la fecha de
+     * creación (así los días anteriores a la edición conservan su meta vieja). Luego, si cambió la
+     * meta, registra la versión nueva con `validFrom = hoy`. No-op para soportes/tasks o metas
+     * incompletas. La lógica de decisión vive en reglas puras testeadas
+     * ([TargetVersionDecisionRule] / [dev.panopt.autonomia.domain.activity.ActiveTargetVersionRule]).
+     */
+    private suspend fun recordAnchorTargetVersion(
+        activityId: String,
+        activityType: ActivitySurface,
+        previous: UserActivityConfigEntity?,
+        newMinutes: Int?,
+        newDays: Int?,
+        now: Long,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) {
+        if (activityType != ActivitySurface.Anchor || newMinutes == null || newDays == null) return
+
+        // Backfill de la versión inicial (vara previa, anclada a createdAt) si nunca se versionó.
+        val existing = dao.getActivityTargetVersions(activityId)
+        if (existing.isEmpty() &&
+            previous?.sessionTargetMinutes != null &&
+            previous.weeklyFrequencyTarget != null
+        ) {
+            val createdDate = Instant.ofEpochMilli(previous.createdAt).atZone(zoneId).toLocalDate()
+            dao.upsertActivityTargetVersion(
+                ActivityTargetVersionEntity(
+                    activityId = activityId,
+                    validFrom = createdDate.toString(),
+                    targetMinutes = previous.sessionTargetMinutes,
+                    targetDays = previous.weeklyFrequencyTarget,
+                    createdAt = previous.createdAt,
+                ),
+            )
+        }
+
+        val shouldRecord = TargetVersionDecisionRule.shouldRecordVersion(
+            previousMinutes = previous?.sessionTargetMinutes,
+            previousDays = previous?.weeklyFrequencyTarget,
+            newMinutes = newMinutes,
+            newDays = newDays,
+        )
+        if (shouldRecord) {
+            dao.upsertActivityTargetVersion(
+                ActivityTargetVersionEntity(
+                    activityId = activityId,
+                    validFrom = LocalDate.now(zoneId).toString(),
+                    targetMinutes = newMinutes,
+                    targetDays = newDays,
+                    createdAt = now,
+                ),
+            )
+        }
     }
 
     /**

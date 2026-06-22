@@ -234,6 +234,27 @@ data class UserActivityConfigEntity(
     val updatedAt: Long,
 )
 
+/**
+ * Versiones de la "vara" (metas) de un ancla por fecha. SIN ForeignKey a propósito (como
+ * `daily_activity_logs`): debe SOBREVIVIR al borrado/archivado del ancla para poder evaluar logs
+ * que reviven al re-agregar. El motor lee, por cada día de la ventana, la versión vigente, para no
+ * reescribir el pasado al editar metas. PK compuesta `(activityId, validFrom, createdAt)` admite
+ * varias versiones el mismo día (la última, por `createdAt`, gana). Ver
+ * `docs/scoring/cambios-config-en-el-tiempo-v1.md`.
+ */
+@Entity(
+    tableName = "activity_target_versions",
+    primaryKeys = ["activityId", "validFrom", "createdAt"],
+    indices = [Index("activityId"), Index("validFrom")],
+)
+data class ActivityTargetVersionEntity(
+    val activityId: String,
+    val validFrom: String, // ISO yyyy-MM-dd
+    val targetMinutes: Int,
+    val targetDays: Int,
+    val createdAt: Long,
+)
+
 @Entity(tableName = "sleep_config")
 data class SleepConfigEntity(
     @PrimaryKey val id: String,

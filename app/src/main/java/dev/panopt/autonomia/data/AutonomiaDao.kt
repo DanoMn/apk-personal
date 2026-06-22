@@ -277,6 +277,19 @@ interface AutonomiaDao {
     @Query("DELETE FROM user_activity_configs")
     suspend fun clearAllUserActivityConfigs()
 
+    // --- Activity target versions (versionado de la vara por fecha) ---
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertActivityTargetVersion(version: ActivityTargetVersionEntity)
+
+    /** Todas las versiones de un ancla, ordenadas. La "versión vigente por fecha" se resuelve en
+     *  dominio ([dev.panopt.autonomia.domain.activity.ActiveTargetVersionRule]). */
+    @Query("SELECT * FROM activity_target_versions WHERE activityId = :activityId ORDER BY validFrom ASC, createdAt ASC")
+    suspend fun getActivityTargetVersions(activityId: String): List<ActivityTargetVersionEntity>
+
+    @Query("SELECT * FROM activity_target_versions")
+    suspend fun getActivityTargetVersionsSnapshot(): List<ActivityTargetVersionEntity>
+
     @Query("DELETE FROM activity_definitions")
     suspend fun clearAllActivityDefinitions()
 

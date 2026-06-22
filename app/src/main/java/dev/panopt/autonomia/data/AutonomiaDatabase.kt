@@ -31,8 +31,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WeeklyScoreSnapshotEntity::class,
         DeviceActivityEventEntity::class,
         TelemetryCollectionLeaseEntity::class,
+        ActivityTargetVersionEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
