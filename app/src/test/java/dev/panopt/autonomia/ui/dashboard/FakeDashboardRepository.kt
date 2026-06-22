@@ -115,6 +115,8 @@ internal class FakeDashboardRepository(
     var deleteCustomActivityResult: dev.panopt.autonomia.domain.activity.RemoveAnchorResult =
         dev.panopt.autonomia.domain.activity.RemoveAnchorResult.Removed
     override suspend fun deleteCustomActivity(activityId: String) = deleteCustomActivityResult
+    override fun trashedActivitiesFlow(): Flow<List<ActivityDefinition>> = flowOf(emptyList())
+    override suspend fun restoreActivity(activityId: String) = Unit
     override suspend fun setAbstinenceTrackActive(trackId: String, active: Boolean) = Unit
     override suspend fun createCustomAbstinenceTrack(name: String) = Unit
     override suspend fun deleteCustomAbstinenceTrack(trackId: String) = Unit

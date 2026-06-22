@@ -249,6 +249,16 @@ internal class DashboardViewModel(
         }
     }
 
+    /** BAÚL: actividades custom eliminadas (recuperables). Vacío = baúl vacío. */
+    val trashedActivities: StateFlow<List<ActivityDefinition>> =
+        repository.trashedActivitiesFlow()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** BAÚL: restaura una actividad eliminada → vuelve al catálogo. */
+    fun restoreActivity(activityId: String) {
+        viewModelScope.launch { repository.restoreActivity(activityId) }
+    }
+
     fun toggleAbstinenceClean(trackId: String, isMarkedCleanToday: Boolean) {
         viewModelScope.launch {
             if (isMarkedCleanToday) {

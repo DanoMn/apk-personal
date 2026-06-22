@@ -83,6 +83,8 @@ internal interface DashboardRepository {
     suspend fun setActivityCompleted(activity: ActivityDefinition, completed: Boolean, date: String)
     suspend fun setActivityValue(activity: ActivityDefinition, actualValue: Int, date: String)
     suspend fun deleteCustomActivity(activityId: String): RemoveAnchorResult
+    fun trashedActivitiesFlow(): Flow<List<ActivityDefinition>>
+    suspend fun restoreActivity(activityId: String)
     suspend fun markAbstinenceClean(trackId: String, date: String)
     suspend fun clearAbstinenceLog(trackId: String, date: String)
     suspend fun markAbstinenceRelapse(trackId: String, date: String)
@@ -167,6 +169,8 @@ internal class AutonomiaDashboardRepository(
     override suspend fun setActivityValue(activity: ActivityDefinition, actualValue: Int, date: String) =
         delegate.setActivityValue(activity, actualValue, date)
     override suspend fun deleteCustomActivity(activityId: String) = delegate.deleteCustomActivity(activityId)
+    override fun trashedActivitiesFlow() = delegate.trashedActivitiesFlow()
+    override suspend fun restoreActivity(activityId: String) = delegate.restoreActivity(activityId)
     override suspend fun markAbstinenceClean(trackId: String, date: String) =
         delegate.markAbstinenceClean(trackId, date)
     override suspend fun clearAbstinenceLog(trackId: String, date: String) =
