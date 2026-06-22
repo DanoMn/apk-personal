@@ -90,7 +90,7 @@ Capability: `anchor-scoring`. Archivo único de producción: `AnchorScoringPolic
 Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` ya acepta
 `windowDays`). Archivos nuevos en `domain/scoring/` + 2 cambios aditivos en use cases existentes.
 
-- [ ] **2.1 (GREEN-aditivo) `BuildScoreInputUseCase` gana `includeGraceAnchors=false`**
+- [x] **2.1 (GREEN-aditivo) `BuildScoreInputUseCase` gana `includeGraceAnchors=false`**
   → Req: "Proyección corre el motor con windowDays=d y sin filtrar gracia" · ADR-3.
   - Archivo: `BuildScoreInputUseCase.kt` L7 (firma), L16-19 (guard del `filterNot`).
   - L7: `operator fun invoke(source: ScoreInputSource, includeGraceAnchors: Boolean = false)`.
@@ -99,7 +99,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
   - (Sin test propio nuevo: el comportamiento `false` lo verifica la regresión existente;
     el `true` se ejercita en 2.3.)
 
-- [ ] **2.2 (GREEN-refactor neutro) Seam `ScoreEngine.calculateProjection(input, windowDays)`**
+- [x] **2.2 (GREEN-refactor neutro) Seam `ScoreEngine.calculateProjection(input, windowDays)`**
   → Req: "Proyección corre el motor con windowDays=d" · ADR-4.
   - Archivo: `ScoreEngine.kt` L36-78.
   - Extraer `private fun calculateInternal(input, windowDays: Int): ScoreReport` con el pipeline actual;
@@ -109,7 +109,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
   - `internal fun calculateProjection(input, windowDays) = calculateInternal(input, windowDays)`.
   - Refactor neutro: la suite existente de `ScoreEngineTest` debe quedar verde sin tocarse (regresión).
 
-- [ ] **2.3 (TEST-RED→GREEN) `StartupDetectionRule.isStartup(...)`**
+- [x] **2.3 (TEST-RED→GREEN) `StartupDetectionRule.isStartup(...)`**
   → Req: "Detección de arranque por historial sin score real + gate de cobertura".
   - Test: `app/src/test/java/dev/panopt/autonomia/domain/scoring/StartupDetectionRuleTest.kt` (nuevo).
     Los 4 scenarios de la spec:
@@ -122,7 +122,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
     (`report, activities, layers, weeklyHistory, today`). Cuenta capas con ≥1 ancla activa
     no-archivada SIN filtrar gracia; exige `≥ ScoringConstants.MIN_ACTIVE_LAYERS_WITH_ANCHOR`.
 
-- [ ] **2.4 (TEST-RED→GREEN) `StartupProjectionUseCase(source, windowDays)`**
+- [x] **2.4 (TEST-RED→GREEN) `StartupProjectionUseCase(source, windowDays)`**
   → Req: "Proyección corre el motor con windowDays=d y sin filtrar gracia" + invariante "no muta el maduro".
   - Test: `StartupProjectionUseCaseTest.kt` (nuevo).
     - 3 anclas en gracia, d=4: la proyección llama `BuildScoreInputUseCase(..., includeGraceAnchors=true)`
@@ -133,7 +133,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
   - Prod: `domain/scoring/StartupProjectionUseCase.kt` (object; orquesta pero JVM puro, sin Room/IO).
     Devuelve `StartupProjection(estado: Double, windowDays: Int)?` (data class en el mismo archivo).
 
-- [ ] **2.5 (TEST-RED→GREEN) `StartupCounterPolicy.counter(projectedEstado, daysLived)`**
+- [x] **2.5 (TEST-RED→GREEN) `StartupCounterPolicy.counter(projectedEstado, daysLived)`**
   → Req: "Contador = scoreProyectado × d/7 con clamp de d".
   - Test: `StartupCounterPolicyTest.kt` (nuevo). Atenuación `× d/7` (verifica sobre el ESTADO,
     luego mapeado por `PointsMappingPolicy.points`):
@@ -146,7 +146,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
     (`counterPoints`, `daysLived`, `daysRemaining`, `windowProgress`). Usa `AnchorGraceRule.GRACE_DAYS`
     como divisor (= 7, fuente única) y `PointsMappingPolicy.points`.
 
-- [ ] **2.6 (TEST obligatorio) No-salto día 7→8 (convergencia)**
+- [x] **2.6 (TEST obligatorio) No-salto día 7→8 (convergencia)**
   → Req: "No-salto día 7→8 (convergencia con el score maduro)".
   - Test: en `StartupProjectionUseCaseTest.kt` (o `StartupConvergenceTest.kt`).
   - Con un set FIJO de hechos de anclas para 7 días:
@@ -159,7 +159,7 @@ Capability: `startup-counter` (dominio). **Depende del Lote 1** (`rFromRatios` y
     el assert como `|counter7 - maduro8| ≤ deltaUnDíaDeHechos` y, en el caso de hechos idénticos
     en el día rodado, `== 0`.
 
-- [ ] **2.7 (TEST) Invariante de persistencia (no escribe snapshot)**
+- [x] **2.7 (TEST) Invariante de persistencia (no escribe snapshot)**
   → Req: "Persistencia NO se toca" · ADR-7.
   - Verificar (test de dominio, sin Room): en arranque el `ScoreReport` real producido por
     `ScoreEngine.calculate` es `NoData` → `visibleScore=0` (lo que el writer persistiría hoy).

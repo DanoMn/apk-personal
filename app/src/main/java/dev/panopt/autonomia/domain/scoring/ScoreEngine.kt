@@ -3,6 +3,7 @@ package dev.panopt.autonomia.domain.scoring
 import dev.panopt.autonomia.ActivitySurface
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
+import dev.panopt.autonomia.domain.activity.AnchorGraceRule
 
 /**
  * Orquestador del motor de scoring de núcleo v1 (PR-F). Conecta el adapter de hechos con los
@@ -33,7 +34,23 @@ object ScoreEngine {
     /** Capa que recibe el opt-in de sobriedad (NIVEL 4): la sobriedad arrastra a Conducta. */
     private const val SOBRIETY_OPT_IN_LAYER = ScoringConstants.CONDUCT_LAYER_ID
 
-    fun calculate(input: ScoreInput): ScoreReport {
+    /**
+     * Camino MADURO (firma pública intacta): corre el pipeline con la ventana semanal completa
+     * (`windowDays = 7`). Byte-idéntico al comportamiento previo a `scoring-arranque-cuenta`.
+     */
+    fun calculate(input: ScoreInput): ScoreReport =
+        calculateInternal(input, windowDays = AnchorGraceRule.GRACE_DAYS.toInt())
+
+    /**
+     * Punto de entrada de la PROYECCIÓN de arranque ([StartupProjectionUseCase]): mismo pipeline
+     * que [calculate] pero con una ventana parcial de `windowDays` días vividos. NO persiste nada
+     * ni altera el `ScoreReport` real (que el camino maduro sigue produciendo `NoData`). La única
+     * diferencia interna es propagar `windowDays` al resolver cada ancla (NIVEL 1).
+     */
+    internal fun calculateProjection(input: ScoreInput, windowDays: Int): ScoreReport =
+        calculateInternal(input, windowDays)
+
+    private fun calculateInternal(input: ScoreInput, windowDays: Int): ScoreReport {
         val activeLayers = input.layers.filter { it.active }.sortedBy { it.sortOrder }
         // Gate de configuración mínima (árbol §7.4): ≥3 capas activas con ≥1 ancla, y al menos un
         // hecho. Sin datos suficientes → NoData (lo decide el orquestador, no la banda pura).
@@ -75,7 +92,7 @@ object ScoreEngine {
                     )
                     val ratios = window.dayRatios
                     if (ratios != null) {
-                        AnchorScoringPolicy.rFromRatios(window.f, ratios)
+                        AnchorScoringPolicy.rFromRatios(window.f, ratios, windowDays)
                     } else {
                         AnchorScoringPolicy.r(window.f, window.t, window.mins)
                     }
