@@ -902,6 +902,14 @@ class AutonomiaRepository(context: Context) {
             sessionTargetMinutes = normalizedSessionTarget,
             commitmentDurationMonths = commitmentDurationMonths,
         )
+        // Re-agregar como ancla la REACTIVA: un "Quitar" previo la dejó archivada y
+        // [ConfigEditRule] preserva `archived`, así que hay que reactivarla explícitamente.
+        dao.toggleUserActivityConfigActive(
+            activityId = activityId,
+            active = true,
+            archived = false,
+            updatedAt = System.currentTimeMillis(),
+        )
     }
 
     /**
@@ -914,7 +922,15 @@ class AutonomiaRepository(context: Context) {
         if (!AnchorCoverageRule.canRemoveAnchor(activeAnchorRefs(), activityId)) {
             return RemoveAnchorResult.BlockedByMinimum
         }
-        dao.deleteUserActivityConfig(activityId)
+        // ARCHIVAR, no borrar: preserva la config + `createdAt` (reloj de gracia) y los hechos.
+        // Así re-agregar la misma ancla NO resetea `createdAt` → no hay "quitar + re-agregar para
+        // perdonar una mala semana" (anti-trampa). Recuperable. Ver cambios-config-en-el-tiempo-v1.md §6.
+        dao.toggleUserActivityConfigActive(
+            activityId = activityId,
+            active = false,
+            archived = true,
+            updatedAt = System.currentTimeMillis(),
+        )
         return RemoveAnchorResult.Removed
     }
 

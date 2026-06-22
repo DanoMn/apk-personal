@@ -222,6 +222,29 @@ el reset del lunes (#858).
 - NO se tocó: estabilidad multi-semana (sigue inerte), sueño-semanal-en-vivo (deuda preexistente,
   `DashboardProjection` pasa solo la noche de hoy), renombres `week*`→`window*` (cosmético).
 
-### FASE 2 — Versionado de la vara + no-borrar ⏳ PENDIENTE
+### FASE 2 — Versionado de la vara + no-borrar ✅ IMPLEMENTADA (2 pendientes acotados)
 
-Lo descrito en §2–§6. Va encima de la Fase 1.
+Hecho:
+- Tabla `activity_target_versions` (sin FK → sobrevive al borrado) + DAO + reglas puras
+  (`ActiveTargetVersionRule` = versión vigente por fecha; `TargetVersionDecisionRule`).
+- `configureActivity` registra versiones al crear/editar metas de un ancla, con backfill lazy
+  de la versión inicial anclada a `createdAt`.
+- El motor evalúa cada día con su meta: `anchorWindow` lee la versión vigente por fecha
+  (minutos por día) y la frecuencia del día más viejo; `AnchorScoringPolicy.rFromRatios`
+  (núcleo extraído, `r` delega). `ScoreInput.targetVersions` (default vacío = legacy).
+- Cableado en AMBOS caminos: snapshot (`WeeklyScoreSnapshotWriter`) y live
+  (`DashboardViewModel` → `DashboardEngine` → `DashboardProjection`). Editar una meta ya no
+  reescribe el pasado en ningún lado.
+- No-borrar: `removeActivityAsAnchor` ARCHIVA (`active=false`, no borra) → `createdAt` estable
+  → cierra la trampa "quitar + re-agregar"; `addActivityAsAnchor` reactiva al re-agregar.
+- Tests: `ActiveTargetVersionRuleTest`, `TargetVersionDecisionRuleTest`,
+  `editingMinutesTargetMidWeekDoesNotRewritePastWithVersions`. Suite completa verde + APK arma.
+
+Pendiente (acotado):
+- **GRACIA de 7 días** (§3.3, excluir del puntaje las anclas con `today − createdAt < 7`): NO
+  implementada. Su interacción con el mínimo de 3 capas rompe el caso del usuario nuevo (3 anclas
+  recién creadas, todas en gracia → NoData), que es el arranque (#858 amortiguación inicial),
+  fuera de este scope por decisión del dueño. Requiere resolver el arranque primero.
+- **BAÚL para `deleteCustomActivity`** (Eliminar custom): hoy borra la definición del catálogo;
+  "nada se borra" pide un flag de baúl en `ActivityDefinitionEntity` + filtrar el catálogo
+  (feature de UI). La trampa del SCORING ya está cerrada por `removeActivityAsAnchor` (Quitar).
