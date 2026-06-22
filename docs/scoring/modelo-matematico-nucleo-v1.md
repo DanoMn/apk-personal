@@ -112,6 +112,12 @@ castigar los días que todavía no llegaron. Reglas:
 byte-idéntico al modelo maduro. El motor maduro nunca pasa `N ≠ 7`; el `windowDays` real lo
 inyecta la proyección de arranque (`startup-counter`), no este nivel.
 
+**Ambos ramos de `R` respetan `windowDays`.** Hay dos formas de resolver un ancla: con versiones de
+meta por día (`dayRatios`, FASE 2) o el ramo legacy `(F, T, mins)` (cuenta sin versiones, lo típico
+de una cuenta nueva). **Los dos** propagan `windowDays` a `rFromRatios`: una cuenta nueva sin
+versiones también puntúa con justicia su ventana parcial (no se castiga por días no vividos). Con
+`N = 7` ambos ramos quedan byte-idénticos al maduro.
+
 ### 1.4 Casos de referencia (verificados)
 `F=3,T=30,[30,30,30]`→**1.000** · `D=0`→**0** · `4×60 (meta 4×30)`→**1.289** (tiempo) ·
 `6×30 (meta 4×30)`→**1.266** (días) · `2/4 días×60`→**0.544** (gate: sin frecuencia, el exceso no cuenta) ·
@@ -238,6 +244,20 @@ PUNTOS(e) = 650 + (raw(e) − raw(0)) · (1100 − 650) / (raw(1.5) − raw(0)) 
 - Piso 650 (digno), tope 1100 (respira sobre 1000). Hitos: 0→650 · 0.40→721 · 0.62→788 · 0.85→873 ·
   **1.0→941** (cumplir-justo) · **1.10→1011** (el 1000 se gana al entrar a Inquebrantable) · 1.5→1100.
 - Continuo y monótono; el número se mueve de a 1 punto.
+
+### 7.1 Contador de arranque (atenuación sobre PUNTOS, no sobre estado)
+Durante el arranque de cuenta (`startup-counter`, primeros 7 días en gracia) el dashboard muestra un
+**contador** que sube `0 → score real`, no el blackout NoData. Ese contador atenúa los **PUNTOS
+VISIBLES**, no el ESTADO: `contador = round(PUNTOS(estado_proyectado) × d/7)`, con `d ∈ [1, 7]`. La
+atenuación se aplica DESPUÉS del mapeo `ESTADO → PUNTOS`, no antes.
+
+**Por qué sobre puntos:** `PUNTOS(·)` tiene piso 650 (`ESTADO 0 → 650`). Atenuar el estado antes de
+mapear (`PUNTOS(estado × d/7)`) dejaría el contador SIEMPRE `≥ 650` — nunca recorrería la zona muerta
+`0–650`. Atenuar los puntos ya mapeados deja el contador arrancar cerca de 0 y subir hacia el real
+(ej. score 900 → día 1 ≈ 129, día 4 ≈ 514, día 7 = 900). La **convergencia día 7→8 se mantiene
+exacta**: en `d = 7`, `× 7/7 = 1` → `contador = PUNTOS(estado_proyectado)`, que con los mismos 7 días
+de hechos == los puntos maduros del día 8 (sin salto). El `estado_proyectado` lo produce el motor con
+`windowDays = d` (§1.3.1) y sin filtrar las anclas en gracia.
 
 ---
 

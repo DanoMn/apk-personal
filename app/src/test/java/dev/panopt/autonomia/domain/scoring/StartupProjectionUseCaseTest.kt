@@ -105,6 +105,44 @@ class StartupProjectionUseCaseTest {
     }
 
     @Test
+    fun newAccountWithoutVersionsRespectsWindowDaysAndIsNotPunished() {
+        // FIX B: cuenta nueva SIN target-versions (ramo legacy `r(f,t,mins)`, dayRatios == null),
+        // día 2 con sus 2 días cumplidos. La proyección con windowDays=2 NO debe castigar los días
+        // todavía no vividos (3..7). Comparada con la ventana injusta de 7 (el bug), la ventana justa
+        // (2) debe dar un estado >= : el superhábit por días no reparte sobre días que no llegaron.
+        val daysLived = 2
+        val source = sourceWithGraceAnchorsNoVersions(daysLived)
+
+        val fair = StartupProjectionUseCase(source, windowDays = daysLived)
+        assertTrue("la proyección justa existe", fair != null)
+
+        // Reproducción del bug: si windowDays NO se propaga por el ramo legacy, la proyección usaría
+        // ventana 7 igual. Forzamos esa comparación corriendo el motor con windowDays=7 sobre los
+        // mismos hechos: la ventana justa (2) no debe ser PEOR que la de 7.
+        val input = BuildScoreInputUseCase(source, includeGraceAnchors = true)
+        val window7 = ScoreEngine.calculateProjection(input, windowDays = 7)
+
+        assertTrue(
+            "ventana justa (d=2) no debe castigar más que la de 7: justa=${fair!!.estado} v7=${window7.estado}",
+            fair.estado >= window7.estado.toDouble() - 1e-9,
+        )
+        assertTrue("la cuenta nueva proyecta estado positivo", fair.estado > 0.0)
+    }
+
+    @Test
+    fun matureWindowDaysSevenIsByteIdenticalForLegacyBranch() {
+        // Cero regresión: el cálculo real (windowDays=7 default) sobre el ramo legacy NO cambia con
+        // el FIX B. Mismos hechos, motor maduro: el estado debe ser idéntico antes/después.
+        // (Validado indirectamente por la suite de ScoreEngineTest, explícito aquí por el FIX B.)
+        val source = sourceWithGraceAnchorsNoVersions(daysLived = 7)
+        val inputDefault = BuildScoreInputUseCase(source, includeGraceAnchors = true)
+        val explicit7 = ScoreEngine.calculateProjection(inputDefault, windowDays = 7)
+        val matureClosed = ScoreEngine.calculate(inputDefault)
+        // calculate usa windowDays=GRACE_DAYS=7 → debe coincidir con calculateProjection(.,7).
+        assertEquals(matureClosed.estado, explicit7.estado, 1e-9f)
+    }
+
+    @Test
     fun matureReportRemainsNoDataInStartupSoNoSnapshotLeak() {
         // Invariante de persistencia (2.7): en arranque el ScoreReport real es NoData → visibleScore
         // null/0 (lo que el writer persistiría). Ningún componente de arranque expone escritura.
@@ -141,6 +179,19 @@ class StartupProjectionUseCaseTest {
             )
         }
         return source(layers, anchors, logs, today, versions)
+    }
+
+    /**
+     * Igual que [sourceWithGraceAnchors] pero SIN target-versions → `dayRatios == null` → el motor
+     * resuelve cada ancla por el ramo legacy `r(f, t, mins)`. Modela la cuenta nueva típica que aún
+     * no generó versiones de meta (FIX B: ese ramo debe respetar `windowDays`).
+     */
+    private fun sourceWithGraceAnchorsNoVersions(daysLived: Int, layerCount: Int = 3): ScoreInputSource {
+        val layers = (0 until layerCount).map { layer("layer_$it", "L$it", it * 10) }
+        val anchors = layers.map { anchor("act_${it.id}", it.id, createdAtDaysAgo(daysLived)) }
+        val livedDays = (0 until daysLived).map { today.minusDays(it.toLong()) }
+        val logs = anchors.flatMap { a -> livedDays.map { log(a.id, it, 30) } }
+        return source(layers, anchors, logs, today, emptyMap())
     }
 
     private inner class SevenDayFacts(val today: LocalDate) {

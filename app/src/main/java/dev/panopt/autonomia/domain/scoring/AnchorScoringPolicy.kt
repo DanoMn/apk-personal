@@ -23,10 +23,13 @@ internal object AnchorScoringPolicy {
      * @param f frecuencia meta (días/semana, 2–7).
      * @param t tiempo meta por sesión (minutos).
      * @param mins minutos hechos por día en la ventana semanal (solo cuentan los `> 0`).
+     * @param windowDays horizonte de la ventana en días vividos; default `7` = semana madura. Se
+     *   propaga a [rFromRatios] para que el ramo legacy (sin target-versions) respete la ventana
+     *   parcial de una cuenta nueva (FIX B `scoring-arranque-cuenta`). Con `7` = byte-idéntico.
      * @return `R ∈ [0, 1.5]`.
      */
-    fun r(f: Int, t: Int, mins: List<Int>): Double =
-        rFromRatios(f, mins.filter { it > 0 }.map { it.toDouble() / t.toDouble() })
+    fun r(f: Int, t: Int, mins: List<Int>, windowDays: Int = 7): Double =
+        rFromRatios(f, mins.filter { it > 0 }.map { it.toDouble() / t.toDouble() }, windowDays)
 
     /**
      * Variante que recibe los RATIOS por día ya calculados (`m_i / T_i`), para que cada día pueda

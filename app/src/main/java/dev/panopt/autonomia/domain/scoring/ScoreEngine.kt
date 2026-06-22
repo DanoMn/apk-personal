@@ -94,7 +94,9 @@ object ScoreEngine {
                     if (ratios != null) {
                         AnchorScoringPolicy.rFromRatios(window.f, ratios, windowDays)
                     } else {
-                        AnchorScoringPolicy.r(window.f, window.t, window.mins)
+                        // FIX B: el ramo legacy (cuenta nueva SIN target-versions) también respeta la
+                        // ventana parcial → no castiga días no vividos. windowDays=7 default = idéntico.
+                        AnchorScoringPolicy.r(window.f, window.t, window.mins, windowDays)
                     }
                 }
             val supportDays = layerActivities
