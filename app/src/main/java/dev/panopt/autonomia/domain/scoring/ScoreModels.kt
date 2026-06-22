@@ -7,6 +7,7 @@ import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.ScoreState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import java.time.LocalDate
 
@@ -29,6 +30,12 @@ data class ScoreInput(
     val sleepNights: List<SleepNightScore> = emptyList(),
     val today: LocalDate = LocalDate.now(),
     val weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
+    /**
+     * FASE 2 — versiones de la vara por ancla (`activityId → versiones`). Vacío = sin versionado
+     * (camino legacy: el motor usa la config actual para todos los días). Cuando un ancla tiene
+     * versiones, el motor evalúa cada día con la meta que regía ese día (no reescribe el pasado).
+     */
+    val targetVersions: Map<String, List<ActivityTargetVersion>> = emptyMap(),
 )
 
 data class ScoreReport(
@@ -122,7 +129,17 @@ enum class ScoreGateKind {
  * multi-unidad. La lista contiene solo los días CON actividad (`> 0`) de la ventana; su longitud =
  * nº de días con actividad (no fija en 7). `f`/`t` salen de la config de la actividad.
  */
-data class AnchorWindow(val f: Int, val t: Int, val mins: List<Int>)
+data class AnchorWindow(
+    val f: Int,
+    val t: Int,
+    val mins: List<Int>,
+    /**
+     * FASE 2: ratios `m_i / T_i` por día, calculados con la meta de minutos VIGENTE cada día
+     * (vara versionada por fecha). `null` = camino legacy (sin versiones): el motor usa `(f, t, mins)`
+     * vía [AnchorScoringPolicy.r]; si no es `null`, usa [AnchorScoringPolicy.rFromRatios].
+     */
+    val dayRatios: List<Double>? = null,
+)
 
 /**
  * Forma cruda de UNA capa en la ventana semanal (salida de [ScoringFactsAdapter]). Es el insumo

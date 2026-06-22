@@ -9,7 +9,9 @@ import dev.panopt.autonomia.ContributionRole
 import dev.panopt.autonomia.DailyActivityStatus
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
+import dev.panopt.autonomia.domain.activity.ActiveTargetVersionRule
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import java.time.Instant
 import java.time.LocalDate
@@ -51,7 +53,12 @@ internal object ScoringFactsAdapter {
      *
      * Solo los días con minuto `> 0` entran a `mins` (el modelo Best-F filtra `m > 0`).
      */
-    fun anchorWindow(def: ActivityDefinition, logs: List<ActivityLog>): AnchorWindow {
+    fun anchorWindow(
+        def: ActivityDefinition,
+        logs: List<ActivityLog>,
+        versions: List<ActivityTargetVersion> = emptyList(),
+        windowStart: LocalDate? = null,
+    ): AnchorWindow {
         val minsByDate = LinkedHashMap<String, Int>()
         for (log in logs) {
             if (log.status == DailyActivityStatus.Omitted) continue
@@ -60,11 +67,28 @@ internal object ScoringFactsAdapter {
             // Dedup defensivo por fecha: el primer día con actividad gana (el builder ya dedup).
             minsByDate.putIfAbsent(log.date, minutes)
         }
-        return AnchorWindow(
-            f = def.targetDays(),
-            t = def.targetDailyValue(),
-            mins = minsByDate.values.toList(),
-        )
+        val mins = minsByDate.values.toList()
+
+        // Camino legacy (sin versiones): config actual para todos los días — comportamiento previo.
+        if (versions.isEmpty()) {
+            return AnchorWindow(f = def.targetDays(), t = def.targetDailyValue(), mins = mins)
+        }
+
+        // FASE 2: cada día con la meta de MINUTOS que regía ESE día; la FRECUENCIA es la vigente en
+        // el día más viejo de la ventana ("entra a los 7 días"). Fallback a la config actual para
+        // fechas sin versión (anteriores a la primera). Ver cambios-config-en-el-tiempo-v1.md.
+        val dayRatios = minsByDate.entries.map { (dateStr, m) ->
+            val date = runCatching { LocalDate.parse(dateStr) }.getOrNull()
+            val targetMin = date?.let { ActiveTargetVersionRule.resolve(versions, it)?.targetMinutes }
+                ?: def.targetDailyValue()
+            m.toDouble() / targetMin.toDouble()
+        }
+        val oldest = windowStart
+            ?: minsByDate.keys.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.minOrNull()
+        val f = oldest?.let { ActiveTargetVersionRule.resolve(versions, it)?.targetDays }
+            ?: def.targetDays()
+
+        return AnchorWindow(f = f, t = def.targetDailyValue(), mins = mins, dayRatios = dayRatios)
     }
 
     /**

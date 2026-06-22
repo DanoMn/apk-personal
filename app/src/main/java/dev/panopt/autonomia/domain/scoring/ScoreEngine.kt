@@ -70,8 +70,15 @@ object ScoreEngine {
                     val window = ScoringFactsAdapter.anchorWindow(
                         def,
                         context.weeklyLogsByActivity[def.id].orEmpty(),
+                        input.targetVersions[def.id].orEmpty(),
+                        context.weekStart,
                     )
-                    AnchorScoringPolicy.r(window.f, window.t, window.mins)
+                    val ratios = window.dayRatios
+                    if (ratios != null) {
+                        AnchorScoringPolicy.rFromRatios(window.f, ratios)
+                    } else {
+                        AnchorScoringPolicy.r(window.f, window.t, window.mins)
+                    }
                 }
             val supportDays = layerActivities
                 .filter { it.activityType == ActivitySurface.Support }

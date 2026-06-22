@@ -25,7 +25,18 @@ internal object AnchorScoringPolicy {
      * @param mins minutos hechos por día en la ventana semanal (solo cuentan los `> 0`).
      * @return `R ∈ [0, 1.5]`.
      */
-    fun r(f: Int, t: Int, mins: List<Int>): Double {
+    fun r(f: Int, t: Int, mins: List<Int>): Double =
+        rFromRatios(f, mins.filter { it > 0 }.map { it.toDouble() / t.toDouble() })
+
+    /**
+     * Variante que recibe los RATIOS por día ya calculados (`m_i / T_i`), para que cada día pueda
+     * usar su propia meta de tiempo (vara versionada por fecha, FASE 2). Núcleo IDÉNTICO a [r]:
+     * solo cambia la fuente de los ratios. Solo cuentan los ratios `> 0`.
+     *
+     * @param f frecuencia meta (días/semana, 2–7).
+     * @param dayRatios razón `m_i / T_i` de cada día con actividad en la ventana.
+     */
+    fun rFromRatios(f: Int, dayRatios: List<Double>): Double {
         val gamma = ScoringConstants.G_
         val lamV = ScoringConstants.LV
         val kappa = ScoringConstants.KP
@@ -33,16 +44,15 @@ internal object AnchorScoringPolicy {
         val smax = ScoringConstants.SMAX
         val s0 = ScoringConstants.S0
 
-        // mk = días con actividad (>0) ordenados descendente; D = cantidad.
-        val mk = mins.filter { it > 0 }.sortedDescending()
+        // mk = ratios con actividad (>0) ordenados descendente; D = cantidad.
+        val mk = dayRatios.filter { it > 0.0 }.sortedDescending()
         val d = mk.size
         if (d == 0) return 0.0
 
-        // Razones de tiempo r_i = t_i / T. commit = mejores min(D, F); vol = resto.
-        val ratios = mk.map { it.toDouble() / t.toDouble() }
+        // commit = mejores min(D, F); vol = resto.
         val cut = min(d, f)
-        val commit = ratios.subList(0, cut)
-        val vol = ratios.subList(cut, d)
+        val commit = mk.subList(0, cut)
+        val vol = mk.subList(cut, d)
 
         // u(r) = min(r, 1)^γ
         fun u(x: Double): Double = min(x, 1.0).pow(gamma)

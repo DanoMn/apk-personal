@@ -18,6 +18,7 @@ import dev.panopt.autonomia.TargetPeriod
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import dev.panopt.autonomia.domain.sleep.interpretation.SleepConfidence
 import java.time.LocalDate
@@ -334,6 +335,33 @@ class ScoreEngineTest {
         assertEquals(1.0f, report.estado, 1e-4f)
     }
 
+    @Test
+    fun editingMinutesTargetMidWeekDoesNotRewritePastWithVersions() {
+        // Editaste la meta de minutos de 30 a 120 HOY. Los días viejos (cumplidos con meta 30)
+        // NO deben reescribirse con la meta nueva: el versionado los mide con su meta de entonces.
+        val anchors = coreThreeAnchors().map { it.copy(sessionTargetMinutes = 120, targetValue = 120) }
+        val logs = justLogs(anchors) // 4 días × 30 min (cumplían la meta vieja de 30)
+        val versions = anchors.associate { a ->
+            a.id to listOf(
+                ActivityTargetVersion(a.id, weekDates.first(), targetMinutes = 30, targetDays = 4, createdAt = 1L),
+                ActivityTargetVersion(a.id, today, targetMinutes = 120, targetDays = 4, createdAt = 2L),
+            )
+        }
+
+        val withVersions = calculate(
+            layers = coreThreeLayers(), activities = anchors, activityLogs = logs, targetVersions = versions,
+        )
+        val legacy = calculate(layers = coreThreeLayers(), activities = anchors, activityLogs = logs)
+
+        // Con versiones: los días viejos usan la meta 30 → cumplen → estado alto (Plenitud).
+        assertEquals(1.0f, withVersions.estado, 1e-4f)
+        // Sin versiones (legacy con la config actual 120): reescribe el pasado → estado deprimido.
+        assertTrue(
+            "legacy reescribe el pasado (${legacy.estado}) vs versionado (${withVersions.estado})",
+            legacy.estado < withVersions.estado,
+        )
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     // Días de "cumplir-justo": 4 días con 30 min (F=4, T=30 → R = 1.0).
@@ -362,6 +390,7 @@ class ScoreEngineTest {
         tasks: List<Task> = emptyList(),
         sleepNights: List<SleepNightScore> = emptyList(),
         weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
+        targetVersions: Map<String, List<ActivityTargetVersion>> = emptyMap(),
     ): ScoreReport =
         ScoreEngine.calculate(
             ScoreInput(
@@ -376,6 +405,7 @@ class ScoreEngineTest {
                 sleepNights = sleepNights,
                 today = today,
                 weeklyHistory = weeklyHistory,
+                targetVersions = targetVersions,
             ),
         )
 
