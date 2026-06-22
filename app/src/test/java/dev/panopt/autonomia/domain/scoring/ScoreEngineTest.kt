@@ -305,6 +305,35 @@ class ScoreEngineTest {
         assertEquals(0f, byId["layer_conducta"]!!.anchorSurplusBonus, 1e-9f)
     }
 
+    @Test
+    fun mondayDoesNotCollapseTheWindow() {
+        // Ventana MÓVIL (#858): el lunes la ventana ya contiene los 6 días previos. Con
+        // cumplimiento justo en esos días, el estado NO colapsa al cruzar el lunes.
+        // (Con la semana calendario vieja, la ventana del lunes era de 1 día → estado ~0.)
+        val monday = LocalDate.of(2026, 5, 25) // lunes
+        val anchors = coreThreeAnchors()
+        val priorDays = (1L..4L).map { monday.minusDays(it) } // jue–dom previos, fuera del lunes
+        val logs = anchors.flatMap { a -> priorDays.map { log(a.id, it, actualValue = 30) } }
+
+        val report = calculate(today = monday, layers = coreThreeLayers(), activities = anchors, activityLogs = logs)
+
+        assertEquals(1.0f, report.estado, 1e-4f)
+        assertEquals(ScoreState.Plenitude, report.state)
+    }
+
+    @Test
+    fun midWeekWindowIncludesPriorCalendarWeekDays() {
+        // Martes: la ventana móvil incluye días de la semana CALENDARIO anterior (antes del lunes).
+        val tuesday = LocalDate.of(2026, 5, 26)
+        val anchors = coreThreeAnchors()
+        val priorDays = (2L..5L).map { tuesday.minusDays(it) } // 05-21..05-24, semana calendario previa
+        val logs = anchors.flatMap { a -> priorDays.map { log(a.id, it, actualValue = 30) } }
+
+        val report = calculate(today = tuesday, layers = coreThreeLayers(), activities = anchors, activityLogs = logs)
+
+        assertEquals(1.0f, report.estado, 1e-4f)
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     // Días de "cumplir-justo": 4 días con 30 min (F=4, T=30 → R = 1.0).

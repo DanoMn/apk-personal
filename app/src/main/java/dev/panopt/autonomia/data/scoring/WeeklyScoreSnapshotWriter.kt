@@ -16,9 +16,15 @@ import java.time.temporal.TemporalAdjusters
 class WeeklyScoreSnapshotWriter(
     private val dataSource: WeeklySnapshotDataSource,
 ) {
-    /** Recalcula el snapshot de la semana en curso (lunes → [today], semana parcial). */
+    /**
+     * Recalcula el snapshot de la semana en curso. La CLAVE sigue siendo la semana calendario
+     * (lunes → [today]) para que la historia tenga UNA fila por semana; pero los HECHOS que lo
+     * alimentan son la ventana MÓVIL de 7 días terminada en [today], coherente con el cálculo
+     * en vivo del dashboard (#858). Para la fila en curso, `weekStart` es clave de indexado, no
+     * borde de datos (los hechos arrancan en `today-6`, que cruza al lunes anterior).
+     */
     suspend fun refreshCurrentWeek(today: LocalDate) {
-        writeWeek(weekStart = mondayOf(today), weekEnd = today)
+        writeWindow(keyWeekStart = mondayOf(today), keyWeekEnd = today, windowEnd = today)
     }
 
     /**
@@ -46,7 +52,9 @@ class WeeklyScoreSnapshotWriter(
             if (weekStart.toString() in existingWeekStarts) continue
             val weekEnd = weekStart.plusDays(6)
             if (!weekHasFacts(weekStart, weekEnd)) continue
-            writeWeek(weekStart = weekStart, weekEnd = weekEnd)
+            // Semana vencida completa: windowEnd = domingo → ventana móvil (domingo-6 .. domingo)
+            // ≡ semana calendario (lunes .. domingo). Clave y datos coinciden.
+            writeWindow(keyWeekStart = weekStart, keyWeekEnd = weekEnd, windowEnd = weekEnd)
         }
     }
 
@@ -57,44 +65,56 @@ class WeeklyScoreSnapshotWriter(
         return dataSource.getAllAbstinenceLogsSnapshot().any { it.date in startKey..endKey }
     }
 
-    private suspend fun writeWeek(weekStart: LocalDate, weekEnd: LocalDate) {
-        val weekStartKey = weekStart.toString()
-        val weekEndKey = weekEnd.toString()
+    /**
+     * Escribe un snapshot bajo la CLAVE de semana calendario [keyWeekStart]..[keyWeekEnd], pero
+     * calculado sobre la ventana MÓVIL de 7 días terminada en [windowEnd] (los hechos van de
+     * `windowEnd-6` a `windowEnd`). Para semanas vencidas completas (windowEnd = domingo) la
+     * ventana móvil coincide con la semana calendario; para la semana en curso, los hechos
+     * cruzan al lunes anterior pero la clave se mantiene en el lunes en curso.
+     */
+    private suspend fun writeWindow(
+        keyWeekStart: LocalDate,
+        keyWeekEnd: LocalDate,
+        windowEnd: LocalDate,
+    ) {
+        val windowStartKey = windowEnd.minusDays(6).toString()
+        val windowEndKey = windowEnd.toString()
         val periodActivityLogs = dataSource.getActivityLogsBetween(
-            startDate = weekStartKey,
-            endDate = weekEndKey,
+            startDate = windowStartKey,
+            endDate = windowEndKey,
         ).map { it.toDomain() }
         val allAbstinenceLogs = dataSource.getAllAbstinenceLogsSnapshot().map { it.toDomain() }
-        // Solo memoria ANTERIOR a esta semana: para la semana en curso es equivalente al
+        // Solo memoria ANTERIOR a la semana-clave: para la semana en curso es equivalente al
         // filtro de la policy (que excluye la semana actual), y para el back-fill evita que
         // semanas posteriores ya escritas se filtren como "previas" de una semana vieja.
+        val keyWeekStartKey = keyWeekStart.toString()
         val weeklyHistory = dataSource.getWeeklyScoreSnapshotsSnapshot()
             .map { it.toHistoryEntry() }
-            .filter { it.weekStart < weekStartKey }
+            .filter { it.weekStart < keyWeekStartKey }
         val source = ScoreInputSource(
             layers = dataSource.getLayersSnapshot().map { it.toDomain() },
             activities = configuredActivitiesSnapshot(),
-            todayActivityLogs = periodActivityLogs.filter { it.date == weekEndKey },
+            todayActivityLogs = periodActivityLogs.filter { it.date == windowEndKey },
             periodActivityLogs = periodActivityLogs,
             abstinenceTracks = dataSource.getAbstinenceTracksSnapshot().map { it.toDomain() },
-            todayAbstinenceLogs = allAbstinenceLogs.filter { it.date == weekEndKey },
+            todayAbstinenceLogs = allAbstinenceLogs.filter { it.date == windowEndKey },
             allAbstinenceLogs = allAbstinenceLogs,
             tasks = dataSource.getTasksSnapshot().map { it.toDomain() },
             // 5.8: weekly sleep — get all nights in range, map to SleepNightScore,
             // filter out NoData (toSleepNightScore returns null for NoData nights).
             sleepNights = dataSource.getSleepNightsInRange(
-                from = weekStartKey,
-                to = weekEndKey,
+                from = windowStartKey,
+                to = windowEndKey,
             ).mapNotNull { it.toSleepNightScore() },
-            today = weekEnd,
+            today = windowEnd,
             weeklyHistory = weeklyHistory,
         )
         val scoreInput = BuildScoreInputUseCase(source)
         val scoreReport = ScoreEngine.calculate(scoreInput)
         val snapshot = BuildWeeklyScoreSnapshotUseCase(
             WeeklyScoreSnapshotInput(
-                weekStart = weekStart,
-                weekEnd = weekEnd,
+                weekStart = keyWeekStart,
+                weekEnd = keyWeekEnd,
                 calculatedAt = System.currentTimeMillis(),
                 scoreInput = scoreInput,
                 scoreReport = scoreReport,

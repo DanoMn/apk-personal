@@ -2,13 +2,15 @@ package dev.panopt.autonomia.domain.scoring
 
 import dev.panopt.autonomia.AbstinenceStatus
 import dev.panopt.autonomia.TaskStatus
-import java.time.DayOfWeek
-import java.time.temporal.TemporalAdjusters
 
 internal object WeeklyScoringContextBuilder {
     fun build(input: ScoreInput): WeeklyScoringContext {
         val activeLayers = input.layers.filter { it.active }.sortedBy { it.sortOrder }
-        val weekStart = input.today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        // Ventana MÓVIL de 7 días (no semana calendario): siempre los últimos 7 días
+        // [today-6 .. today]. Elimina el "reset del lunes" (#858): al cruzar el lunes la
+        // ventana ya contiene los 6 días previos, así que el estado no colapsa. `weekStart`
+        // queda como "el día más viejo de la ventana" (ancla de la regla de frecuencia, FASE 2).
+        val weekStart = input.today.minusDays(6)
         val weekDates = weekStart.datesUntilInclusive(input.today)
         val visibleActivities = input.activities
             .filter { it.active && !it.archived }

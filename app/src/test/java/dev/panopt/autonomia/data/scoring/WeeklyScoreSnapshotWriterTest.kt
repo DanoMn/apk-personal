@@ -43,11 +43,12 @@ class WeeklyScoreSnapshotWriterTest {
 
         writer.refreshCurrentWeek(today)
 
-        // Los hechos se piden para la semana en curso: lunes (2026-05-25) → hoy.
-        assertEquals("2026-05-25" to "2026-05-27", fake.activityLogsRange)
-        assertEquals("2026-05-25" to "2026-05-27", fake.sleepRange)
+        // Los hechos se piden para la ventana MÓVIL de 7 días terminada hoy: 05-21 → 05-27
+        // (cruza el lunes anterior), no solo lunes-en-curso → hoy.
+        assertEquals("2026-05-21" to "2026-05-27", fake.activityLogsRange)
+        assertEquals("2026-05-21" to "2026-05-27", fake.sleepRange)
 
-        // Y el snapshot se persiste con los límites correctos.
+        // Pero el snapshot se persiste con la CLAVE de semana calendario (lunes en curso → hoy).
         val snapshot = fake.upserted
         assertNotNull("El writer debe persistir un snapshot", snapshot)
         assertEquals("2026-05-25", snapshot!!.weekStart)
