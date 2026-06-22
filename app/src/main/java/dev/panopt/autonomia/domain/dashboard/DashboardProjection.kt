@@ -21,12 +21,19 @@ import dev.panopt.autonomia.TaskStatus
 import dev.panopt.autonomia.domain.abstinence.AbstinencePolicy
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
 import dev.panopt.autonomia.domain.activity.isGoal
+import dev.panopt.autonomia.domain.activity.AnchorGraceRule
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.PointsMappingPolicy
 import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
+import dev.panopt.autonomia.domain.scoring.StartupCounterPolicy
+import dev.panopt.autonomia.domain.scoring.StartupDetectionRule
+import dev.panopt.autonomia.domain.scoring.StartupProjectionUseCase
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
+import java.time.temporal.ChronoUnit
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
 import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
@@ -98,28 +105,44 @@ internal fun buildDashboardState(
         today = today,
     )
 
-    val scoreReport = ScoreEngine.calculate(
-        BuildScoreInputUseCase(
-            ScoreInputSource(
-                layers = layers,
-                activities = activities,
-                todayActivityLogs = todayActivityLogs,
-                periodActivityLogs = periodActivityLogs,
-                abstinenceTracks = abstinenceTracks,
-                todayAbstinenceLogs = todayAbstinenceLogs,
-                allAbstinenceLogs = allAbstinenceLogs,
-                tasks = tasks,
-                // WU-7: wire the today's SleepNight into the scoring path (design §7, PR3 carryover).
-                // If sleepNight has a cached sleepScore (auto-materialized), pass it as a single-night
-                // list. If null (NoData or manual entry), empty list → ADR-3: re-normalize Cuerpo.
-                sleepNights = listOfNotNull(sleepNight?.toSleepNightScore()),
-                today = today,
-                weeklyHistory = weeklyHistory,
-                targetVersions = targetVersions,
-            ),
-        ),
+    // Source de hechos crudos del scoring: lo consume el camino maduro (ScoreEngine.calculate) y, en
+    // arranque, la proyección (StartupProjectionUseCase). Se extrae a un val para reusarlo sin
+    // duplicar el mapeo (refactor neutro: el camino maduro queda byte-idéntico).
+    val scoreInputSource = ScoreInputSource(
+        layers = layers,
+        activities = activities,
+        todayActivityLogs = todayActivityLogs,
+        periodActivityLogs = periodActivityLogs,
+        abstinenceTracks = abstinenceTracks,
+        todayAbstinenceLogs = todayAbstinenceLogs,
+        allAbstinenceLogs = allAbstinenceLogs,
+        tasks = tasks,
+        // WU-7: wire the today's SleepNight into the scoring path (design §7, PR3 carryover).
+        // If sleepNight has a cached sleepScore (auto-materialized), pass it as a single-night
+        // list. If null (NoData or manual entry), empty list → ADR-3: re-normalize Cuerpo.
+        sleepNights = listOfNotNull(sleepNight?.toSleepNightScore()),
+        today = today,
+        weeklyHistory = weeklyHistory,
+        targetVersions = targetVersions,
     )
+    val scoreReport = ScoreEngine.calculate(BuildScoreInputUseCase(scoreInputSource))
     val scoreState = scoreReport.state
+
+    // ARRANQUE (`scoring-arranque-cuenta`): si la cuenta es nueva (anclas en gracia → NoData real +
+    // sin historial de score real + ≥3 capas con ancla), reemplazamos el blackout NoData por la barra
+    // de arranque. El `scoreReport` real SIGUE NoData (presentación aparte, no estado del motor).
+    val startup: StartupCardState? =
+        if (StartupDetectionRule.isStartup(scoreReport, activities, layers, weeklyHistory, today)) {
+            val anchorActivities = activities.filter {
+                it.active && !it.archived && it.activityType == ActivitySurface.Anchor
+            }
+            val daysLived = startupDaysLived(anchorActivities, today)
+            StartupProjectionUseCase(scoreInputSource, daysLived)?.let { projection ->
+                StartupCounterPolicy.counter(projection.estado, daysLived).toStartupCardState()
+            }
+        } else {
+            null
+        }
     // NIVEL 7 (proyección): el número visible del dashboard es el mapeo E ESTADO→PUNTOS [650,1100].
     // Mismo cálculo de dominio puro que el motor usa para poblar el seam (PointsMappingPolicy), así
     // dashboard y snapshot semanal nunca divergen. NoData (visibleScore == null) → sin número.
@@ -261,6 +284,42 @@ internal fun buildDashboardState(
             .sortedByDescending { it.completedAt ?: it.updatedAt }
             .map { DashboardTaskState(id = it.id, title = it.title, layerId = it.layerId) },
         scoreReport = scoreReport.toDashboardScoreReportState(),
+        startup = startup,
+    )
+}
+
+/**
+ * Días vividos desde la creación del ancla MÁS VIEJA (`createdAt` epoch millis), clampeado a `[1, 7]`.
+ * El día de creación cuenta como día 1 (`+ 1`). Coherente con `AnchorGraceRule.GRACE_DAYS = 7`: día 8
+ * ya sale de gracia y el motor maduro toma la posta. Sin anclas → 1 (defensivo).
+ */
+private fun startupDaysLived(anchorActivities: List<ActivityDefinition>, today: LocalDate): Int {
+    val oldestCreatedAt = anchorActivities.minOfOrNull { it.createdAt } ?: return 1
+    val createdDate = Instant.ofEpochMilli(oldestCreatedAt).atZone(ZoneId.systemDefault()).toLocalDate()
+    val grace = AnchorGraceRule.GRACE_DAYS
+    return (ChronoUnit.DAYS.between(createdDate, today) + 1).coerceIn(1L, grace).toInt()
+}
+
+/**
+ * Mapea el [dev.panopt.autonomia.domain.scoring.StartupCounter] de dominio al value object de
+ * presentación, armando el copy con tono adulto/compasivo (AGENTS.md): "Faltan N días para tu puntaje
+ * real" (singular/plural), sin términos prohibidos ("fallaste", "deberías", tono clínico).
+ */
+private fun dev.panopt.autonomia.domain.scoring.StartupCounter.toStartupCardState(): StartupCardState {
+    val remaining = daysRemaining
+    val daysLabel = when {
+        remaining <= 0 -> "Mañana llega tu puntaje real"
+        remaining == 1 -> "Falta 1 día para tu puntaje real"
+        else -> "Faltan $remaining días para tu puntaje real"
+    }
+    return StartupCardState(
+        counterLabel = counterPoints.toString(),
+        counterPoints = counterPoints,
+        windowProgress = windowProgress,
+        daysRemaining = remaining,
+        daysRemainingLabel = daysLabel,
+        headline = "La base está cargando",
+        body = "Tu puntaje se está formando con cada acción. Sin apuro: esto recién empieza.",
     )
 }
 

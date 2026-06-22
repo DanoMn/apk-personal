@@ -152,6 +152,26 @@ hitos i (centro cᵢ, ancho wᵢ, aporte Aᵢ): 700(.18,.10,60) 800(.55,.11,110)
 - Continuo, monótono, **de a 1 punto** (aprovecha la resolución del estado).
 - Hitos en los cortes: 0→650 · 0.40→721 · 0.62→788 · 0.85→873 · 1.0→941 · 1.10→1011 · 1.5→1100.
 
+### 12.1 Barra de arranque de cuenta (canal de presentación, NO estado del motor)
+
+Una cuenta nueva tiene sus anclas en **gracia** (primeros 7 días): el motor real todavía devuelve
+`NoData` (no hay veredicto). En vez del blackout "Sin datos", el dashboard muestra una **barra de
+arranque**: un contador que sube `0 → score real proyectado` y, al cumplirse la gracia (día 8),
+**converge sin salto** con el score maduro.
+
+- **Es presentación, no un estado del motor.** No existe `ScoreState.Arranque`. El `ScoreReport` real
+  sigue siendo `NoData` y nada se persiste. El arranque vive en un canal aparte
+  (`DashboardState.startup`), nullable: `null` = render normal (StatusCard real); no-`null` = barra de
+  arranque (StartupStatusCard, card hermano). El motor nunca se entera.
+- **Score proyectado (justicia):** se corre el motor con `windowDays = d` (la ventana parcial, §4) y
+  **sin filtrar** las anclas en gracia, para obtener el score real que tendría la cuenta con sus `d`
+  días vividos — sin castigar los días que no llegaron.
+- **Contador (barra de carga):** `round(PUNTOS(estado_proyectado) × d/7)`. Se atenúan los PUNTOS ya
+  mapeados (no el estado), para que el número recorra la zona muerta `0–650` y suba hacia el real.
+  Día 7 → `× 7/7` = score completo == maduro del día 8 (mismos hechos): convergencia exacta, sin salto.
+- **Gate soberano:** `< 3` capas con ancla → `NoData` REAL ("configurá tu base"), NUNCA arranque. La
+  barra solo aparece con cobertura mínima y sin historial de score real previo.
+
 ## 13. Ejemplo integrado (punta a punta, verificado) — CON los dos opt-ins activos
 
 Usuario con 5 capas: anclas (superhabit de tiempo y días, déficit), soportes, capa solo-soportes, tasks,

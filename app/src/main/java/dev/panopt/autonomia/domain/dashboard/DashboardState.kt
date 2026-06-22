@@ -21,6 +21,29 @@ internal data class DashboardState(
     val pendingTasks: List<DashboardTaskState> = emptyList(),
     val completedTasks: List<DashboardTaskState> = emptyList(),
     val scoreReport: DashboardScoreReportState = DashboardScoreReportState(),
+    /**
+     * Canal de presentación del ARRANQUE de cuenta (`scoring-arranque-cuenta`). `null` = no arranque
+     * → el dashboard renderiza el [DashboardStatusState] real (comportamiento de hoy). No-`null` = la
+     * cuenta es nueva (anclas en gracia) → renderiza [StartupCardState] en su lugar. El `scoreState`
+     * real SIGUE siendo `NoData`: el arranque es presentación, no un estado del motor.
+     */
+    val startup: StartupCardState? = null,
+)
+
+/**
+ * Estado de presentación de la barra de ARRANQUE de cuenta. Lo computa el DOMINIO
+ * (`DashboardProjection` vía `StartupCounterPolicy`); Compose SOLO lo presenta y anima. El número
+ * (`counterPoints`) sube desde la zona muerta hacia el score real proyectado; `windowProgress` (`d/7`)
+ * alimenta el arco. El copy respeta el tono adulto/compasivo (AGENTS.md), sin términos prohibidos.
+ */
+internal data class StartupCardState(
+    val counterLabel: String,        // counterPoints.toString() — el número central
+    val counterPoints: Int,          // para animateIntAsState
+    val windowProgress: Float,       // d/7 — para animateFloatAsState (arco)
+    val daysRemaining: Int,
+    val daysRemainingLabel: String,  // "Faltan N días para tu puntaje real" (1 día → singular)
+    val headline: String,            // copy cálido de arranque (tono AGENTS.md)
+    val body: String,
 )
 
 internal data class DashboardStatusState(

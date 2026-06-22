@@ -43,6 +43,7 @@ import dev.panopt.autonomia.ui.dashboard.components.LayersSection
 import dev.panopt.autonomia.ui.dashboard.components.NavigationDrawer
 import dev.panopt.autonomia.ui.dashboard.components.SignalsSection
 import dev.panopt.autonomia.ui.dashboard.components.SobrietySection
+import dev.panopt.autonomia.ui.dashboard.components.StartupStatusCard
 import dev.panopt.autonomia.ui.dashboard.components.StatusCard
 import dev.panopt.autonomia.ui.dashboard.components.SupportsPreviewSection
 import dev.panopt.autonomia.ui.dashboard.components.TasksPreviewSection
@@ -111,7 +112,15 @@ internal fun DashboardScreen(
                 dateLabel = state.headerDate,
                 onOpenDrawer = { isDrawerOpen = true },
             )
-            StatusCard(palette = palette, status = state.status)
+            // Arranque (`scoring-arranque-cuenta`): cuenta nueva en gracia → barra de carga, en vez
+            // del blackout "Sin datos". La decisión `startup != null` ya viene resuelta del dominio
+            // (cero lógica de negocio acá). StatusCard real intacto.
+            val startup = state.startup
+            if (startup != null) {
+                StartupStatusCard(palette = palette, startup = startup)
+            } else {
+                StatusCard(palette = palette, status = state.status)
+            }
             DailyProgressCard(palette = palette, progress = state.dailyProgress)
             AnchorPhraseCard(palette = palette, phrase = state.anchorPhrase)
             ActionButtons(

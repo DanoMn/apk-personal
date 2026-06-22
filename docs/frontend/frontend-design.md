@@ -200,6 +200,27 @@ No debe mostrar:
 
 La navegacion objetivo es drawer lateral.
 
+### Card de estado: normal vs arranque
+
+El area de estado del dashboard tiene DOS cards posibles, y se elige uno segun la cuenta:
+
+- **StatusCard** (normal): el estado calculado real (orbe con el score, banda, headline/body). Es el
+  card de siempre; no se toca.
+- **StartupStatusCard** (arranque de cuenta): cuando la cuenta es nueva (sus anclas estan en gracia,
+  los primeros 7 dias), en vez del blackout "Sin datos" se muestra una **barra de carga**. Misma
+  FORMA que StatusCard (texto a la izquierda + orbe a la derecha) para coherencia visual, pero es un
+  componente hermano e independiente. El orbe reusa el ScoreOrbit: el numero central sube `0 → score
+  real` (animado) y el arco se llena `d/7` (animado). Copy compasivo: pill "Arranque", headline "La
+  base esta cargando", y "Faltan N dias para tu puntaje real" (singular/plural; "Manana llega tu
+  puntaje real" en el dia 7). Sin tono punitivo ni clinico.
+
+**Color calido propio del arranque:** NO se inventa paleta. Se deriva de los tokens existentes
+`colorCoral` y `colorCardboard` (cartn/beige + coral mate) via la utilidad `mix`, dando un tono
+calido que lo distingue del estado normal pero respeta la base oscura organica. Ningun token nuevo.
+
+La eleccion `startup != null` la resuelve el dominio (DashboardProjection); el Composable solo
+presenta y anima — cero logica de negocio en la card (state hoisting).
+
 ## Tono visual
 
 La UI debe sentirse:

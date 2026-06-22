@@ -86,4 +86,67 @@ aislado: el dominio de arranque existe y está testeado, pero NADIE lo consume t
 - **Convergencia 2.6 con tolerancia 0:** mismos 7 días de hechos; día 7 anclas en gracia (proyección no filtra) windowDays=7 ×7/7; día 8 anclas con `createdAt` hace 7 días (fuera de gracia) maduro. `counterPoints == visibleScore` exacto.
 - **`GRACE_DAYS.toInt()` como fuente del 7** en `calculate` (no constante nueva): coherente con el default `windowDays=7` de `rFromRatios` y con `AnchorGraceRule` como única autoridad temporal del arranque.
 
-## Lote 3 — Proyección + UI — ⬜ PENDIENTE
+## Lote 3 — Proyección + UI (+ 2 fixes de dominio del Lote 2) — ✅ COMPLETO
+
+Strict TDD (RED → GREEN → REFACTOR). Dos correcciones de dominio (FIX A + FIX B) más el wiring de
+proyección y la UI. Build de Compose verde. Entregable: la cuenta nueva ve la barra de arranque
+`0 → score real` en vez del blackout "Sin datos".
+
+### FIX A (CRÍTICO) — atenuación sobre PUNTOS, no sobre estado
+
+| Qué | Detalle |
+|-----|---------|
+| Problema | `StartupCounterPolicy` atenuaba el ESTADO antes de mapear (`points(estado × d/7)`). Con piso 650 de `PointsMappingPolicy`, el contador quedaba SIEMPRE ≥650 — nunca recorría la zona muerta 0–650. |
+| Fix | `counter = round(points(estado) × d/7)`: se atenúan los PUNTOS ya mapeados. El contador arranca cerca de 0 y sube hacia el real. Ejemplos del dueño verificados: score 900 → d1=129, d4=514, d7=900. |
+| Convergencia | Se mantiene: en d=7 `×7/7=1` → `counter = points(estado)` == puntos maduros día 8 (mismos hechos). Test 2.6 sigue comparando PUNTOS (`matureReport.visibleScore == counter.counterPoints`), igualdad exacta. |
+| Tests | `StartupCounterPolicyTest` reescrito a semántica de puntos (`expected(estado,d) = round(points(estado)×d/7)`); nuevos `counterLivesInDeadZoneBelowFloorOnEarlyDays` y `ownerExamplesNineHundredPointScore` (estado por bisección → points==900). |
+
+### FIX B — el ramo legacy respeta `windowDays`
+
+| Qué | Detalle |
+|-----|---------|
+| Problema | El ramo `r(f, t, mins)` (cuenta nueva SIN target-versions → `dayRatios == null`) ignoraba `windowDays` → proyectaba con ventana 7, castigando días no vividos. |
+| Fix | `AnchorScoringPolicy.r` gana `windowDays: Int = 7` y lo propaga a `rFromRatios`; `ScoreEngine.calculateInternal` lo pasa por el ramo `else`. Default 7 = byte-idéntico. |
+| Tests | `newAccountWithoutVersionsRespectsWindowDaysAndIsNotPunished` (cuenta nueva sin versiones, día 2 → ventana justa ≥ ventana 7) y `matureWindowDaysSevenIsByteIdenticalForLegacyBranch` (cero regresión). Helper `sourceWithGraceAnchorsNoVersions`. |
+
+### Lote 3 propiamente (UI + proyección)
+
+| Task | Estado | Nota |
+|------|--------|------|
+| 3.1 `StartupCardState` + `DashboardState.startup` | [x] | data class de presentación (counterLabel/counterPoints/windowProgress/daysRemaining/daysRemainingLabel/headline/body); campo nullable |
+| 3.2 `DashboardProjection` computa `startup` | [x] | extraído `scoreInputSource` a val (reuso); `StartupDetectionRule → StartupProjectionUseCase → StartupCounterPolicy → toStartupCardState`; helper `startupDaysLived` (createdAt más viejo, +1, clamp [1,7]) |
+| 3.3 `StartupStatusCard` (Compose hermano) | [x] | `animateIntAsState`(número) + `animateFloatAsState`(arco d/7); reusa `ScoreOrbit`; color cálido `mix(colorCoral,0.35f,colorCardboard)`; sin lógica de negocio; StatusCard intacto |
+| 3.4 Dashboard elige card | [x] | `DashboardScreen` L114: `if (state.startup != null) StartupStatusCard else StatusCard` |
+| 3.5 Docs vivos | [x] | `modelo-matematico-nucleo-v1.md` §7.1 (atenuación sobre puntos) + §1.3.1 (ambos ramos respetan windowDays); `modelo-scoring-oficial-v1.md` §12.1 (barra de arranque); `frontend-design.md` (card de arranque) |
+
+### Cambios de producción
+- `domain/scoring/StartupCounterPolicy.kt` — atenúa PUNTOS: `round(points(estado) × d/7)` (FIX A).
+- `domain/scoring/AnchorScoringPolicy.kt` — `r(f, t, mins, windowDays=7)` propaga a `rFromRatios` (FIX B).
+- `domain/scoring/ScoreEngine.kt` — ramo legacy `else` propaga `windowDays` (FIX B).
+- `domain/dashboard/DashboardState.kt` — `StartupCardState` + `val startup: StartupCardState? = null`.
+- `domain/dashboard/DashboardProjection.kt` — `scoreInputSource` extraído a val; cómputo de `startup`;
+  helpers `startupDaysLived` y `toStartupCardState` (copy compasivo).
+- `ui/dashboard/components/StartupStatusCard.kt` (NUEVO) — card hermano animado.
+- `ui/dashboard/DashboardScreen.kt` — branch `if (state.startup != null)`.
+
+### Tests nuevos/modificados
+- `StartupCounterPolicyTest.kt` (reescrito a semántica de puntos, 9 tests).
+- `StartupProjectionUseCaseTest.kt` (+2 tests FIX B).
+- `DashboardProjectionStartupTest.kt` (NUEVO, 3 tests: arranque→startup!=null & NoData; madura→null; <3 capas→null+NoData).
+
+### Verificación (output real)
+- `testDebugUnitTest --tests '...domain.*'` → **BUILD SUCCESSFUL** (367 tests, cero regresión incl. ScoreEngineTest/AnchorScoringPolicyTest/DashboardProjectionTest).
+- `assembleDebug` → **BUILD SUCCESSFUL in 27s** (build de Compose verde, sin warnings).
+
+### Decisiones de implementación
+- **FIX A gana a la decisión previa del Lote 2** (que atenuaba el estado). El learning anterior
+  ("contador sobre ESTADO") queda SUPERSEDIDO: la intención del dueño es que el contador viva en la
+  zona muerta 0–650. La convergencia se preserva igual porque en d=7 `×7/7=1` no atenúa.
+- **`startupDaysLived` con `+1`**: el día de creación es el día 1. Anclas creadas hace N días →
+  daysLived = N+1. Los tests de proyección de dashboard alinean su fixture a esa convención.
+- **Compose sin test JVM**: el `StartupStatusCard` se valida en build + capa runtime
+  (`verificacion-por-capas.md`); la lógica (número, días, copy) ya está testeada en dominio.
+
+### Commits (branch `feat/scoring-motor-nucleo-v1`, sin atribución IA)
+- 3a (fixes dominio A+B): `fix(scoring): attenuate startup counter on points and honor windowDays in legacy anchor branch`.
+- 3b (UI + proyección + docs): `feat(scoring): startup account card wiring and UI (DashboardState.startup, StartupStatusCard)`.

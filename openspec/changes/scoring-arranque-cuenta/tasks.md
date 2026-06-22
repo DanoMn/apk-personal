@@ -176,14 +176,14 @@ está testeado, pero NADIE lo consume todavía (sin wiring de UI). El dashboard 
 
 Capability: `startup-counter` (presentación). **Depende del Lote 2**. Wiring + Compose + docs.
 
-- [ ] **3.1 (GREEN) `StartupCardState` + campo `DashboardState.startup`**
+- [x] **3.1 (GREEN) `StartupCardState` + campo `DashboardState.startup`**
   → Req: "Canal de presentación separado (DashboardState.startup)" · §5.1, §5.2.
   - Archivo: `domain/dashboard/DashboardState.kt` (L23-24).
   - `internal data class StartupCardState(counterLabel, counterPoints, windowProgress, daysRemaining,
     daysRemainingLabel, headline, body)`.
   - `DashboardState` gana `val startup: StartupCardState? = null` (nullable → rollback gratis).
 
-- [ ] **3.2 (TEST-RED→GREEN) `DashboardProjection` computa `startup`**
+- [x] **3.2 (TEST-RED→GREEN) `DashboardProjection` computa `startup`**
   → Req: "Canal de presentación separado" · Scenarios arranque→startup!=null & NoData; madura→null; <3 capas→null+NoData.
   - Test: `app/src/test/java/dev/panopt/autonomia/domain/dashboard/DashboardProjectionStartupTest.kt` (nuevo).
     - cuenta en arranque (3 anclas en gracia, historial vacío) → `state.startup != null` (counter,
@@ -200,7 +200,7 @@ Capability: `startup-counter` (presentación). **Depende del Lote 2**. Wiring + 
       "Faltan N días para tu puntaje real" / "La base está cargando". Sin términos prohibidos.
     - `return DashboardState(..., startup = startup)`.
 
-- [ ] **3.3 (GREEN) `StartupStatusCard` (Compose hermano)**
+- [x] **3.3 (GREEN) `StartupStatusCard` (Compose hermano)**
   → Req: "UI — StartupStatusCard separado, StatusCard intacto" · §7.
   - Archivo nuevo: `ui/dashboard/components/StartupStatusCard.kt`.
   - `@Composable internal fun StartupStatusCard(palette, startup: StartupCardState)`.
@@ -210,13 +210,13 @@ Capability: `startup-counter` (presentación). **Depende del Lote 2**. Wiring + 
   - **Sin lógica de negocio**: recibe `StartupCardState` ya resuelto, solo presenta/anima.
   - (Compose: no se le exige test unitario JVM; la capa visual se valida en runtime — `verificacion-por-capas.md`.)
 
-- [ ] **3.4 (GREEN) Dashboard elige card según `startup != null`**
+- [x] **3.4 (GREEN) Dashboard elige card según `startup != null`**
   → Req: "UI — Dashboard elige StartupStatusCard cuando startup != null" · §6.
   - Archivo: `ui/dashboard/DashboardScreen.kt` L114.
   - `if (state.startup != null) StartupStatusCard(palette, state.startup) else StatusCard(palette, state.status)`.
   - `StatusCard` y `ScoreOrbit` NO se tocan (su código fuente queda idéntico).
 
-- [ ] **3.5 (DOC vivo) Actualizar docs de scoring y frontend**
+- [x] **3.5 (DOC vivo) Actualizar docs de scoring y frontend**
   → Success criterion: docs vivos al día.
   - `docs/scoring/modelo-matematico-nucleo-v1.md`: confirmar `windowDays` (si no quedó del 1.7) + nota arranque.
   - `docs/scoring/modelo-scoring-oficial-v1.md`: describir la barra de arranque como canal de
