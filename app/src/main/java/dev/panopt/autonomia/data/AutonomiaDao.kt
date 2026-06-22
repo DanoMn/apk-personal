@@ -208,8 +208,15 @@ interface AutonomiaDao {
 
     // --- New queries for activity_definitions ---
 
-    @Query("SELECT * FROM activity_definitions ORDER BY sortOrder")
+    @Query("SELECT * FROM activity_definitions WHERE trashed = 0 ORDER BY sortOrder")
     fun observeActivityDefinitions(): Flow<List<ActivityDefinitionEntity>>
+
+    /** BAÚL: actividades custom eliminadas (recuperables), para la pantalla del baúl. */
+    @Query("SELECT * FROM activity_definitions WHERE trashed = 1 ORDER BY updatedAt DESC")
+    fun observeTrashedActivityDefinitions(): Flow<List<ActivityDefinitionEntity>>
+
+    @Query("UPDATE activity_definitions SET trashed = :trashed, updatedAt = :updatedAt WHERE id = :activityId")
+    suspend fun setActivityDefinitionTrashed(activityId: String, trashed: Boolean, updatedAt: Long)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity)
@@ -228,7 +235,7 @@ interface AutonomiaDao {
     @Query("SELECT * FROM user_activity_configs WHERE active = 1 AND archived = 0")
     suspend fun getActiveUserActivityConfigs(): List<UserActivityConfigEntity>
 
-    @Query("SELECT * FROM activity_definitions")
+    @Query("SELECT * FROM activity_definitions WHERE trashed = 0")
     suspend fun getActivityDefinitionsSnapshot(): List<ActivityDefinitionEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

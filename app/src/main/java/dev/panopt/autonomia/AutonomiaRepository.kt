@@ -1129,10 +1129,27 @@ class AutonomiaRepository(context: Context) {
         )
         if (decision is RemoveAnchorResult.BlockedByMinimum) return decision
 
-        // Los hechos (daily_activity_logs) PERSISTEN: solo se borra la definición de catálogo.
-        dao.deleteActivityDefinition(activityId)
+        // BAÚL: NADA se borra. La definición se manda al baúl (trashed) y su config se archiva;
+        // los hechos (daily_activity_logs) y las versiones de la vara persisten. Recuperable.
+        val now = System.currentTimeMillis()
+        dao.setActivityDefinitionTrashed(activityId, trashed = true, updatedAt = now)
+        if (dao.getUserActivityConfig(activityId) != null) {
+            dao.toggleUserActivityConfigActive(activityId, active = false, archived = true, updatedAt = now)
+        }
         return RemoveAnchorResult.Removed
     }
+
+    /**
+     * BAÚL: restaura una actividad eliminada (la saca del baúl → vuelve al catálogo). Su config
+     * queda archivada; el usuario la re-agrega como ancla/soporte si quiere volver a usarla.
+     */
+    suspend fun restoreActivity(activityId: String) {
+        dao.setActivityDefinitionTrashed(activityId, trashed = false, updatedAt = System.currentTimeMillis())
+    }
+
+    /** BAÚL: actividades custom eliminadas (recuperables), para la pantalla del baúl. */
+    fun trashedActivitiesFlow(): Flow<List<ActivityDefinition>> =
+        dao.observeTrashedActivityDefinitions().map { defs -> defs.map { it.toDomain() } }
 
     suspend fun upsertActivityDefinition(definition: ActivityDefinitionEntity) {
         dao.upsertActivityDefinition(definition)

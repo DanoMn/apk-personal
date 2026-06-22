@@ -202,6 +202,12 @@ data class ActivityDefinitionEntity(
     val sortOrder: Int,
     val createdAt: Long,
     val updatedAt: Long,
+    /**
+     * BAÚL: `true` = la actividad custom fue "Eliminada" por el usuario. NO se borra (los hechos y
+     * la definición persisten), solo se oculta del catálogo y del scoring; recuperable desde el
+     * baúl. "Nada se borra" (decisión del dueño). Ver cambios-config-en-el-tiempo-v1.md §6.
+     */
+    val trashed: Boolean = false,
 )
 
 @Entity(

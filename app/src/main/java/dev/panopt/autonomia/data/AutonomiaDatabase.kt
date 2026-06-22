@@ -33,7 +33,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TelemetryCollectionLeaseEntity::class,
         ActivityTargetVersionEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AutonomiaDatabase : RoomDatabase() {
