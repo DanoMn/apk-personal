@@ -99,6 +99,7 @@ internal class FakeDashboardRepository(
     override fun anchorPhraseSlotFlow(dateKey: String): Flow<List<AnchorPhraseDailySlotEntity>> = flowOf(emptyList())
     override fun focusSignalActivityIdFlow(): StateFlow<String?> = MutableStateFlow(null)
     override fun weeklyScoreHistoryFlow(): Flow<List<WeeklyScoreHistoryEntry>> = flowOf(emptyList())
+    override fun activityTargetVersionsFlow(): Flow<Map<String, List<dev.panopt.autonomia.domain.activity.ActivityTargetVersion>>> = flowOf(emptyMap())
 
     override suspend fun ensureSeeded() = Unit
     override suspend fun materializeAssumedAbstinenceRelapses(today: LocalDate, zoneId: ZoneId) = Unit

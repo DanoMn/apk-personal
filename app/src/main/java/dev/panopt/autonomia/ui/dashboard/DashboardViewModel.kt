@@ -127,8 +127,12 @@ internal class DashboardViewModel(
             }
 
             val factWithHistoryFlow =
-                combine(factFlow, repository.weeklyScoreHistoryFlow()) { facts, weeklyHistory ->
-                    facts.copy(weeklyHistory = weeklyHistory)
+                combine(
+                    factFlow,
+                    repository.weeklyScoreHistoryFlow(),
+                    repository.activityTargetVersionsFlow(),
+                ) { facts, weeklyHistory, targetVersions ->
+                    facts.copy(weeklyHistory = weeklyHistory, targetVersions = targetVersions)
                 }
 
             // Combine anchorPhrases + slot flow into one snapshot to keep outer combine at 5.
@@ -168,6 +172,7 @@ internal class DashboardViewModel(
                     weeklyHistory = facts.weeklyHistory,
                     focusSignalActivityId = focusSignalActivityId,
                     today = date,
+                    targetVersions = facts.targetVersions,
                 )
             }
         }.stateIn(
@@ -583,6 +588,7 @@ private data class DashboardFactSnapshot(
     val riskEvents: List<dev.panopt.autonomia.RiskEvent>,
     val tasks: List<dev.panopt.autonomia.Task>,
     val weeklyHistory: List<dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry> = emptyList(),
+    val targetVersions: Map<String, List<dev.panopt.autonomia.domain.activity.ActivityTargetVersion>> = emptyMap(),
 )
 
 /** Snapshot combining the anchor phrase catalog + the resolved phraseId for the current phase. */

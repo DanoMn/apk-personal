@@ -20,6 +20,8 @@ import dev.panopt.autonomia.data.scoring.DaoWeeklySnapshotDataSource
 import dev.panopt.autonomia.data.scoring.WeeklyScoreSnapshotWriter
 import dev.panopt.autonomia.data.scoring.toHistoryEntry
 import dev.panopt.autonomia.data.local.mapper.toDomain
+import dev.panopt.autonomia.data.local.mapper.toVersionsByActivity
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.activity.normalizeAnchorSessionTargetMinutes
 import dev.panopt.autonomia.domain.activity.normalizeAnchorWeeklyFrequencyTarget
 import dev.panopt.autonomia.domain.activity.requireAnchorUnit
@@ -935,6 +937,10 @@ class AutonomiaRepository(context: Context) {
 
     fun observeUserActivityConfigs(): Flow<List<UserActivityConfigEntity>> =
         dao.observeUserActivityConfigs()
+
+    /** FASE 2 — versiones de la vara por ancla, observable para el camino live del dashboard. */
+    fun activityTargetVersionsFlow(): Flow<Map<String, List<ActivityTargetVersion>>> =
+        dao.observeActivityTargetVersions().map { it.toVersionsByActivity() }
 
     fun observeConfiguredActivities(): Flow<List<ActivityDefinition>> =
         dao.observeUserActivityConfigs().combine(dao.observeActivityDefinitions()) { configs, definitions ->

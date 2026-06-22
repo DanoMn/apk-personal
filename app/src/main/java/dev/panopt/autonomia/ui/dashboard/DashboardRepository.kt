@@ -54,6 +54,7 @@ internal interface DashboardRepository {
     fun anchorPhraseSlotFlow(dateKey: String): Flow<List<AnchorPhraseDailySlotEntity>>
     fun focusSignalActivityIdFlow(): StateFlow<String?>
     fun weeklyScoreHistoryFlow(): Flow<List<WeeklyScoreHistoryEntry>>
+    fun activityTargetVersionsFlow(): Flow<Map<String, List<dev.panopt.autonomia.domain.activity.ActivityTargetVersion>>>
 
     // --- Mantenimiento diario (corre en init y al volver del background) ---
     suspend fun ensureSeeded()
@@ -142,6 +143,7 @@ internal class AutonomiaDashboardRepository(
     override fun anchorPhraseSlotFlow(dateKey: String) = delegate.observeAnchorPhraseDailySlots(dateKey)
     override fun focusSignalActivityIdFlow() = delegate.focusSignalActivityIdFlow()
     override fun weeklyScoreHistoryFlow() = delegate.weeklyScoreHistoryFlow()
+    override fun activityTargetVersionsFlow() = delegate.activityTargetVersionsFlow()
 
     override suspend fun ensureSeeded() = delegate.ensureSeeded()
     override suspend fun materializeAssumedAbstinenceRelapses(today: LocalDate, zoneId: ZoneId) =

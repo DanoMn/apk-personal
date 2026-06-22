@@ -290,6 +290,9 @@ interface AutonomiaDao {
     @Query("SELECT * FROM activity_target_versions")
     suspend fun getActivityTargetVersionsSnapshot(): List<ActivityTargetVersionEntity>
 
+    @Query("SELECT * FROM activity_target_versions")
+    fun observeActivityTargetVersions(): Flow<List<ActivityTargetVersionEntity>>
+
     @Query("DELETE FROM activity_definitions")
     suspend fun clearAllActivityDefinitions()
 
