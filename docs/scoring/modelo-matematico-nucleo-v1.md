@@ -91,6 +91,27 @@ R     = base  +  base^p · S                           gate base²: sin cimiento
   `wt=1`) el tiempo hereda todo el peso; en F bajo, los días extra pesan más.
 - **Techo:** `R ≤ 1 + smax = 1.5`. El superhabit no explota (no rompe el promedio de capa).
 
+### 1.3.1 Ventana de `N` días (`windowDays`)
+La función `R` se generaliza de "la semana SIEMPRE tiene 7 días" a "la ventana tiene
+`windowDays = N` días" (parámetro de `rFromRatios`, default `N = 7` = semana madura). Esto
+permite puntuar con justicia una **ventana parcial** (cuenta nueva, `d < 7` días vividos) sin
+castigar los días que todavía no llegaron. Reglas:
+
+- `N = windowDays` se **clampa a `[1, 7]`** (default y tope = 7).
+- `f_eff = min(F, N)` es la **frecuencia efectiva de ventana**: no se puede comprometer más días
+  de los vividos. Gobierna SOLO los términos de superhábit de ventana (`Sd`, `wt`).
+- `Sd = V / (N − f_eff)` si `f_eff < N`, **`0` si `f_eff ≥ N`** (guard contra división por cero;
+  generaliza el `7 − F` literal). Reparte el superhábit de días sobre los días de ventana restantes.
+- `wt = (f_eff / N)^κ` — generaliza `(F/7)^κ`; queda en `[0, 1]` por construcción (`f_eff ≤ N`),
+  nunca `> 1`.
+- `φ = (1/F)·Σ_commit u(r_i)`, `cut = min(d, F)` y `St = (1/F)·Σ_commit max(r_i−1,0)` mantienen el
+  **`F` crudo** (la meta es semanal y no se prorratea: cumplir un día aporta lo mismo en arranque
+  que maduro).
+
+**Invariante de regresión:** con `N = 7`, `f_eff = min(F, 7) = F` ∀F∈[2,7] → resultado
+byte-idéntico al modelo maduro. El motor maduro nunca pasa `N ≠ 7`; el `windowDays` real lo
+inyecta la proyección de arranque (`startup-counter`), no este nivel.
+
 ### 1.4 Casos de referencia (verificados)
 `F=3,T=30,[30,30,30]`→**1.000** · `D=0`→**0** · `4×60 (meta 4×30)`→**1.289** (tiempo) ·
 `6×30 (meta 4×30)`→**1.266** (días) · `2/4 días×60`→**0.544** (gate: sin frecuencia, el exceso no cuenta) ·
