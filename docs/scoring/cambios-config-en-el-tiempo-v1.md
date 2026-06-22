@@ -240,11 +240,16 @@ Hecho:
 - Tests: `ActiveTargetVersionRuleTest`, `TargetVersionDecisionRuleTest`,
   `editingMinutesTargetMidWeekDoesNotRewritePastWithVersions`. Suite completa verde + APK arma.
 
-Pendiente (acotado):
-- **GRACIA de 7 días** (§3.3, excluir del puntaje las anclas con `today − createdAt < 7`): NO
-  implementada. Su interacción con el mínimo de 3 capas rompe el caso del usuario nuevo (3 anclas
-  recién creadas, todas en gracia → NoData), que es el arranque (#858 amortiguación inicial),
-  fuera de este scope por decisión del dueño. Requiere resolver el arranque primero.
+- **GRACIA de 7 días** (§3.3): un ancla con `today − createdAt < 7` se excluye del input (gate del
+  mínimo + cálculo) vía `AnchorGraceRule` en `BuildScoreInputUseCase` → agregar un ancla nueva no
+  hunde el puntaje. Solo anclas (soportes nuevos entran igual). Tests: `AnchorGraceRuleTest`,
+  `anchorsWithinGracePeriodAreExcludedButSupportsAreNot`.
+  - ⚠️ **Efecto conocido a resolver aparte**: si un usuario recién registrado tiene sus 3 anclas
+    del onboarding todas en gracia → NoData los primeros 7 días. Es el arranque / amortiguación
+    inicial (#858 root cause 3), que se aborda como tema separado (decisión del dueño: implementar
+    la gracia ahora, resolver el arranque después).
+
+Pendiente:
 - **BAÚL para `deleteCustomActivity`** (Eliminar custom): hoy borra la definición del catálogo;
   "nada se borra" pide un flag de baúl en `ActivityDefinitionEntity` + filtrar el catálogo
   (feature de UI). La trampa del SCORING ya está cerrada por `removeActivityAsAnchor` (Quitar).

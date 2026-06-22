@@ -1,6 +1,7 @@
 package dev.panopt.autonomia.domain.scoring
 
 import dev.panopt.autonomia.ActivitySurface
+import dev.panopt.autonomia.domain.activity.AnchorGraceRule
 
 object BuildScoreInputUseCase {
     operator fun invoke(source: ScoreInputSource): ScoreInput =
@@ -10,6 +11,12 @@ object BuildScoreInputUseCase {
                 .sortedBy { it.sortOrder },
             activities = source.activities
                 .filter { it.active && !it.archived && it.activityType != ActivitySurface.Task }
+                // GRACIA (FASE 2 §3.3): un ancla creada hace < 7 días no entra al puntaje (ni al
+                // gate del mínimo ni al cálculo) hasta tener una ventana de historial suficiente.
+                .filterNot {
+                    it.activityType == ActivitySurface.Anchor &&
+                        AnchorGraceRule.isWithinGrace(it.createdAt, source.today)
+                }
                 .sortedBy { it.sortOrder },
             todayActivityLogs = source.todayActivityLogs,
             periodActivityLogs = source.periodActivityLogs,

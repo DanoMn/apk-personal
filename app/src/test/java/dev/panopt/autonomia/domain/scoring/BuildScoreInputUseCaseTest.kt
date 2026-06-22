@@ -55,6 +55,35 @@ class BuildScoreInputUseCaseTest {
         assertEquals(today, input.today)
     }
 
+    @Test
+    fun anchorsWithinGracePeriodAreExcludedButSupportsAreNot() {
+        // Gracia (FASE 2 §3.3): un ancla creada HOY (< 7 días) se excluye del input; el ancla
+        // madura entra; un soporte nuevo entra igual (la gracia es solo para anclas).
+        val input = BuildScoreInputUseCase(
+            ScoreInputSource(
+                layers = listOf(layer("layer_active", active = true, sortOrder = 10)),
+                activities = listOf(
+                    activity("act_mature", ActivitySurface.Anchor, active = true, archived = false, sortOrder = 10, createdAt = 0L),
+                    activity("act_new", ActivitySurface.Anchor, active = true, archived = false, sortOrder = 20, createdAt = millis(today)),
+                    activity("sup_new", ActivitySurface.Support, active = true, archived = false, sortOrder = 30, createdAt = millis(today)),
+                ),
+                todayActivityLogs = emptyList(),
+                periodActivityLogs = emptyList(),
+                abstinenceTracks = emptyList(),
+                todayAbstinenceLogs = emptyList(),
+                allAbstinenceLogs = emptyList(),
+                tasks = emptyList(),
+                sleepNights = emptyList(),
+                today = today,
+            ),
+        )
+
+        assertEquals(listOf("act_mature", "sup_new"), input.activities.map { it.id })
+    }
+
+    private fun millis(date: LocalDate): Long =
+        date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+
     private fun layer(id: String, active: Boolean, sortOrder: Int): Layer =
         Layer(
             id = id,
@@ -70,6 +99,7 @@ class BuildScoreInputUseCaseTest {
         active: Boolean,
         archived: Boolean,
         sortOrder: Int,
+        createdAt: Long = 0L,
     ): ActivityDefinition =
         ActivityDefinition(
             id = id,
@@ -92,6 +122,7 @@ class BuildScoreInputUseCaseTest {
             active = active,
             archived = archived,
             sortOrder = sortOrder,
+            createdAt = createdAt,
         )
 
     private fun track(id: String, active: Boolean, sortOrder: Int): AbstinenceTrack =
