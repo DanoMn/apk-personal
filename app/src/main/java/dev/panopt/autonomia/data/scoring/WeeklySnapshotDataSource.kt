@@ -3,6 +3,7 @@ package dev.panopt.autonomia.data.scoring
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
+import dev.panopt.autonomia.data.ActivityTargetVersionEntity
 import dev.panopt.autonomia.data.AutonomiaDao
 import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.LayerEntity
@@ -29,6 +30,7 @@ interface WeeklySnapshotDataSource {
     suspend fun getSleepNightsInRange(from: String, to: String): List<SleepNightEntity>
     suspend fun getActiveUserActivityConfigs(): List<UserActivityConfigEntity>
     suspend fun getActivityDefinitionsSnapshot(): List<ActivityDefinitionEntity>
+    suspend fun getActivityTargetVersionsSnapshot(): List<ActivityTargetVersionEntity>
     suspend fun getWeeklyScoreSnapshotsSnapshot(): List<WeeklyScoreSnapshotEntity>
     suspend fun upsertWeeklyScoreSnapshot(snapshot: WeeklyScoreSnapshotEntity)
 }
@@ -50,6 +52,7 @@ class DaoWeeklySnapshotDataSource(
         dao.getSleepNightsInRange(from, to)
     override suspend fun getActiveUserActivityConfigs() = dao.getActiveUserActivityConfigs()
     override suspend fun getActivityDefinitionsSnapshot() = dao.getActivityDefinitionsSnapshot()
+    override suspend fun getActivityTargetVersionsSnapshot() = dao.getActivityTargetVersionsSnapshot()
     override suspend fun getWeeklyScoreSnapshotsSnapshot() = dao.getWeeklyScoreSnapshotsSnapshot()
     override suspend fun upsertWeeklyScoreSnapshot(snapshot: WeeklyScoreSnapshotEntity) =
         dao.upsertWeeklyScoreSnapshot(snapshot)

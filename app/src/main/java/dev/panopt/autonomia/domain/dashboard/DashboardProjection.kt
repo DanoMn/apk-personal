@@ -24,6 +24,7 @@ import dev.panopt.autonomia.domain.activity.isGoal
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
 import dev.panopt.autonomia.domain.scoring.PointsMappingPolicy
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.scoring.ScoreInputSource
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import java.util.Locale
@@ -55,6 +56,7 @@ internal fun buildDashboardState(
     weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
     focusSignalActivityId: String?,
     today: LocalDate = LocalDate.now(),
+    targetVersions: Map<String, List<ActivityTargetVersion>> = emptyMap(),
 ): DashboardState {
     val activeLayers = layers.filter { it.active }.sortedBy { it.sortOrder }
     val layerById = activeLayers.associateBy { it.id }
@@ -113,6 +115,7 @@ internal fun buildDashboardState(
                 sleepNights = listOfNotNull(sleepNight?.toSleepNightScore()),
                 today = today,
                 weeklyHistory = weeklyHistory,
+                targetVersions = targetVersions,
             ),
         ),
     )

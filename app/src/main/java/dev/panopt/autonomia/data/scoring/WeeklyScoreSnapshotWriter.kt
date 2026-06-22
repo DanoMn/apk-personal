@@ -3,6 +3,7 @@ package dev.panopt.autonomia.data.scoring
 import dev.panopt.autonomia.data.local.mapper.mergeToDomain
 import dev.panopt.autonomia.data.local.mapper.toDomain
 import dev.panopt.autonomia.data.local.mapper.toSleepNightScore
+import dev.panopt.autonomia.data.local.mapper.toVersionsByActivity
 import dev.panopt.autonomia.domain.scoring.BuildScoreInputUseCase
 import dev.panopt.autonomia.domain.scoring.BuildWeeklyScoreSnapshotUseCase
 import dev.panopt.autonomia.domain.scoring.ScoreEngine
@@ -108,6 +109,7 @@ class WeeklyScoreSnapshotWriter(
             ).mapNotNull { it.toSleepNightScore() },
             today = windowEnd,
             weeklyHistory = weeklyHistory,
+            targetVersions = dataSource.getActivityTargetVersionsSnapshot().toVersionsByActivity(),
         )
         val scoreInput = BuildScoreInputUseCase(source)
         val scoreReport = ScoreEngine.calculate(scoreInput)

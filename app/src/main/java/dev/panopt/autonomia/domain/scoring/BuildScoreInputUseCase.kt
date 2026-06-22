@@ -22,5 +22,6 @@ object BuildScoreInputUseCase {
             sleepNights = source.sleepNights,
             today = source.today,
             weeklyHistory = source.weeklyHistory,
+            targetVersions = source.targetVersions,
         )
 }

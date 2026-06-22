@@ -3,6 +3,7 @@ package dev.panopt.autonomia.data.scoring
 import dev.panopt.autonomia.data.AbstinenceLogEntity
 import dev.panopt.autonomia.data.AbstinenceTrackEntity
 import dev.panopt.autonomia.data.ActivityDefinitionEntity
+import dev.panopt.autonomia.data.ActivityTargetVersionEntity
 import dev.panopt.autonomia.data.DailyActivityLogEntity
 import dev.panopt.autonomia.data.LayerEntity
 import dev.panopt.autonomia.data.SleepNightEntity
@@ -212,4 +213,5 @@ internal class FakeWeeklySnapshotDataSource(
     override suspend fun getTasksSnapshot(): List<TaskEntity> = emptyList()
     override suspend fun getActiveUserActivityConfigs(): List<UserActivityConfigEntity> = emptyList()
     override suspend fun getActivityDefinitionsSnapshot(): List<ActivityDefinitionEntity> = emptyList()
+    override suspend fun getActivityTargetVersionsSnapshot(): List<ActivityTargetVersionEntity> = emptyList()
 }

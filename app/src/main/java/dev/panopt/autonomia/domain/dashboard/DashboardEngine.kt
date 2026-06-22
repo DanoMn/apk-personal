@@ -11,6 +11,7 @@ import dev.panopt.autonomia.SleepNight
 import dev.panopt.autonomia.SleepSessionState
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.scoring.WeeklyScoreHistoryEntry
 import dev.panopt.autonomia.domain.sleep.SleepPolicy
 import java.time.LocalDate
@@ -36,6 +37,7 @@ internal object DashboardEngine {
         weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
         focusSignalActivityId: String?,
         today: LocalDate,
+        targetVersions: Map<String, List<ActivityTargetVersion>> = emptyMap(),
     ): DashboardState =
         buildDashboardState(
             layers = layers,
@@ -57,5 +59,6 @@ internal object DashboardEngine {
             weeklyHistory = weeklyHistory,
             focusSignalActivityId = focusSignalActivityId,
             today = today,
+            targetVersions = targetVersions,
         )
 }

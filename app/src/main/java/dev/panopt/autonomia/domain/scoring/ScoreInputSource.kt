@@ -6,6 +6,7 @@ import dev.panopt.autonomia.ActivityLog
 import dev.panopt.autonomia.Layer
 import dev.panopt.autonomia.Task
 import dev.panopt.autonomia.domain.activity.ActivityDefinition
+import dev.panopt.autonomia.domain.activity.ActivityTargetVersion
 import dev.panopt.autonomia.domain.sleep.SleepNightScore
 import java.time.LocalDate
 
@@ -31,4 +32,6 @@ data class ScoreInputSource(
     val sleepNights: List<SleepNightScore> = emptyList(),
     val today: LocalDate = LocalDate.now(),
     val weeklyHistory: List<WeeklyScoreHistoryEntry> = emptyList(),
+    /** FASE 2 — versiones de la vara por ancla (`activityId → versiones`). Vacío = camino legacy. */
+    val targetVersions: Map<String, List<ActivityTargetVersion>> = emptyMap(),
 )
