@@ -46,9 +46,10 @@ internal fun OnboardingScreen(
     onComplete: () -> Unit,
     layers: List<DashboardLayerState> = emptyList(),
     anchorOptions: List<DashboardActivityOptionState> = emptyList(),
-    onAddAnchor: (activityId: String) -> Unit = {},
-    onCreateAnchor: (name: String, layerId: String) -> Unit = { _, _ -> },
+    onAddAnchor: (activityId: String, sessionTargetMinutes: Int, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit = { _, _, _, _ -> },
     onRemoveAnchor: (activityId: String) -> Unit = {},
+    onCreateActivity: (name: String, layerId: String, sessionTargetMinutes: Int, isSecondary: Boolean, weeklyFrequencyTarget: Int, commitmentDurationMonths: Int?) -> Unit = { _, _, _, _, _, _ -> },
+    onDeleteActivity: (activityId: String) -> Unit = {},
     // Bloque Intención (slice 4)
     intention: OnboardingIntention? = null,
     onSelectIntention: (OnboardingIntention) -> Unit = {},
@@ -66,6 +67,24 @@ internal fun OnboardingScreen(
     onWindDownConsent: (Boolean) -> Unit = {},
     onSleepContinue: (sleepAt: String, wakeAt: String) -> Unit = { _, _ -> },
 ) {
+    // El Bloque Anclas reusa AnchorConfigScreen (pantalla real, autónoma a pantalla completa). Va
+    // FUERA del Box con padding del onboarding para no romper su layout propio (top bar, buscador
+    // y filtros pineados ya manejan sus márgenes).
+    if (state.currentStep == OnboardingStep.Anchors) {
+        OnboardingAnchorsStep(
+            palette = palette,
+            layers = layers,
+            options = anchorOptions,
+            onAddAnchor = onAddAnchor,
+            onRemoveAnchor = onRemoveAnchor,
+            onCreateActivity = onCreateActivity,
+            onDeleteActivity = onDeleteActivity,
+            onContinue = onAdvance,
+            onBack = onBack,
+        )
+        return
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -102,16 +121,8 @@ internal fun OnboardingScreen(
                 onBack = onBack,
             )
 
-            OnboardingStep.Anchors -> OnboardingAnchorsStep(
-                palette = palette,
-                layers = layers,
-                options = anchorOptions,
-                onAddAnchor = onAddAnchor,
-                onCreateAnchor = onCreateAnchor,
-                onRemoveAnchor = onRemoveAnchor,
-                onContinue = onAdvance,
-                onBack = onBack,
-            )
+            // Anclas se renderiza a pantalla completa antes del Box (ver arriba).
+            OnboardingStep.Anchors -> Unit
 
             OnboardingStep.Intention -> OnboardingIntentionStep(
                 palette = palette,

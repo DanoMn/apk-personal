@@ -77,6 +77,12 @@ internal fun AnchorConfigScreen(
     onBack: () -> Unit,
     removalBlockedMessage: String? = null,
     onRemovalBlockedMessageShown: () -> Unit = {},
+    // Slots opcionales para el host (drawer pasa `null` → comportamiento intacto). Solo se muestran
+    // en modo lista (no en el editor de targets ni al crear custom). El onboarding usa:
+    //  - subHeader: guía de progreso compacta, debajo del top bar (no toca el fondo pineado).
+    //  - listFooter: el botón "Continuar", al fondo (más fácil de alcanzar), solo al abrir la compuerta.
+    subHeader: (@Composable () -> Unit)? = null,
+    listFooter: (@Composable () -> Unit)? = null,
 ) {
     BackHandler(onBack = onBack)
 
@@ -277,6 +283,9 @@ internal fun AnchorConfigScreen(
                     onDismiss = { isCreatingCustom = false },
                 )
             } else {
+                // Slot del host (onboarding): guía compacta debajo del header. Drawer = `null`.
+                subHeader?.invoke()
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -536,6 +545,11 @@ internal fun AnchorConfigScreen(
                             }
                         }
                     }
+
+                    // Slot del host al fondo (onboarding): "Continuar". Dentro del bloque pineado:
+                    // comparte el margen inferior (navigationBarsPadding) y queda a 10dp de los
+                    // filtros (spacedBy del Column). En el drawer es `null`.
+                    listFooter?.invoke()
                 }
             }
         }

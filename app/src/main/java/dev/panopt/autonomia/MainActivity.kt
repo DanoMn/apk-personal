@@ -29,8 +29,6 @@ import dev.panopt.autonomia.data.worker.WindDownNotificationScheduler
 import dev.panopt.autonomia.domain.notifications.SleepNotificationPolicy
 import dev.panopt.autonomia.platform.notifications.PostNotificationsPermission
 import dev.panopt.autonomia.platform.notifications.SleepNotificationChannels
-import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_SESSION_MINUTES
-import dev.panopt.autonomia.domain.activity.DEFAULT_ANCHOR_WEEKLY_FREQUENCY
 import dev.panopt.autonomia.sleep.SleepDeviceAdminReceiver
 import dev.panopt.autonomia.ui.anchors.AnchorConfigScreen
 import dev.panopt.autonomia.ui.dashboard.DashboardScreen
@@ -217,25 +215,10 @@ class MainActivity : ComponentActivity() {
                     },
                     layers = dashboardState.layers,
                     anchorOptions = dashboardState.activityOptions,
-                    onAddAnchor = { activityId ->
-                        dashboardViewModel.addActivityAsAnchor(
-                            activityId,
-                            DEFAULT_ANCHOR_SESSION_MINUTES,
-                            DEFAULT_ANCHOR_WEEKLY_FREQUENCY,
-                            null,
-                        )
-                    },
-                    onCreateAnchor = { name, layerId ->
-                        dashboardViewModel.createActivity(
-                            name = name,
-                            layerId = layerId,
-                            sessionTargetMinutes = DEFAULT_ANCHOR_SESSION_MINUTES,
-                            isSecondary = false,
-                            weeklyFrequencyTarget = DEFAULT_ANCHOR_WEEKLY_FREQUENCY,
-                            commitmentDurationMonths = null,
-                        )
-                    },
+                    onAddAnchor = dashboardViewModel::addActivityAsAnchor,
                     onRemoveAnchor = dashboardViewModel::removeActivityAsAnchor,
+                    onCreateActivity = dashboardViewModel::createActivity,
+                    onDeleteActivity = dashboardViewModel::deleteActivity,
                     // Bloque Sueño (slice 3)
                     sleepState = dashboardState.sleep,
                     isAutoModeEnabled = isSleepAutoModeEnabled,
