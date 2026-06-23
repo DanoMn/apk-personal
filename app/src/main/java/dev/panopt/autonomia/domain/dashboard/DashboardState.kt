@@ -72,6 +72,10 @@ internal data class DashboardLayerState(
     val id: String,
     val name: String,
     val progress: Float,
+    // Solo la sección "Capas de hoy" del dashboard filtra por esto (capas con ≥1 ancla configurada).
+    // El resto de consumidores (chips de filtro en config de anclas/soportes/tasks) usa la lista
+    // COMPLETA, por eso el default es true: nunca esconde capas fuera del dashboard.
+    val hasAnchors: Boolean = true,
 )
 
 internal data class DashboardSignalState(

@@ -76,19 +76,24 @@ internal fun LayersSection(
     palette: DashboardPalette,
     layers: List<DashboardLayerState>,
 ) {
+    // "Capas de hoy" muestra SOLO las capas con al menos un ancla configurada. El filtro vive acá
+    // (renderizado del dashboard), no en el estado: la lista completa la siguen necesitando los
+    // chips de filtro de las pantallas de config (anclas/soportes/tasks).
+    val shownLayers = layers.filter { it.hasAnchors }
+
     SectionHeader(
         palette = palette,
         title = "Capas de hoy",
-        note = "${layers.count { it.progress > 0f }} de ${layers.size} activas",
+        note = "${shownLayers.count { it.progress > 0f }} de ${shownLayers.size} activas",
     )
 
-    if (layers.isEmpty()) return
+    if (shownLayers.isEmpty()) return
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(7.2.dp),
     ) {
-        layers.forEach { layer ->
+        shownLayers.forEach { layer ->
             val color = layer.layerColor(palette)
             LayerPill(
                 label = layer.name,

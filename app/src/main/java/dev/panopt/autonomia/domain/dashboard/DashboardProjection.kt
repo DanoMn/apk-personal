@@ -99,8 +99,7 @@ internal fun buildDashboardState(
     val completedCoreCount = coreActivities.count { it.id in completedActivityIds }
     val completedSelfCareCount = selfCareActivities.count { it.id in completedActivityIds }
     val weekRows = buildWeekRows(
-        layers = activeLayers,
-        activities = dashboardActivities,
+        anchors = primaryActivities,
         weekLogs = weekActivityLogs,
         today = today,
     )
@@ -150,11 +149,16 @@ internal fun buildDashboardState(
         PointsMappingPolicy.points(scoreReport.estado.toDouble())
     }
     val score = visiblePoints ?: 0
+    // La lista de capas va COMPLETA en el estado (la consumen también los chips de filtro de las
+    // pantallas de config de anclas/soportes/tasks). Solo MARCAMOS cuáles tienen ≥1 ancla
+    // configurada con `hasAnchors`; "Capas de hoy" en el dashboard filtra por ese flag al renderizar.
+    val anchorLayerIds = primaryActivities.map { it.layerId }.toSet()
     val layerStates = scoreReport.layerScores.map { layerScore ->
         DashboardLayerState(
             id = layerScore.layerId,
             name = layerScore.name,
             progress = layerScore.score,
+            hasAnchors = layerScore.layerId in anchorLayerIds,
         )
     }
     val pendingCount = (dashboardActivities.size - completedCount).coerceAtLeast(0)
@@ -728,30 +732,38 @@ private fun streakDays(
     return days
 }
 
+/**
+ * Filas de "Semana": UNA por ancla configurada (no por capa), porque la meta de frecuencia vive por
+ * actividad. Cada fila cuenta los DÍAS DISTINTOS de la semana en que esa ancla se completó, contra
+ * TU meta. Dos fases:
+ *  - Construyendo el hábito (activeDays < meta): denominador = meta. La barra se llena hacia tu
+ *    objetivo (ej. `2/3`).
+ *  - Superhábit (activeDays >= meta): cumpliste, el denominador pasa a 7 (ej. `3/7`) para ver cuántos
+ *    días extra sobre la meta estás sumando hacia una semana perfecta.
+ * La fila conserva el `layerId` del ancla solo para heredar el color de su capa.
+ */
 private fun buildWeekRows(
-    layers: List<Layer>,
-    activities: List<ActivityDefinition>,
+    anchors: List<ActivityDefinition>,
     weekLogs: List<ActivityLog>,
     today: LocalDate,
 ): List<DashboardWeekRowState> {
     val start = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    val completedActivityIdsByDate = weekLogs
-        .filter { it.completed }
-        .groupBy { it.date }
-        .mapValues { (_, logs) -> logs.map { it.activityId }.toSet() }
-    val activitiesByLayer = activities.groupBy { it.layerId }
+    val weekDates = (0L..6L).map { start.plusDays(it).toString() }.toSet()
+    val completedDatesByActivity = weekLogs
+        .filter { it.completed && it.date in weekDates }
+        .groupBy { it.activityId }
+        .mapValues { (_, logs) -> logs.map { it.date }.toSet() }
 
-    return layers.map { layer ->
-        val layerActivityIds = activitiesByLayer[layer.id].orEmpty().map { it.id }.toSet()
-        val activeDays = (0L..6L).count { offset ->
-            val date = start.plusDays(offset).toString()
-            completedActivityIdsByDate[date].orEmpty().any { it in layerActivityIds }
-        }
+    return anchors.map { anchor ->
+        val activeDays = completedDatesByActivity[anchor.id].orEmpty().size
+        val target = anchor.weeklyFrequencyTarget?.coerceIn(1, 7) ?: 7
+        val metGoal = activeDays >= target
+        val denominator = if (metGoal) 7 else target
         DashboardWeekRowState(
-            layerId = layer.id,
-            name = layer.name,
-            score = "$activeDays/7",
-            progress = activeDays / 7f,
+            layerId = anchor.layerId,
+            name = anchor.name,
+            score = "$activeDays/$denominator",
+            progress = if (denominator == 0) 0f else activeDays.toFloat() / denominator,
         )
     }
 }
