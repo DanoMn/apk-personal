@@ -67,6 +67,13 @@ internal fun OnboardingScreen(
     onWindDownConsent: (Boolean) -> Unit = {},
     onSleepContinue: (sleepAt: String, wakeAt: String) -> Unit = { _, _ -> },
 ) {
+    // El Bloque Bienvenida es una secuencia editorial autónoma (pager de 4 momentos, animaciones,
+    // sellos de capa). Va a pantalla completa, fuera del Box con padding del onboarding.
+    if (state.currentStep == OnboardingStep.Welcome) {
+        OnboardingWelcomeStep(palette = palette, onContinue = onAdvance)
+        return
+    }
+
     // El Bloque Anclas reusa AnchorConfigScreen (pantalla real, autónoma a pantalla completa). Va
     // FUERA del Box con padding del onboarding para no romper su layout propio (top bar, buscador
     // y filtros pineados ya manejan sus márgenes).
@@ -85,6 +92,18 @@ internal fun OnboardingScreen(
         return
     }
 
+    // El Cierre es el momento de logro sereno (sellos de capas cubiertas encendiéndose). Pantalla
+    // completa, autónoma, fuera del Box con padding del onboarding.
+    if (state.currentStep == OnboardingStep.Closing) {
+        OnboardingClosingStep(
+            palette = palette,
+            anchorOptions = anchorOptions,
+            onComplete = onComplete,
+            onBack = onBack,
+        )
+        return
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -93,33 +112,11 @@ internal fun OnboardingScreen(
             .padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
         when (state.currentStep) {
-            OnboardingStep.Welcome -> OnboardingBlock(
-                palette = palette,
-                title = "Autonomía sin límites",
-                body = "Toda vida descansa sobre cimientos que no siempre vemos: el descanso, el " +
-                    "cuerpo, el orden de los días, los otros, aquello que construimos. Cuando uno " +
-                    "cede, lo demás empieza a inclinarse.\n\n" +
-                    "Esta app no pretende medir esa abstracción inalcanzable que llamamos " +
-                    "felicidad, sino algo más sencillo y más noble: saber si tus cimientos siguen " +
-                    "en pie.\n\n" +
-                    "A ese conjunto de cimientos lo llamamos tu base. Vamos a reconocerla juntos, " +
-                    "sin apuro y sin exigir perfección.",
-                primaryLabel = "Empecemos",
-                onPrimary = onAdvance,
-            )
+            // Bienvenida se renderiza a pantalla completa antes del Box (ver arriba).
+            OnboardingStep.Welcome -> Unit
 
-            OnboardingStep.Closing -> OnboardingBlock(
-                palette = palette,
-                title = "Tus cimientos están en pie",
-                body = "Esto es el comienzo de un viaje, no un examen. Podrás ajustar todo cuando " +
-                    "quieras.\n\n" +
-                    "Y si algún día el rigor decae, la app no te condena: solo te recuerda, con la " +
-                    "calma de un adulto funcional, que es momento de volver a la base, de volver al " +
-                    "cuerpo, y recomenzar.",
-                primaryLabel = "Entrar",
-                onPrimary = onComplete,
-                onBack = onBack,
-            )
+            // Cierre se renderiza a pantalla completa antes del Box (ver arriba).
+            OnboardingStep.Closing -> Unit
 
             // Anclas se renderiza a pantalla completa antes del Box (ver arriba).
             OnboardingStep.Anchors -> Unit
@@ -151,55 +148,6 @@ internal fun OnboardingScreen(
                 onCreateTrackAndContinue = onCreateSobrietyTrack,
                 onSkipSobriety = onSkipSobriety,
                 onBack = onBack,
-            )
-        }
-    }
-}
-
-@Composable
-private fun OnboardingBlock(
-    palette: DashboardPalette,
-    title: String,
-    body: String,
-    primaryLabel: String,
-    onPrimary: () -> Unit,
-    onBack: (() -> Unit)? = null,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = title,
-            color = palette.textMain,
-            fontSize = 30.sp,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.SemiBold,
-            lineHeight = 36.sp,
-        )
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = body,
-            color = palette.textMuted,
-            fontSize = 16.sp,
-            lineHeight = 24.sp,
-        )
-        Spacer(Modifier.height(36.dp))
-        OnboardingPrimaryButton(palette = palette, label = primaryLabel, onClick = onPrimary)
-        if (onBack != null) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = "Volver",
-                color = palette.textFaint,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(onClick = onBack)
-                    .padding(vertical = 12.dp),
             )
         }
     }
